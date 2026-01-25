@@ -1,8 +1,9 @@
 import subprocess
 from typing import List, Dict
 
-from util.metadata_access import fetch_all_metadata
-from constant import SSH_CONNECT, REMOTE_PREFIX
+from util.RemarkableFileData import RemarkableFileData
+
+remarkable_file_data = RemarkableFileData()
 
 def mv(args: List[str]) -> None:
     """
@@ -36,7 +37,8 @@ def ls(args: List[str]) -> None:
     :param args: arguments for the ls command
     :return: None
     """
-    remarkable_metadata = fetch_all_metadata()
+    remarkable_metadata = remarkable_file_data.get_data()
+
     result = []
     for uuid, v in remarkable_metadata.items():
         if remarkable_metadata[uuid].get('type') == 'CollectionType':
