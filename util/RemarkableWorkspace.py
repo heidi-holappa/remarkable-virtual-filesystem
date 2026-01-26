@@ -5,19 +5,16 @@ from typing import Dict, Any, Optional
 
 from constant import SSH_CONNECT, REMOTE_PREFIX
 
-class RemarkableFileData:
+class RemarkableWorkspace:
 
+    # Document and collection data loaded from reMarkable
     _data: Dict[str, Dict[str, Any]]
-
-
+    # An empty string represents root.
+    _current_collection: str
 
     def __init__(self):
         self._data: Optional[Dict[str, Dict[str, Any]]] = None
-
-    def load(self) -> None:
-        if self._data is None:
-            self._data = self._fetch_to_memory()
-
+        self._current_collection: str = ''
 
     def _fetch_to_memory(self) -> Dict[str, Dict[str, Any]]:
         """
@@ -124,6 +121,15 @@ class RemarkableFileData:
 
         return sizes
 
+    def load(self) -> None:
+        """
+        Loads the initial metadata information. If metadata is already
+        loaded into class attribute, does nothing.
+
+        :return: None
+        """
+        if self._data is None:
+            self._data = self._fetch_to_memory()
 
     def get_data(self) -> Dict[str, Dict[str, Any]]:
         """
@@ -137,7 +143,11 @@ class RemarkableFileData:
     def refresh(self) -> None:
         self._data = self._fetch_to_memory()
 
+    def get_current_collection(self) -> str:
+        """
+        A getter for the current collection. An empty string
+        represents the root.
 
-    def generate_path_structure(self, metadata: Dict)  -> Dict:
-        # TODO: is this necessary
-        return {}
+        :return: a UUID of the current collection
+        """
+        return self._current_collection
