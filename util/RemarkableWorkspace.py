@@ -65,7 +65,7 @@ class RemarkableWorkspace:
                 uuid = (
                     member.name
                     .removeprefix("./")
-                    .removesuffix(".remarkable_file_data")
+                    .removesuffix(".metadata")
                 )
                 data[uuid] = metadata
 
@@ -151,3 +151,66 @@ class RemarkableWorkspace:
         :return: a UUID of the current collection
         """
         return self._current_collection
+
+    def set_current_collection(self, collection: str) -> None:
+        """
+        Setter for the current collection. The collection
+        must be either an UUID of a CollectionType or an
+        empty string for root.
+
+        :return: None
+        """
+        is_root = collection == ''
+        is_valid_collection = self._data.get(collection) and self._data[collection].get('type') == 'CollectionType'
+        if not (is_root or is_valid_collection):
+            # TODO: think about this. Should this lead to exception or be handled more gracefully?
+            raise Exception("Invalid Collection")
+        self._current_collection = collection
+
+
+    def get_parent(self) -> str:
+        return self._data[self._current_collection].get('parent')
+
+    def get_collection(self, collection: str) -> Optional[str]:
+        """
+        As a first version returns the uuid of the collection with the current parent
+        and a matching visible name
+        :param collection: a name of the collection
+        :return: an optional UUID of the collection
+        """
+        for k, v in self._data.items():
+            if v.get('parent') != self._current_collection:
+                continue
+            if v.get('type') == 'CollectionType' and v.get('visibleName') == collection:
+                return k
+        return None
+
+    def get_current_path(self) -> str:
+        if self._current_collection == '':
+            return "/"
+        return self.recurse_collection_path(self._current_collection)
+
+    def recurse_collection_path(self, uuid: str) -> str:
+        """
+        A helper method to find the path for each entity.
+
+        :param uuid: entity's uuid
+        :param remarkable_metadata: a reference to the dictionary of metadata
+        :return: a string representation of the path
+        """
+
+        if not self._data.get(uuid):
+            return './<NA>'
+
+        # print(f"data for {uuid}: {remarkable_metadata.get(uuid)}")
+        if self._data[uuid].get('parent') == '':
+            return "./" + self._data[uuid]['visibleName']
+
+        if self._data[uuid].get('parent') == 'trash':
+            return './trash/' + self._data[uuid].get('visibleName')
+
+        return self.recurse_collection_path(self._data[uuid]['parent']) + "/" + self._data[uuid].get('visibleName')
+
+
+
+remarkable_workspace = RemarkableWorkspace()
