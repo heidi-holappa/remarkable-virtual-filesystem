@@ -4,9 +4,11 @@ from typing import List, Dict
 from util.RemarkableWorkspace import remarkable_workspace as workspace
 
 def cd(args: List[str]) -> None:
-    path = ' '.join(args)
+    path = ''
+    if args:
+        path = ' '.join(args)
     match path:
-        case "/":
+        case "":
             workspace.set_current_collection('')
         case "..":
             workspace.set_current_collection(workspace.get_parent())
