@@ -1,9 +1,11 @@
-from com.common import clear, ls, mv, rm
+from com.common import clear, ls, mv, rm, cd
 from typing import List
 from com.help import help
+from util.RemarkableWorkspace import remarkable_workspace as workspace
 
 while True:
-    user_input: List[str] = input("remarkable$ ").split(' ')
+    path = workspace.get_current_path()
+    user_input: List[str] = input(f"remarkable~{path}$ ").split(' ')
     
     if not user_input:
         continue
@@ -11,8 +13,12 @@ while True:
     command, *args = user_input
 
     match command:
+        case "cd":
+            cd(args)
         case "clear":
             clear()
+        case "rm":
+            rm(args)
         case "ls":
             ls(args)
         case "mv":
@@ -22,4 +28,4 @@ while True:
         case "exit" | "x":
             break
         case _:
-            print("Unknown com. Type help for a list of supported commands")
+            print("Unknown command. Type help for a list of supported commands")
