@@ -1,23 +1,18 @@
 import subprocess
 from typing import List, Dict
 
+from constant import ROOT_COLLECTION
+
 from util.RemarkableWorkspace import remarkable_workspace as workspace
 
 def cd(args: List[str]) -> None:
-    path = ''
-    if args:
-        path = ' '.join(args)
-    match path:
-        case "":
-            workspace.set_current_collection('')
-        case "..":
-            workspace.set_current_collection(workspace.get_parent())
-        case _:
-            collection = workspace.get_collection(path)
-            if collection:
-                workspace.set_current_collection(collection)
-            else:
-                print("Invalid path")
+    if len(args) == 0:
+        workspace.set_current_collection(ROOT_COLLECTION)
+    elif len(args) > 1:
+        print("Usage: cd OR cd <path>")
+        return
+    else:
+        workspace.change_collection(args[0])
 
 def mv(args: List[str]) -> None:
     """
