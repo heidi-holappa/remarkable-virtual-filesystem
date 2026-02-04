@@ -1,7 +1,7 @@
-from com.common import clear, ls, mv, rm, cd
+from src.com.common import clear, ls, mv, rm, cd
 from typing import List
-from com.help import help
-from util.RemarkableWorkspace import remarkable_workspace as workspace
+from src.com.help import help
+from src.util.RemarkableWorkspaceOLD import remarkable_workspace as workspace
 
 while True:
     path = workspace.get_current_path()

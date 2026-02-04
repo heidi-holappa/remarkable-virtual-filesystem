@@ -1,9 +1,10 @@
 import subprocess
 from typing import List, Dict
 
-from constant import ROOT_COLLECTION
+from src.constant import ROOT_COLLECTION
 
-from util.RemarkableWorkspace import remarkable_workspace as workspace
+from src.util.RemarkableWorkspaceOLD import remarkable_workspace as workspace
+
 
 def cd(args: List[str]) -> None:
     if len(args) == 0:

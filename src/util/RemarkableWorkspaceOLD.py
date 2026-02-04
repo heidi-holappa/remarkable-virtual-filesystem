@@ -3,7 +3,7 @@ import tarfile, json
 from io import BytesIO
 from typing import Dict, Any, Optional
 
-from constant import SSH_CONNECT, REMOTE_PREFIX, ROOT_COLLECTION
+from src.constant import SSH_CONNECT, REMOTE_PREFIX, ROOT_COLLECTION
 
 class RemarkableWorkspace:
 
