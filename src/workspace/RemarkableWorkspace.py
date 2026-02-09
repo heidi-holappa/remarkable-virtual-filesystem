@@ -1,6 +1,9 @@
 from typing import Dict, Any, Optional
 
-from src.constant import ROOT_COLLECTION
+from src.exception.NotFoundException import NotFoundException
+from src.exception.InvalidPathException import InvalidPathException
+
+from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, INVALID_PATH
 
 class RemarkableWorkspace:
 
@@ -28,8 +31,7 @@ class RemarkableWorkspace:
         is_root = collection == ''
         is_valid_collection = self._data.get(collection) and self._data[collection].get('type') == 'CollectionType'
         if not (is_root or is_valid_collection):
-            # TODO: think about this. Should this lead to exception or be handled more gracefully?
-            raise Exception("Invalid Collection")
+            raise NotFoundException(COLLECTION_NOT_FOUND)
         self._current_collection = collection
 
 
@@ -43,6 +45,9 @@ class RemarkableWorkspace:
 
         if entity is None:
             entity = self._current_collection
+
+        if not self._data.get(entity):
+            raise NotFoundException(COLLECTION_NOT_FOUND)
 
         if entity == ROOT_COLLECTION or self._data.get(entity) == ROOT_COLLECTION:
             return ROOT_COLLECTION
@@ -118,8 +123,7 @@ class RemarkableWorkspace:
             if collection_pointer is None:
                 break
         if collection_pointer is None:
-            print(f"Invalid path: {path}")
-            return
+            raise InvalidPathException(INVALID_PATH)
 
         self._current_collection = collection_pointer
 
