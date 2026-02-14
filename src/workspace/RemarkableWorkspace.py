@@ -87,10 +87,10 @@ class RemarkableWorkspace:
 
         # print(f"data for {uuid}: {remarkable_metadata.get(uuid)}")
         if self._data[uuid].get('parent') == '':
-            return "./" + self._data[uuid]['visibleName']
+            return "/" + self._data[uuid]['visibleName']
 
         if self._data[uuid].get('parent') == 'trash':
-            return './trash/' + self._data[uuid].get('visibleName')
+            return '/trash/' + self._data[uuid].get('visibleName')
 
         return self.generate_absolute_collection_path(self._data[uuid]['parent']) + "/" + self._data[uuid].get('visibleName')
 

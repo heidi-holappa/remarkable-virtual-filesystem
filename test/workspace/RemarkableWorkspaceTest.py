@@ -86,3 +86,13 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             self.ws.change_collection("C")
 
         self.assertTrue(INVALID_PATH in str(context.exception))
+
+    # Get absolute path
+    def test_root_path_is_output_correctly(self) -> None:
+        self.assertEqual("/", self.ws.generate_absolute_collection_path(""))
+
+    def test_direct_subdirectory_to_root_output_correctly(self) -> None:
+        self.assertEqual("/A", self.ws.generate_absolute_collection_path("a"))
+
+    def test_nested_subdirectory_output_correctly(self) -> None:
+        self.assertEqual("/A/A_0", self.ws.generate_absolute_collection_path("a_0"))
