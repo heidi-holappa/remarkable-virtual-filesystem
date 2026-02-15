@@ -1,2 +1,10 @@
-.idea/
+
+# Ignore virtual environments
+venv/
+.env/
+
+# pycache directories
 **/__pycache__/
+
+# Pycharm configuration (no idea why the directory is IDEA in pycharm as well)
+.idea/
