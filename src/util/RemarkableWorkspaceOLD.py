@@ -1,3 +1,4 @@
+# pylint: skip-file
 import subprocess
 import tarfile, json
 from io import BytesIO

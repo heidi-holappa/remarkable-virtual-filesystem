@@ -1,4 +1,13 @@
-def help():
+"""
+    Method for help instruction
+"""
+
+def help_instruction():
+    """
+        Help message provides instructions on how to
+        use the reMarkable bash-emulator
+    """
+
     print(
 """
 Supported commands:
@@ -19,4 +28,3 @@ Supported commands:
   - e(x)it:
       * exit python program
 """)
-

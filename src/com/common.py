@@ -1,3 +1,8 @@
+"""
+    A collection of common instructions used supported
+    by reMarkable bash-emulator
+"""
+
 import subprocess
 from typing import List, Dict
 
@@ -7,6 +12,12 @@ from src.util.RemarkableWorkspaceOLD import remarkable_workspace as workspace
 
 
 def cd(args: List[str]) -> None:
+    """
+    Instruction for change directory command
+
+    :param args: the path to which directory should be changed to
+    :return: None
+    """
     if len(args) == 0:
         workspace.set_current_collection(ROOT_COLLECTION)
     elif len(args) > 1:
@@ -22,9 +33,9 @@ def mv(args: List[str]) -> None:
     TODO: implement mv
 
     :param args: arguments given for the instruction
-    :return:
+    :return: None
     """
-    print("TODO: move stuff")
+    print(f"Move not implemented. Called with args: {args}")
 
 
 def rm(args: List[str]) -> None:
@@ -36,7 +47,7 @@ def rm(args: List[str]) -> None:
     :param args: possible arguments
     :return: None
     """
-    print("TODO: remove stuff")
+    print(f"Remove not implemented. Called with args: {args}")
 
 def ls(args: List[str]) -> None:
     """
@@ -49,22 +60,26 @@ def ls(args: List[str]) -> None:
     """
     remarkable_metadata = workspace.get_data()
 
+    print(f"List called with args: {args}")
+
     result = []
     for uuid, v in remarkable_metadata.items():
-        if remarkable_metadata[uuid].get('parent') != workspace.get_current_collection():
+        if v.get('parent') != workspace.get_current_collection():
             continue
         path_and_file = recurse_path(uuid, remarkable_metadata)
-        if remarkable_metadata[uuid].get('size'):
-            path_and_file = str(remarkable_metadata[uuid].get('size')) + '\t' + path_and_file
+        if v.get('size'):
+            path_and_file = str(v.get('size')) + '\t' + path_and_file
         result.append(path_and_file)
 
     for e in sorted(result):
         print(e)
 
-def clear():
-    subprocess.run("clear")
-
-
+def clear() -> None:
+    """
+        Clears bash terminal
+    :return: None
+    """
+    subprocess.run("clear", check=False)
 
 def recurse_path(uuid: str, remarkable_metadata: Dict) -> str:
     """
@@ -87,4 +102,5 @@ def recurse_path(uuid: str, remarkable_metadata: Dict) -> str:
     if remarkable_metadata[uuid].get('parent') == 'trash':
         return './trash/' + remarkable_metadata[uuid].get('visibleName')
 
-    return  recurse_path(remarkable_metadata[uuid]['parent'], remarkable_metadata) + "/" + remarkable_metadata[uuid].get('visibleName')
+    return  recurse_path(remarkable_metadata[uuid]['parent'],
+                         remarkable_metadata) + "/" + remarkable_metadata[uuid].get('visibleName')
