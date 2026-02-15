@@ -1,7 +1,7 @@
 from typing import Dict, Any, Optional
 
-from src.exception.NotFoundException import NotFoundException
-from src.exception.InvalidPathException import InvalidPathException
+from src.exception.not_found_exception import NotFoundException
+from src.exception.invalid_path_exception import InvalidPathException
 
 from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, INVALID_PATH
 

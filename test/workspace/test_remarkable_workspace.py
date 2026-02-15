@@ -1,9 +1,9 @@
 import unittest
 from typing import Dict
 
-from src.workspace.RemarkableWorkspace import RemarkableWorkspace
-from src.exception.NotFoundException import NotFoundException
-from src.exception.InvalidPathException import InvalidPathException
+from src.workspace.remarkable_workspace import RemarkableWorkspace
+from src.exception.not_found_exception import NotFoundException
+from src.exception.invalid_path_exception import InvalidPathException
 from src.constant import COLLECTION_NOT_FOUND, INVALID_PATH
 
 class RemarkableWorkspaceTest(unittest.TestCase):

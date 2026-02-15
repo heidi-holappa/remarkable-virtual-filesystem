@@ -3,7 +3,7 @@ import tarfile, json
 from typing import Dict, Any
 from io import BytesIO
 
-from src.data.MetadataSource import MetadataSource
+from src.data.metadata_source import MetadataSource
 from src.constant import REMOTE_PREFIX, SSH_CONNECT
 
 class RemarkableSSHMetadataSource(MetadataSource):

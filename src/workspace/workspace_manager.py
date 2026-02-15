@@ -1,7 +1,7 @@
 from typing import Optional
 
-from src.data import MetadataSource
-from src.workspace.RemarkableWorkspace import RemarkableWorkspace
+from src.data import metadata_source
+from src.workspace.remarkable_workspace import RemarkableWorkspace
 
 class WorkspaceManager:
 
