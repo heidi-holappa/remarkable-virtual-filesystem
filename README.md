@@ -16,6 +16,14 @@ Todo:
 ## Development
 
 
+### Pylint
+
+Execute pylint with 
+
+```bash
+pylint src/
+```
+
 ### Testing
 
 Create coverage data by running tests: 

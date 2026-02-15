@@ -1,5 +1,12 @@
+"""
+    Module providing an implementation of MetadataSource
+    responsible for interacting with the reMarkable device
+    via SSH connection
+"""
+
 import subprocess
-import tarfile, json
+import tarfile
+import json
 from typing import Dict, Any
 from io import BytesIO
 
@@ -7,8 +14,16 @@ from src.data.metadata_source import MetadataSource
 from src.constant import REMOTE_PREFIX, SSH_CONNECT
 
 class RemarkableSSHMetadataSource(MetadataSource):
+    """
+        An implementation of MetadataSource responsible for
+        interacting with the reMarkable device via SSH connection
+    """
 
     def load(self) -> dict[str, dict[str, Any]]:
+        """
+        A public method to load metadata into memory
+        :return: a dictionary of metadata
+        """
         data = self._fetch_metadata()
         sizes = self._get_file_sizes()
         for uuid, size in sizes.items():

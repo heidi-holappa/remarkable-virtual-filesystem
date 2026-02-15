@@ -1,3 +1,8 @@
+"""
+    Module for the functionalities of accessing
+    reMarkable metadata content
+"""
+
 from typing import Dict, Any, Optional
 
 from src.exception.not_found_exception import NotFoundException
@@ -6,6 +11,10 @@ from src.exception.invalid_path_exception import InvalidPathException
 from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, INVALID_PATH
 
 class RemarkableWorkspace:
+    """
+        Class for accessing metadata content from
+        reMarkable user collections
+    """
 
     def __init__(self, metadata: Dict[str, Dict[str, Any]]):
         self._data = metadata
@@ -29,7 +38,8 @@ class RemarkableWorkspace:
         :return: None
         """
         is_root = collection == ''
-        is_valid_collection = self._data.get(collection) and self._data[collection].get('type') == 'CollectionType'
+        is_valid_collection = (self._data.get(collection)
+                               and self._data[collection].get('type') == 'CollectionType')
         if not (is_root or is_valid_collection):
             raise NotFoundException(COLLECTION_NOT_FOUND)
         self._current_collection = collection
@@ -69,6 +79,12 @@ class RemarkableWorkspace:
         return None
 
     def get_current_path(self) -> str:
+        """
+        Get a human-readable bash-esque representation for the
+        current collection
+
+        :return: a string representing the current collection as a bash-path
+        """
         if self._current_collection == '':
             return "/"
         return self.generate_absolute_collection_path(self._current_collection)
@@ -92,7 +108,8 @@ class RemarkableWorkspace:
         if self._data[uuid].get('parent') == 'trash':
             return '/trash/' + self._data[uuid].get('visibleName')
 
-        return self.generate_absolute_collection_path(self._data[uuid]['parent']) + "/" + self._data[uuid].get('visibleName')
+        return (self.generate_absolute_collection_path(self._data[uuid]['parent']) +
+                "/" + self._data[uuid].get('visibleName'))
 
     def change_collection(self, path: str) -> None:
         """
@@ -112,18 +129,17 @@ class RemarkableWorkspace:
             # In absolute path traversal begins at root
             collection_pointer = ROOT_COLLECTION
 
-        for dir in directory_changes:
-            match dir:
+        for directory in directory_changes:
+            match directory:
                 case '' | '.':
                     continue
                 case '..':
                     collection_pointer = self.get_parent(collection_pointer)
                 case _:
-                    collection_pointer = self.get_collection(dir, collection_pointer)
+                    collection_pointer = self.get_collection(directory, collection_pointer)
             if collection_pointer is None:
                 break
         if collection_pointer is None:
             raise InvalidPathException(INVALID_PATH)
 
         self._current_collection = collection_pointer
-
