@@ -1,6 +1,6 @@
 from src.com.common import clear, ls, mv, rm, cd
 from typing import List
-from src.com.help import help
+from src.com.help import help_instruction
 from src.util.RemarkableWorkspaceOLD import remarkable_workspace as workspace
 
 while True:
@@ -24,7 +24,7 @@ while True:
         case "mv":
             mv(args)
         case "help":
-            help()
+            help_instruction()
         case "exit" | "x":
             break
         case _:
