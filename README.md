@@ -13,3 +13,22 @@ Todo:
 
 
 
+## Development
+
+
+### Testing
+
+Create coverage data by running tests: 
+```bash
+coverage run --source=src -m pytest
+```
+
+View report overview in terminal: 
+```bash
+coverage report
+```
+
+Generate HTML-report:
+```bash
+coverage html
+```
