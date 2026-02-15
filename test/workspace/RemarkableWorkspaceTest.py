@@ -56,7 +56,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
 
         self.assertTrue(COLLECTION_NOT_FOUND in str(context.exception))
 
-    ## Change directory tests
+    ## Change collection/directory tests
     def test_change_collection_from_root_to_direct_subpath(self) -> None:
 
         self.ws.change_collection("/A")
