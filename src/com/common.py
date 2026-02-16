@@ -4,7 +4,7 @@
 """
 
 import subprocess
-from typing import List, Dict
+from typing import List
 
 from src.constant import ROOT_COLLECTION
 from src.workspace.workspace_manager import WorkspaceManager
