@@ -7,24 +7,27 @@ import subprocess
 from typing import List, Dict
 
 from src.constant import ROOT_COLLECTION
+from src.workspace.workspace_manager import WorkspaceManager
 
-from src.util.RemarkableWorkspaceOLD import remarkable_workspace as workspace
 
-
-def cd(args: List[str]) -> None:
+def cd(args: List[str], workspace_manager: WorkspaceManager) -> None:
     """
     Instruction for change directory command
 
     :param args: the path to which directory should be changed to
+    :param workspace_manager: manager for reMarkable workspace
     :return: None
     """
+
+    ws = workspace_manager.get()
+
     if len(args) == 0:
-        workspace.set_current_collection(ROOT_COLLECTION)
+        ws.set_current_collection(ROOT_COLLECTION)
     elif len(args) > 1:
         print("Usage: cd OR cd <path>")
         return
     else:
-        workspace.change_collection(args[0])
+        ws.change_collection(args[0])
 
 def mv(args: List[str]) -> None:
     """
@@ -49,22 +52,25 @@ def rm(args: List[str]) -> None:
     """
     print(f"Remove not implemented. Called with args: {args}")
 
-def ls(args: List[str]) -> None:
+def ls(args: List[str], workspace_manager: WorkspaceManager) -> None:
     """
     A light implementation of the list command.
 
     TODO: add support for args
 
     :param args: arguments for the ls command
+    :param workspace_manager: manager for reMarkable workspace
     :return: None
     """
-    remarkable_metadata = workspace.get_data()
+    ws = workspace_manager.get()
+
+    remarkable_metadata = ws.get_data()
 
     print(f"List called with args: {args}")
 
     result = []
     for uuid, v in remarkable_metadata.items():
-        if v.get('parent') != workspace.get_current_collection():
+        if v.get('parent') != ws.get_current_collection():
             continue
         path_and_file = recurse_path(uuid, remarkable_metadata)
         if v.get('size'):

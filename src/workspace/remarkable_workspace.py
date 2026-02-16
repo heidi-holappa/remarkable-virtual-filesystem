@@ -20,6 +20,15 @@ class RemarkableWorkspace:
         self._data = metadata
         self._current_collection = ''
 
+
+    def get_data(self) -> Dict[str, Dict[str, Any]]:
+        """
+        A getter for the reMarkable filedata
+
+        :return: a dictionary of Remarkable file data
+        """
+        return self._data  # type: ignore
+
     def get_current_collection(self) -> str:
         """
         A getter for the current collection. An empty string
