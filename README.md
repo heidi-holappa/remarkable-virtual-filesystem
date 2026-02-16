@@ -40,3 +40,8 @@ Generate HTML-report:
 ```bash
 coverage html
 ```
+
+And for convenience: 
+```bash
+coverage run --source=src -m pytest && coverage html && xdg-open htmlcov/index.html
+```

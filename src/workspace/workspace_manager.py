@@ -5,6 +5,7 @@
 from typing import Optional
 
 from src.data.metadata_source import MetadataSource
+from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 
 class WorkspaceManager:
@@ -39,3 +40,6 @@ class WorkspaceManager:
         """
         self._workspace = RemarkableWorkspace(self._source.load())
         return self._workspace
+
+
+default_workspace_manager = WorkspaceManager(RemarkableSSHMetadataSource())
