@@ -72,7 +72,7 @@ def ls(args: List[str], workspace_manager: WorkspaceManager) -> None:
     for uuid, v in remarkable_metadata.items():
         if v.get('parent') != ws.get_current_collection():
             continue
-        path_and_file = recurse_path(uuid, remarkable_metadata)
+        path_and_file = ws.generate_absolute_collection_path(uuid)
         if v.get('size'):
             path_and_file = str(v.get('size')) + '\t' + path_and_file
         result.append(path_and_file)
@@ -86,27 +86,3 @@ def clear() -> None:
     :return: None
     """
     subprocess.run("clear", check=False)
-
-def recurse_path(uuid: str, remarkable_metadata: Dict) -> str:
-    """
-    A helper method to find the path for each entity.
-
-    TODO: remove when code uses workspace implementation of this
-
-    :param uuid: entity's uuid
-    :param remarkable_metadata: a reference to the dictionary of metadata
-    :return: a string representation of the path
-    """
-
-    if not remarkable_metadata.get(uuid):
-        return './<NA>'
-
-    # print(f"data for {uuid}: {remarkable_metadata.get(uuid)}")
-    if remarkable_metadata[uuid].get('parent') == '':
-        return "./" + remarkable_metadata[uuid]['visibleName']
-
-    if remarkable_metadata[uuid].get('parent') == 'trash':
-        return './trash/' + remarkable_metadata[uuid].get('visibleName')
-
-    return  recurse_path(remarkable_metadata[uuid]['parent'],
-                         remarkable_metadata) + "/" + remarkable_metadata[uuid].get('visibleName')
