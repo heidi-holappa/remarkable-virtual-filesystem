@@ -28,6 +28,7 @@ LLM used:
 """
 
 import unittest
+import subprocess
 import time
 import uuid
 from unittest.mock import patch, MagicMock
@@ -37,6 +38,7 @@ import json
 from typing import Dict
 
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
+from src.constant import SSH_CONNECT, REMOTE_PREFIX
 
 
 class TestRemarkableSSHMetadataSource(unittest.TestCase):
@@ -191,8 +193,56 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         self.assertIn("error", str(ctx.exception))
 
     # --------------------------------------------------
+    # write_metadata_to_remarkable()
+    # --------------------------------------------------
+
+    @patch("subprocess.Popen")
+    def test_metadata_write_operation_succeeds(self, mock_popen) -> None:
+        # Assuming the method under test is provided a valid UUID
+        entry_uuid = "327edac1-e3ca-4e1d-a4e0-e042603407c8"
+
+        # Assuming the method under test is provided valid metadata
+        valid_metadata = {
+            "createdTime": "1768039700239",
+            "lastModified": "1768039700238",
+            "new": False,
+            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
+            "pinned": False,
+            "source": "",
+            "type": "CollectionType",
+            "visibleName": "61-90"
+        }
+
+        # And assuming the process finished successfully
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = ("", "")
+        mock_proc.returncode = 0
+
+        mock_popen.return_value.__enter__.return_value = mock_proc
+
+        # When method under test is invoked
+        self.source.write_metadata_to_remarkable(entry_uuid, valid_metadata)
+
+        # Then the remote device is called with the correct instruction
+        expected_filename = f"{entry_uuid}.metadata"
+        expected_cmd = REMOTE_PREFIX + f"cat > '{expected_filename}'"
+
+        mock_popen.assert_called_once_with(
+            SSH_CONNECT + [expected_cmd],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        # Then communicate is passed the correct JSON data as an argument
+        expected_content = json.dumps(valid_metadata, indent=4)
+        mock_proc.communicate.assert_called_once_with(expected_content)
+
+
+
+    # --------------------------------------------------
     # is_valid_metadata()
-    # (tests written by heidi-holappa)
     # --------------------------------------------------
 
     def test_valid_metadata_entry_is_accepted(self) -> None:
