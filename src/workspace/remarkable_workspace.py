@@ -122,9 +122,24 @@ class RemarkableWorkspace:
 
     def change_collection(self, path: str) -> None:
         """
+        Attempts to change current collection to the provided
+        collection. If traversal of given path fails to locate
+        a collection, InvalidPathException is raised.
+
+        :param path: a string representation of a path
+        :return: an optional uuid of the target collection or None if collection could not be found
+        """
+        collection_pointer = self.traverse_path(path)
+        if collection_pointer is None:
+            raise InvalidPathException(INVALID_PATH)
+
+        self._current_collection = collection_pointer
+
+    def traverse_path(self, path: str) -> str:
+        """
         Splits the provided path into a list of entries and tries to
         traverse through the given path changes. At its simplest a path
-        change can be travesing to one directory above the current position
+        change can be traversing to one directory above the current position
         with '..' or into a direct subdirectory.
 
         See the project wiki for a comprehensive list of path changing rules.
@@ -148,7 +163,18 @@ class RemarkableWorkspace:
                     collection_pointer = self.get_collection(directory, collection_pointer)
             if collection_pointer is None:
                 break
-        if collection_pointer is None:
-            raise InvalidPathException(INVALID_PATH)
 
-        self._current_collection = collection_pointer
+        return collection_pointer
+
+    def handle_move_instruction(self, filename: str, path: str) -> None:
+        """
+        As an MVP the move instruction moves on CollectionType,
+        i.e., changes the parent of the given document type to the
+        provided parent.
+
+        :param filename: name of the file to be moved
+        :param path: the directory of the target parent
+        :return: None
+        """
+
+
