@@ -35,10 +35,12 @@ from unittest.mock import patch, MagicMock
 from io import BytesIO, StringIO
 import tarfile
 import json
-from typing import Dict
+from typing import Dict, Tuple
 
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
 from src.constant import SSH_CONNECT, REMOTE_PREFIX
+from src.exception.invalid_metadata_exception import InvalidMetadataException
+from src.exception.remarkable_write_exception import RemarkableWriteException
 
 
 class TestRemarkableSSHMetadataSource(unittest.TestCase):
@@ -198,20 +200,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
     @patch("subprocess.Popen")
     def test_metadata_write_operation_succeeds(self, mock_popen) -> None:
-        # Assuming the method under test is provided a valid UUID
-        entry_uuid = "327edac1-e3ca-4e1d-a4e0-e042603407c8"
 
-        # Assuming the method under test is provided valid metadata
-        valid_metadata = {
-            "createdTime": "1768039700239",
-            "lastModified": "1768039700238",
-            "new": False,
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
 
         # And assuming the process finished successfully
         mock_proc = MagicMock()
@@ -221,7 +210,8 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         mock_popen.return_value.__enter__.return_value = mock_proc
 
         # When method under test is invoked
-        self.source.write_metadata_to_remarkable(entry_uuid, valid_metadata)
+        entry_uuid, valid_metadata = self.call_write_metadata_to_remarkable_with_valid_data()
+
 
         # Then the remote device is called with the correct instruction
         expected_filename = f"{entry_uuid}.metadata"
@@ -239,6 +229,81 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         expected_content = json.dumps(valid_metadata, indent=4)
         mock_proc.communicate.assert_called_once_with(expected_content)
 
+    @patch("subprocess.Popen")
+    def test_metadata_write_fails_with_returncode(self, mock_popen) -> None:
+        # And assuming the process finished successfully
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = ("", "")
+        mock_proc.returncode = 1
+
+        mock_popen.return_value.__enter__.return_value = mock_proc
+
+
+        with self.assertRaises(RemarkableWriteException) as context:
+            self.call_write_metadata_to_remarkable_with_valid_data()
+
+
+        self.assertTrue("Failed to write metadata" in str(context.exception))
+
+    @patch("subprocess.Popen", side_effect=OSError('test'))
+    def test_metadata_write_fails_due_to_os_error(self, mock_popen) -> None:
+        # And assuming the process finished successfully
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = ("", "")
+        mock_proc.returncode = 0
+
+        mock_popen.return_value.__enter__.return_value = mock_proc
+
+        with self.assertRaises(RemarkableWriteException) as context:
+            self.call_write_metadata_to_remarkable_with_valid_data()
+
+        self.assertTrue("OS error while writing metadata" in str(context.exception))
+
+
+
+    def call_write_metadata_to_remarkable_with_valid_data(self) -> Tuple[str, Dict[str, str | bool]]:
+        # Assuming the method under test is provided a valid UUID
+        entry_uuid = "327edac1-e3ca-4e1d-a4e0-e042603407c8"
+
+        # Assuming the method under test is provided valid metadata
+        valid_metadata = {
+            "createdTime": "1768039700239",
+            "lastModified": "1768039700238",
+            "new": False,
+            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
+            "pinned": False,
+            "source": "",
+            "type": "CollectionType",
+            "visibleName": "61-90"
+        }
+
+        self.source.write_metadata_to_remarkable(entry_uuid, valid_metadata)
+
+        return entry_uuid, valid_metadata
+
+
+
+    @patch("subprocess.Popen")
+    def test_metadata_write_operation_fails_due_to_invalid_metadata(self, mock_popen) -> None:
+        # Assuming the method under test is provided a valid UUID
+        entry_uuid = "327edac1-e3ca-4e1d-a4e0-e042603407c8"
+
+        # Assuming the method under test is provided invalid metadata
+        invalid_metadata = {
+            "createdTime": "1768039700239",
+            "lastModified": "1768039700238",
+            "new": False,
+            "parent": "invalid-uuid",
+            "pinned": False,
+            "source": "",
+            "type": "CollectionType",
+            "visibleName": "61-90"
+        }
+
+        with self.assertRaises(InvalidMetadataException) as context:
+            self.source.write_metadata_to_remarkable(entry_uuid, invalid_metadata)
+
+        self.assertTrue("metadata was invalid" in str(context.exception))
 
 
     # --------------------------------------------------
