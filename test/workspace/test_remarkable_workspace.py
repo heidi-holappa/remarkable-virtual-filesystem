@@ -1,6 +1,9 @@
 import unittest
 from typing import Dict
+from unittest.mock import patch, MagicMock
 
+from src.data.metadata_source import MetadataSource
+from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from src.exception.not_found_exception import NotFoundException
 from src.exception.invalid_path_exception import InvalidPathException
@@ -8,7 +11,8 @@ from src.constant import COLLECTION_NOT_FOUND, INVALID_PATH
 
 class RemarkableWorkspaceTest(unittest.TestCase):
 
-    def setUp(self) -> None:
+    @patch.object(RemarkableSSHMetadataSource, "load")
+    def setUp(self, mock_load) -> None:
         self.TEST_DATA: Dict[str, Dict[str, str]] = {
             "": {"type": "CollectionType", "parent": "", "visibleName": ""},
             "a": {"type": "CollectionType", "parent": "", "visibleName": "A"},
@@ -16,7 +20,10 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             "b": {"type": "CollectionType", "parent": "", "visibleName": "B"},
             "b_0": {"type": "CollectionType", "parent": "b", "visibleName": "B_0"},
         }
-        self.ws = RemarkableWorkspace(self.TEST_DATA)
+
+        mock_load.return_value = self.TEST_DATA
+
+        self.ws = RemarkableWorkspace(RemarkableSSHMetadataSource())
 
     # Get parent
     def test_get_parent_returns_correct_parent_when_parent_is_other_than_root(self) -> None:

@@ -28,7 +28,7 @@ class WorkspaceManager:
         :return: an instance of the reMarkable workspace
         """
         if self._workspace is None:
-            self._workspace = RemarkableWorkspace(self._source.load())
+            self._workspace = RemarkableWorkspace(self._source)
         return self._workspace
 
     def refresh(self) -> RemarkableWorkspace:
@@ -38,7 +38,7 @@ class WorkspaceManager:
 
         :return: an instance of reMarkable workspace
         """
-        self._workspace = RemarkableWorkspace(self._source.load())
+        self._workspace = RemarkableWorkspace(self._source)
         return self._workspace
 
 
