@@ -7,6 +7,7 @@ import subprocess
 from typing import List
 
 from src.constant import ROOT_COLLECTION
+from src.workspace.remarkable_workspace import RemarkableWorkspace
 from src.workspace.workspace_manager import WorkspaceManager
 
 
@@ -19,7 +20,7 @@ def cd(args: List[str], workspace_manager: WorkspaceManager) -> None:
     :return: None
     """
 
-    ws = workspace_manager.get()
+    ws: RemarkableWorkspace = workspace_manager.get()
 
     if len(args) == 0:
         ws.set_current_collection(ROOT_COLLECTION)
@@ -29,16 +30,22 @@ def cd(args: List[str], workspace_manager: WorkspaceManager) -> None:
     else:
         ws.change_collection(args[0])
 
-def mv(args: List[str]) -> None:
+def mv(args: List[str], workspace_manager: WorkspaceManager) -> None:
     """
     A light implementation of move command
 
-    TODO: implement mv
-
     :param args: arguments given for the instruction
+    :param workspace_manager: manager for reMarkable workspace
     :return: None
     """
-    print(f"Move not implemented. Called with args: {args}")
+    ws: RemarkableWorkspace = workspace_manager.get()
+
+    if len(args) == 2:
+        ws.handle_move_instruction(*args)
+    else:
+        print("Usage (mvp): mv <filename without path> <path>")
+
+
 
 
 def rm(args: List[str]) -> None:

@@ -15,7 +15,9 @@ class TestCommon(unittest.TestCase):
         self.manager = WorkspaceManager(StubRemarkableMetadataSource())
         self.ws = self.manager.get()
 
+    # -------------------------------
     # cd instruction
+    # -------------------------------
     def test_cd_without_args_sets_current_path_to_root(self) -> None:
         self.ws.set_current_collection("a")
         cd([], self.manager)
@@ -43,8 +45,9 @@ class TestCommon(unittest.TestCase):
             output: str = mock_out.getvalue()
             self.assertTrue("Usage: cd OR cd <path>" in output, msg=f"Output was: {output}")
 
-
+    # -------------------------------
     # ls instruction
+    # -------------------------------
     def test_ls_root(self) -> None:
         self.ws.set_current_collection("")
         with patch('sys.stdout', new=StringIO()) as mock_out:
@@ -68,8 +71,9 @@ class TestCommon(unittest.TestCase):
             self.assertTrue("1024 kB" in output, msg=f"Output was: {output}")
             self.assertTrue("/A/Fairytale.pdf" in output, msg=f"Output was: {output}")
 
-
+    # -------------------------------
     # clear instruction
+    # -------------------------------
     @patch("src.com.common.subprocess.run")
     def test_clear(self, mock_run: MagicMock) -> None:
         """
@@ -83,8 +87,9 @@ class TestCommon(unittest.TestCase):
         clear()
         mock_run.assert_called_once_with("clear", check=False)
 
-
+    # -------------------------------
     # mv instruction
+    # -------------------------------
     def test_mv(self) -> None:
         """
         Move instruction is not yet implemented. This test will
@@ -93,12 +98,13 @@ class TestCommon(unittest.TestCase):
         """
         self.ws.set_current_collection("")
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            mv([])
+            mv([], self.manager)
             output: str = mock_out.getvalue()
-            self.assertTrue("Move not implemented." in output, msg=f"Output was: {output}")
+            self.assertTrue("Usage (mvp):" in output, msg=f"Output was: {output}")
 
-
+    # -------------------------------
     # rm instruction
+    # -------------------------------
     def test_rm(self) -> None:
         """
         Move instruction is not yet implemented. This test will
