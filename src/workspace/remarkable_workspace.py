@@ -3,12 +3,16 @@
     reMarkable metadata content
 """
 
+import copy
 from typing import Dict, Any, Optional
 
+from src.data.metadata_source import MetadataSource
+from src.exception.invalid_metadata_exception import InvalidMetadataException
 from src.exception.not_found_exception import NotFoundException
 from src.exception.invalid_path_exception import InvalidPathException
 
 from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, INVALID_PATH
+from src.dto.metadata import Metadata
 
 class RemarkableWorkspace:
     """
@@ -16,8 +20,9 @@ class RemarkableWorkspace:
         reMarkable user collections
     """
 
-    def __init__(self, metadata: Dict[str, Dict[str, Any]]):
-        self._data = metadata
+    def __init__(self, source: MetadataSource):
+        self._source = source
+        self._data = self._source.load()
         self._current_collection = ''
 
 
@@ -27,7 +32,24 @@ class RemarkableWorkspace:
 
         :return: a dictionary of Remarkable file data
         """
-        return self._data  # type: ignore
+        return self._data
+
+
+    def get_data_for_uuid(self, entry_uuid: str) -> Dict[str, Any]:
+        """
+        Returns the data for the provided UUID. If data
+        is not found, raises a NotFoundException
+
+        :return: a dictionary of metadata
+        """
+
+        data: Optional[Dict[str, Any]] = self._data.get(entry_uuid)
+
+        if not data:
+            raise NotFoundException(f"Metadata not found for {entry_uuid}")
+
+        return data
+
 
     def get_current_collection(self) -> str:
         """
@@ -122,9 +144,24 @@ class RemarkableWorkspace:
 
     def change_collection(self, path: str) -> None:
         """
+        Attempts to change current collection to the provided
+        collection. If traversal of given path fails to locate
+        a collection, InvalidPathException is raised.
+
+        :param path: a string representation of a path
+        :return: an optional uuid of the target collection or None if collection could not be found
+        """
+        collection_pointer = self.traverse_path(path)
+        if collection_pointer is None:
+            raise InvalidPathException(INVALID_PATH)
+
+        self._current_collection = collection_pointer
+
+    def traverse_path(self, path: str) -> str:
+        """
         Splits the provided path into a list of entries and tries to
         traverse through the given path changes. At its simplest a path
-        change can be travesing to one directory above the current position
+        change can be traversing to one directory above the current position
         with '..' or into a direct subdirectory.
 
         See the project wiki for a comprehensive list of path changing rules.
@@ -148,7 +185,71 @@ class RemarkableWorkspace:
                     collection_pointer = self.get_collection(directory, collection_pointer)
             if collection_pointer is None:
                 break
-        if collection_pointer is None:
+
+        return collection_pointer
+
+    def handle_move_instruction(self, filename: str, path: str) -> None:
+        """
+        As an MVP the move instruction moves one DocumentType,
+        i.e., changes the parent of the given DocumentType to the
+        provided parent.
+
+        :param filename: name of the file to be moved
+        :param path: the directory of the target parent
+        :return: None
+        """
+
+        # Get the UUID of the new parent
+        target_uuid: Optional[str] = self.traverse_path(path)
+        if target_uuid is None:
             raise InvalidPathException(INVALID_PATH)
 
-        self._current_collection = collection_pointer
+        try:
+            # Get the metadata and UUID of the file in question
+            entry_uuid: str = self.get_uuid_with_visible_name_and_parent(filename, self._current_collection)
+
+            new_metadata_entry: Dict[str, Any] = copy.deepcopy(self._data.get(entry_uuid))
+            new_metadata_entry['parent'] = target_uuid
+
+            # Create a Metadata DTO for given UUID
+            metadata: Metadata = Metadata.from_dict(new_metadata_entry)
+
+            # Call RemarkableSshMetadataSource to store the metadata entry
+            self._source.write(entry_uuid, metadata)
+
+            # Update local data
+            self._data[entry_uuid] = new_metadata_entry
+
+            # TODO: should reMarkable be refreshed? That should perhaps be
+            #        its own ticket.
+
+        except (NotFoundException, InvalidMetadataException) as e:
+            print(f"ERROR: {e} ")
+
+    def get_uuid_with_visible_name_and_parent(self, filename: str, parent_uuid: str) -> str:
+        """
+        Gets the data for the given entry and composes a dictionary
+        representation of the metadata. The entry is identified by
+        the following rules:
+
+          1. the visibleName of the entry is the filename
+          2. the parent of the entry is the parent_uuid
+
+        If no match is found, a NotFoundException is raised.
+
+        :param filename: the visibleName of the entry
+        :param parent_uuid: the parent of the entry
+        :return: a tuple containing the UUID of the entry and
+                 a dictionary representation of the metadata
+        """
+
+        print(f"filename: {filename}, parent: {parent_uuid}")
+
+        for k, v in self._data.items():
+            if v.get('parent') == parent_uuid:
+                print(v.get('visibleName'))
+            if v.get('parent') == parent_uuid and v.get('visibleName') == filename:
+                return k
+
+        path: Optional[str] = self.generate_absolute_collection_path(parent_uuid)
+        raise NotFoundException(f"Metadata not found for {path}/{filename}")

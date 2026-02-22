@@ -3,6 +3,8 @@
 """
 from typing import Dict, Any
 
+from src.dto.metadata import Metadata
+
 class MetadataSource:
     """
         Base class for the source of metadata
@@ -12,5 +14,28 @@ class MetadataSource:
         """
         A public method to load metadata into memory
         :return: a dictionary of metadata
+        """
+        raise NotImplementedError
+
+
+    def refresh(self) -> None:
+        """
+        Restarts the reMarkable UI-application.
+        Any changes made to metadata on reMarkable
+        are only visible on the device after the
+        application is restarted.
+
+        :return: None
+        """
+
+
+    def write(self, entry_uuid: str, metadata: Metadata) -> None:
+        """
+        A public method to write a metadata entry
+        into reMarkable. If an entry with the same
+        UUID exists in the device, it will be
+        overwritten.
+
+        :return: None
         """
         raise NotImplementedError

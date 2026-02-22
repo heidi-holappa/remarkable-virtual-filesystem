@@ -5,13 +5,19 @@
 """
 
 import subprocess
+import re
+import time
 import tarfile
 import json
 from typing import Dict, Any
 from io import BytesIO
+from collections.abc import Callable
+from src.dto.metadata import Metadata
 
 from src.data.metadata_source import MetadataSource
 from src.constant import REMOTE_PREFIX, SSH_CONNECT
+from src.exception.remarkable_write_exception import RemarkableWriteException
+from src.exception.invalid_metadata_exception import InvalidMetadataException
 
 class RemarkableSSHMetadataSource(MetadataSource):
     """
@@ -19,7 +25,15 @@ class RemarkableSSHMetadataSource(MetadataSource):
         interacting with the reMarkable device via SSH connection
     """
 
-    def load(self) -> dict[str, dict[str, Any]]:
+    _UUID_REGEX = re.compile(
+        r"^[0-9a-f]{8}-"
+        r"[0-9a-f]{4}-"
+        r"[0-9a-f]{4}-"
+        r"[0-9a-f]{4}-"
+        r"[0-9a-f]{12}$"
+    )
+
+    def load(self) -> Dict[str, Dict[str, Any]]:
         """
         A public method to load metadata into memory
         :return: a dictionary of metadata
@@ -101,8 +115,8 @@ class RemarkableSSHMetadataSource(MetadataSource):
         to provide intuition on the total disk space allocated
         to each entity, including the possible user notations.
 
-        Uses common tools such as du, awk and split found in
-        BusyBox to gather the information.
+        Uses common tools such as ``du``, ``awk`` and ``split``
+        found in BusyBox to gather the information.
 
         :return: a dictionary with entity UUIDs as keys and
                     disk space allocated to each entity in kilobytes
@@ -135,3 +149,45 @@ class RemarkableSSHMetadataSource(MetadataSource):
             sizes[uuid] = int(size)
 
         return sizes
+
+    def write(self, entry_uuid: str, metadata: Metadata) -> None:
+        """Write metadata file to reMarkable
+
+        Writes the provided metadata dictionary into reMarkable user file
+        directory in a file named ``<uuid>.metadata``. A possible existing
+        file on the device is overwritten.
+
+        raises:
+          **RemarkableWriteException**: indicates an exception occurred during write operation
+
+        :param entry_uuid: the UUID for which a metadata-file is to be written
+        :param metadata: a Metadata DTO containing the metadata to be written
+        :return: None
+        """
+
+        metadata_filename = f"{entry_uuid}.metadata"
+        metadata_content = json.dumps(metadata.to_dict(), indent=4)
+
+        cmd = REMOTE_PREFIX + f"cat > '{metadata_filename}'"
+
+        try:
+            with subprocess.Popen(
+                    SSH_CONNECT + [cmd],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+            ) as proc:
+
+                stdout, stderr = proc.communicate(metadata_content)
+
+                if proc.returncode != 0:
+                    raise RemarkableWriteException(
+                        f"Failed to write metadata: {stderr.strip()}"
+                    )
+
+        except OSError as e:
+            raise RemarkableWriteException(
+                f"OS error while writing metadata: {e}"
+            ) from e
+

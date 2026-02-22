@@ -16,9 +16,9 @@ All interactions with the reMarkable device (SSH, subprocess calls,
 and remote command execution) are fully mocked to ensure that tests
 run deterministically and do not require a physical device.
 
-These tests were initially generated with the assistance of a Large
-Language Model (LLM) and subsequently reviewed and validated by a
-human developer.
+The tests for _fetch_metadata and _get_files_sizes were initially
+generated with the assistance of a Large Language Model (LLM) and
+subsequently reviewed and validated by a human developer.
 
 LLM used:
 - Model: ChatGPT
@@ -28,12 +28,21 @@ LLM used:
 """
 
 import unittest
+import subprocess
+import time
+import uuid
 from unittest.mock import patch, MagicMock
-from io import BytesIO
+from io import BytesIO, StringIO
 import tarfile
 import json
+from typing import Dict, Tuple
 
+from src.dto.entry_type_enum import EntityType
+from src.dto.metadata import Metadata
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
+from src.constant import SSH_CONNECT, REMOTE_PREFIX
+from src.exception.invalid_metadata_exception import InvalidMetadataException
+from src.exception.remarkable_write_exception import RemarkableWriteException
 
 
 class TestRemarkableSSHMetadataSource(unittest.TestCase):
@@ -186,3 +195,92 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
             self.source._get_file_sizes()
 
         self.assertIn("error", str(ctx.exception))
+
+    # --------------------------------------------------
+    # write_metadata_to_remarkable()
+    # --------------------------------------------------
+
+    @patch("subprocess.Popen")
+    def test_metadata_write_operation_succeeds(self, mock_popen) -> None:
+
+
+        # And assuming the process finished successfully
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = ("", "")
+        mock_proc.returncode = 0
+
+        mock_popen.return_value.__enter__.return_value = mock_proc
+
+        # When method under test is invoked
+        entry_uuid, valid_metadata_as_dict = self.call_write_metadata_to_remarkable_with_valid_data()
+
+
+        # Then the remote device is called with the correct instruction
+        expected_filename = f"{entry_uuid}.metadata"
+        expected_cmd = REMOTE_PREFIX + f"cat > '{expected_filename}'"
+
+        mock_popen.assert_called_once_with(
+            SSH_CONNECT + [expected_cmd],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        # Then communicate is passed the correct JSON data as an argument
+        expected_content = json.dumps(valid_metadata_as_dict, indent=4)
+        mock_proc.communicate.assert_called_once_with(expected_content)
+
+    @patch("subprocess.Popen")
+    def test_metadata_write_fails_with_returncode(self, mock_popen) -> None:
+        # And assuming the process finished successfully
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = ("", "")
+        mock_proc.returncode = 1
+
+        mock_popen.return_value.__enter__.return_value = mock_proc
+
+
+        with self.assertRaises(RemarkableWriteException) as context:
+            self.call_write_metadata_to_remarkable_with_valid_data()
+
+
+        self.assertTrue("Failed to write metadata" in str(context.exception))
+
+    @patch("subprocess.Popen", side_effect=OSError('test'))
+    def test_metadata_write_fails_due_to_os_error(self, mock_popen) -> None:
+        # And assuming the process finished successfully
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = ("", "")
+        mock_proc.returncode = 0
+
+        mock_popen.return_value.__enter__.return_value = mock_proc
+
+        with self.assertRaises(RemarkableWriteException) as context:
+            self.call_write_metadata_to_remarkable_with_valid_data()
+
+        self.assertTrue("OS error while writing metadata" in str(context.exception))
+
+
+
+    def call_write_metadata_to_remarkable_with_valid_data(self) -> Tuple[str, Dict[str, str | bool]]:
+        # Assuming the method under test is provided a valid UUID
+        entry_uuid = "327edac1-e3ca-4e1d-a4e0-e042603407c8"
+
+        # Assuming the method under test is provided valid metadata
+        valid_metadata = Metadata(
+            created_time=1768039700239,
+            last_modified=1768039700238,
+            new=False,
+            parent="d433121d-b050-4740-8db7-0ed11b980371",
+            pinned=False,
+            source="",
+            type=EntityType.COLLECTION_TYPE,
+            visible_name="61-90"
+        )
+
+        self.source.write(entry_uuid, valid_metadata)
+
+        return entry_uuid, valid_metadata.to_dict()
+
+
