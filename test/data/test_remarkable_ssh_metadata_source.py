@@ -37,6 +37,8 @@ import tarfile
 import json
 from typing import Dict, Tuple
 
+from src.dto.entry_type_enum import EntityType
+from src.dto.metadata import Metadata
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
 from src.constant import SSH_CONNECT, REMOTE_PREFIX
 from src.exception.invalid_metadata_exception import InvalidMetadataException
@@ -210,7 +212,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         mock_popen.return_value.__enter__.return_value = mock_proc
 
         # When method under test is invoked
-        entry_uuid, valid_metadata = self.call_write_metadata_to_remarkable_with_valid_data()
+        entry_uuid, valid_metadata_as_dict = self.call_write_metadata_to_remarkable_with_valid_data()
 
 
         # Then the remote device is called with the correct instruction
@@ -226,7 +228,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         )
 
         # Then communicate is passed the correct JSON data as an argument
-        expected_content = json.dumps(valid_metadata, indent=4)
+        expected_content = json.dumps(valid_metadata_as_dict, indent=4)
         mock_proc.communicate.assert_called_once_with(expected_content)
 
     @patch("subprocess.Popen")
@@ -266,296 +268,19 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         entry_uuid = "327edac1-e3ca-4e1d-a4e0-e042603407c8"
 
         # Assuming the method under test is provided valid metadata
-        valid_metadata = {
-            "createdTime": "1768039700239",
-            "lastModified": "1768039700238",
-            "new": False,
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
+        valid_metadata = Metadata(
+            created_time=1768039700239,
+            last_modified=1768039700238,
+            new=False,
+            parent="d433121d-b050-4740-8db7-0ed11b980371",
+            pinned=False,
+            source="",
+            type=EntityType.COLLECTION_TYPE,
+            visible_name="61-90"
+        )
 
-        self.source.write_metadata_to_remarkable(entry_uuid, valid_metadata)
+        self.source.write(entry_uuid, valid_metadata)
 
-        return entry_uuid, valid_metadata
-
-
-
-    @patch("subprocess.Popen")
-    def test_metadata_write_operation_fails_due_to_invalid_metadata(self, mock_popen) -> None:
-        # Assuming the method under test is provided a valid UUID
-        entry_uuid = "327edac1-e3ca-4e1d-a4e0-e042603407c8"
-
-        # Assuming the method under test is provided invalid metadata
-        invalid_metadata = {
-            "createdTime": "1768039700239",
-            "lastModified": "1768039700238",
-            "new": False,
-            "parent": "invalid-uuid",
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        with self.assertRaises(InvalidMetadataException) as context:
-            self.source.write_metadata_to_remarkable(entry_uuid, invalid_metadata)
-
-        self.assertTrue("metadata was invalid" in str(context.exception))
+        return entry_uuid, valid_metadata.to_dict()
 
 
-    # --------------------------------------------------
-    # is_valid_metadata()
-    # --------------------------------------------------
-
-    def test_valid_metadata_entry_is_accepted(self) -> None:
-        valid_metadata: Dict[str, str | bool] = {
-            "createdTime": "1768039700239",
-            "lastModified": "1768039700238",
-            "new": False,
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        self.assertTrue(self.source.is_valid_metadata(valid_metadata))
-
-    def test_metadata_with_root_as_parent_is_accepted(self) -> None:
-        valid_metadata: Dict[str, str | bool] = {
-            "createdTime": "1768039700239",
-            "lastModified": "1768039700238",
-            "new": False,
-            "parent": "",
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        self.assertTrue(self.source.is_valid_metadata(valid_metadata))
-
-    def test_metadata_with_missing_key_parent_is_rejected(self) -> None:
-        metadata_with_missing_parent_field: Dict[str, str | bool] = {
-            "createdTime": "1768039700239",
-            "lastModified": "1768039700238",
-            "new": False,
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        self.assertFalse(self.source.is_valid_metadata(metadata_with_missing_parent_field))
-
-    def test_metadata_with_additional_key_size_is_rejected(self) -> None:
-        invalid_metadata_additional_key_size: Dict[str, str | bool] = {
-            "createdTime": "1768039700239",
-            "lastModified": "1768039700238",
-            "new": False,
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90",
-            "size": "4 kB"
-        }
-
-        self.assertFalse(self.source.is_valid_metadata(invalid_metadata_additional_key_size))
-
-    def test_metadata_with_invalid_created_time(self) -> None:
-        expected_output = "invalid value in metadata field createdTime"
-        invalid_metadata: Dict[str, str | bool] = {
-            "createdTime": "-1",
-            "lastModified": "1768039700238",
-            "new": False,
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        self.invalid_value_in_given_field(invalid_metadata, expected_output)
-
-
-    def test_case_invalid_value_in_field_last_modified(self) -> None:
-        in_future_ms = int(time.time() * 1000) + 100000
-
-        expected_output = "invalid value in metadata field lastModified"
-        invalid_metadata: Dict[str, str | bool] = {
-            "createdTime": "1768039700238",
-            "lastModified": str(in_future_ms),
-            "new": False,
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        self.invalid_value_in_given_field(invalid_metadata, expected_output)
-
-    def test_case_non_string_value_in_field_last_modified(self) -> None:
-        expected_output = "invalid value in metadata field lastModified"
-        invalid_metadata: Dict[str, str | bool] = {
-            "createdTime": "1768039700238",
-            "lastModified": 1768039700238,
-            "new": False,
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        self.invalid_value_in_given_field(invalid_metadata, expected_output)
-
-    def test_edge_case_invalid_digit_value_in_field_last_modified(self) -> None:
-        expected_output = "invalid value in metadata field lastModified"
-        invalid_metadata: Dict[str, str | bool] = {
-            "createdTime": "1768039700238",
-            "lastModified": "176803970023\u00B2",
-            "new": False,
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        self.invalid_value_in_given_field(invalid_metadata, expected_output)
-
-    def test_edge_case_too_small_value_in_field_last_modified(self) -> None:
-        expected_output = "invalid value in metadata field lastModified"
-        invalid_metadata: Dict[str, str | bool] = {
-            "createdTime": "1768039700238",
-            "lastModified": "176803970023",
-            "new": False,
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        self.invalid_value_in_given_field(invalid_metadata, expected_output)
-
-    def test_case_invalid_value_in_field_new(self) -> None:
-        expected_output = "invalid value in metadata field new"
-        invalid_metadata: Dict[str, str | bool] = {
-            "createdTime": "1768039700238",
-            "lastModified": "1768039700238",
-            "new": "false",
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        self.invalid_value_in_given_field(invalid_metadata, expected_output)
-
-
-    def test_case_invalid_string_value_in_field_parent(self) -> None:
-        expected_output = "invalid value in metadata field parent"
-        invalid_metadata: Dict[str, str | bool] = {
-            "createdTime": "1768039700238",
-            "lastModified": "1768039700238",
-            "new": True,
-            "parent": "123-456-xxy",
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        self.invalid_value_in_given_field(invalid_metadata, expected_output)
-
-    def test_case_non_string_value_in_field_parent(self) -> None:
-        expected_output = "invalid value in metadata field parent"
-        invalid_metadata: Dict[str, str | bool] = {
-            "createdTime": "1768039700238",
-            "lastModified": "1768039700238",
-            "new": True,
-            "parent": uuid.uuid1,
-            "pinned": False,
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        self.invalid_value_in_given_field(invalid_metadata, expected_output)
-
-
-    def test_case_invalid_value_in_field_pinned(self) -> None:
-        expected_output = "invalid value in metadata field pinned"
-        invalid_metadata: Dict[str, str | bool] = {
-            "createdTime": "1768039700238",
-            "lastModified": "1768039700238",
-            "new": True,
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": "true",
-            "source": "",
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        self.invalid_value_in_given_field(invalid_metadata, expected_output)
-
-    def test_case_invalid_value_in_field_source(self) -> None:
-        expected_output = "invalid value in metadata field source"
-        invalid_metadata: Dict[str, str | bool] = {
-            "createdTime": "1768039700238",
-            "lastModified": "1768039700238",
-            "new": True,
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": False,
-            "source": None,
-            "type": "CollectionType",
-            "visibleName": "61-90"
-        }
-
-        self.invalid_value_in_given_field(invalid_metadata, expected_output)
-
-    def test_case_invalid_value_in_field_type(self) -> None:
-        expected_output = "invalid value in metadata field type"
-        invalid_metadata: Dict[str, str | bool] = {
-            "createdTime": "1768039700238",
-            "lastModified": "1768039700238",
-            "new": False,
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": False,
-            "source": "",
-            "type": "UnknownType",
-            "visibleName": "61-90"
-        }
-
-        self.invalid_value_in_given_field(invalid_metadata, expected_output)
-
-    def test_case_invalid_value_in_field_visible_name(self) -> None:
-        expected_output = "invalid value in metadata field visibleName"
-        invalid_metadata: Dict[str, str | bool] = {
-            "createdTime": "1768039700238",
-            "lastModified": "1768039700238",
-            "new": False,
-            "parent": "d433121d-b050-4740-8db7-0ed11b980371",
-            "pinned": False,
-            "source": "",
-            "type": "DocumentType",
-            "visibleName": None
-        }
-
-        self.invalid_value_in_given_field(invalid_metadata, expected_output)
-
-    def invalid_value_in_given_field(self, invalid_metadata: Dict[str, str | bool],
-                                          expected_output: str) -> None:
-        with patch('sys.stdout', new=StringIO()) as mock_out:
-            validation_result: bool = self.source.is_valid_metadata(invalid_metadata)
-            output: str = mock_out.getvalue()
-            self.assertTrue(expected_output in output,
-                            msg=f"Output did not match expected: {output}")
-            self.assertFalse(validation_result)
