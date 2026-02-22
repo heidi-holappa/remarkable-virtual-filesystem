@@ -26,7 +26,7 @@ def main_loop() -> None:
             case "ls":
                 ls(args, workspace_manager)
             case "mv":
-                mv(args)
+                mv(args, workspace_manager)
             case "help":
                 help_instruction()
             case "exit" | "x":
@@ -36,4 +36,4 @@ def main_loop() -> None:
 
 
 if __name__ == "__main__":
-    pass
+    main_loop()
