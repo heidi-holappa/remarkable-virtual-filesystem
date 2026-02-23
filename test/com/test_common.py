@@ -6,6 +6,8 @@ from src.com.common import cd, ls, mv, rm, clear
 from test.stub_remarkable_metadata_source import StubRemarkableMetadataSource
 from src.workspace.workspace_manager import WorkspaceManager
 
+from test.test_data import UUID_A
+
 class TestCommon(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -19,7 +21,7 @@ class TestCommon(unittest.TestCase):
     # cd instruction
     # -------------------------------
     def test_cd_without_args_sets_current_path_to_root(self) -> None:
-        self.ws.set_current_collection("a")
+        self.ws.set_current_collection(UUID_A)
         cd([], self.manager)
         self.assertTrue(self.ws.get_current_collection() == "")
 
@@ -35,7 +37,7 @@ class TestCommon(unittest.TestCase):
         """
         self.ws.set_current_collection("")
         cd(["A"], self.manager)
-        self.assertTrue(self.ws.get_current_collection() == "a")
+        self.assertTrue(self.ws.get_current_collection() == UUID_A)
 
 
     def test_cd_with_too_many_args(self) -> None:
@@ -57,14 +59,14 @@ class TestCommon(unittest.TestCase):
             self.assertTrue("/B" in output, msg=f"Output was: {output}")
 
     def test_ls_sub_path(self) -> None:
-        self.ws.set_current_collection("a")
+        self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
             ls([], self.manager)
             output: str = mock_out.getvalue()
             self.assertTrue("/A_0" in output, msg=f"Output was: {output}")
 
     def test_ls_file_with_size(self) -> None:
-        self.ws.set_current_collection("a")
+        self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
             ls([], self.manager)
             output: str = mock_out.getvalue()
