@@ -206,7 +206,8 @@ class RemarkableWorkspace:
 
         try:
             # Get the metadata and UUID of the file in question
-            entry_uuid: str = self.get_uuid_with_visible_name_and_parent(filename, self._current_collection)
+            entry_uuid: str = self.get_uuid_with_visible_name_and_parent(
+                filename, self._current_collection)
 
             new_metadata_entry: Dict[str, Any] = copy.deepcopy(self._data.get(entry_uuid))
             new_metadata_entry['parent'] = target_uuid
@@ -219,9 +220,6 @@ class RemarkableWorkspace:
 
             # Update local data
             self._data[entry_uuid] = new_metadata_entry
-
-            # TODO: should reMarkable be refreshed? That should perhaps be
-            #        its own ticket.
 
         except (NotFoundException, InvalidMetadataException) as e:
             print(f"ERROR: {e} ")
