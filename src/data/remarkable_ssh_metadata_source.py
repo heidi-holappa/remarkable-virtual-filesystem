@@ -5,33 +5,21 @@
 """
 
 import subprocess
-import re
-import time
 import tarfile
 import json
 from typing import Dict, Any
 from io import BytesIO
-from collections.abc import Callable
 from src.dto.metadata import Metadata
 
 from src.data.metadata_source import MetadataSource
 from src.constant import REMOTE_PREFIX, SSH_CONNECT
 from src.exception.remarkable_write_exception import RemarkableWriteException
-from src.exception.invalid_metadata_exception import InvalidMetadataException
 
 class RemarkableSSHMetadataSource(MetadataSource):
     """
         An implementation of MetadataSource responsible for
         interacting with the reMarkable device via SSH connection
     """
-
-    _UUID_REGEX = re.compile(
-        r"^[0-9a-f]{8}-"
-        r"[0-9a-f]{4}-"
-        r"[0-9a-f]{4}-"
-        r"[0-9a-f]{4}-"
-        r"[0-9a-f]{12}$"
-    )
 
     def load(self) -> Dict[str, Dict[str, Any]]:
         """
@@ -190,4 +178,3 @@ class RemarkableSSHMetadataSource(MetadataSource):
             raise RemarkableWriteException(
                 f"OS error while writing metadata: {e}"
             ) from e
-

@@ -194,19 +194,33 @@ class RemarkableWorkspace:
         i.e., changes the parent of the given DocumentType to the
         provided parent.
 
+        In try-except following exceptions may occur:
+          - InvalidPathException if target path does not exist
+          - InvalidMetadataException if metadata validation fails
+          - NotFoundException if the file to move is not found
+
         :param filename: name of the file to be moved
         :param path: the directory of the target parent
         :return: None
         """
 
-        # Get the UUID of the new parent
-        target_uuid: Optional[str] = self.traverse_path(path)
-        if target_uuid is None:
-            raise InvalidPathException(INVALID_PATH)
+        # Handle possible path in filename
+        if "/" in filename:
+            parent_path, file = filename.rsplit(sep='/', maxsplit=1)
+            parent_uuid = self.traverse_path(parent_path)
+        else:
+            file = filename
+            parent_uuid = self._current_collection
 
         try:
+            # Get the UUID of the new parent
+            target_uuid: Optional[str] = self.traverse_path(path)
+            if target_uuid is None:
+                raise InvalidPathException(INVALID_PATH)
+
             # Get the metadata and UUID of the file in question
-            entry_uuid: str = self.get_uuid_with_visible_name_and_parent(filename, self._current_collection)
+            entry_uuid: str = self.get_uuid_with_visible_name_and_parent(
+                file, parent_uuid)
 
             new_metadata_entry: Dict[str, Any] = copy.deepcopy(self._data.get(entry_uuid))
             new_metadata_entry['parent'] = target_uuid
@@ -220,10 +234,7 @@ class RemarkableWorkspace:
             # Update local data
             self._data[entry_uuid] = new_metadata_entry
 
-            # TODO: should reMarkable be refreshed? That should perhaps be
-            #        its own ticket.
-
-        except (NotFoundException, InvalidMetadataException) as e:
+        except (NotFoundException, InvalidMetadataException, InvalidPathException) as e:
             print(f"ERROR: {e} ")
 
     def get_uuid_with_visible_name_and_parent(self, filename: str, parent_uuid: str) -> str:
