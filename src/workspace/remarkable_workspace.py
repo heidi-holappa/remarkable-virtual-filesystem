@@ -194,6 +194,11 @@ class RemarkableWorkspace:
         i.e., changes the parent of the given DocumentType to the
         provided parent.
 
+        In try-except following exceptions may occur:
+          - InvalidPathException if target path does not exist
+          - InvalidMetadataException if metadata validation fails
+          - NotFoundException if the file to move is not found
+
         :param filename: name of the file to be moved
         :param path: the directory of the target parent
         :return: None

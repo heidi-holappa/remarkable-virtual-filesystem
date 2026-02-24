@@ -1,4 +1,5 @@
 import unittest
+from io import StringIO
 import copy
 from unittest.mock import patch
 
@@ -10,6 +11,7 @@ from src.constant import COLLECTION_NOT_FOUND, INVALID_PATH
 from test.test_data import (
     TEST_DATA,
     UUID_FAIRYTALE,
+    UUID_INVALID_LAST_MODIFIED,
     UUID_A, UUID_A0,
     UUID_B, UUID_B0)
 
@@ -133,6 +135,33 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.ws.set_current_collection(UUID_A0)
         self.ws.handle_move_instruction("../Fairytale.pdf", "/B")
         self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
+
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_with_invalid_filepath_error_is_shown_to_user(self, mock_write) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.handle_move_instruction("/C/non-existing-file.pdf", "/B")
+            output: str = mock_out.getvalue()
+            self.assertTrue("Metadata not found for" in output, msg=f"Output was: {output}")
+
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_with_invalid_target_path_error_is_shown_to_user(self, mock_write) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.handle_move_instruction("/A/Fairytale.pdf", "/C")
+            output: str = mock_out.getvalue()
+            self.assertTrue(INVALID_PATH in output, msg=f"Output was: {output}")
+
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_document_with_invalid_metadata_cannot_be_moved_and_error_is_shown(self, mock_write) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.handle_move_instruction("/A/InvalidLastModified.pdf", "/B")
+            output: str = mock_out.getvalue()
+            self.assertTrue("One or more metadata fields have invalid values" in output, msg=f"Output was: {output}")
 
     # Get UUID with visibleName and parent
     def test_when_file_is_found_uuid_is_returned(self) -> None:

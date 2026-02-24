@@ -11,6 +11,7 @@ UUID_A0 = "d066ef0a-e9ee-475d-a04d-c1f2be88768d"
 UUID_B = "48635ee3-f8af-4013-98f3-7f2bfc2de0e4"
 UUID_B0 = "52da29a9-96fd-47fc-bd7d-7eb825be10a3"
 UUID_FAIRYTALE = "38e9f881-9cba-400d-b238-75c3bd6d64a8"
+UUID_INVALID_LAST_MODIFIED = "5592fdc0-020c-4a69-b4d3-a3106ca328ca"
 
 
 TEST_DATA: Dict[str, Dict[str, str]] = {
@@ -24,6 +25,17 @@ TEST_DATA: Dict[str, Dict[str, str]] = {
                 "size": "1024 kB",
                 "createdTime": 0,
                 "lastModified": 123456789,
+                "new": False,
+                "pinned": False,
+                "source": ""
+            },
+            UUID_INVALID_LAST_MODIFIED: {
+                "type": "DocumentType",
+                "parent": UUID_A,
+                "visibleName": "InvalidLastModified.pdf",
+                "size": "1024 kB",
+                "createdTime": 0,
+                "lastModified": -1,
                 "new": False,
                 "pinned": False,
                 "source": ""
