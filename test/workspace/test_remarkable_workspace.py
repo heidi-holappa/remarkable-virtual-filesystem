@@ -2,6 +2,7 @@ import unittest
 from io import StringIO
 import copy
 from unittest.mock import patch, MagicMock
+from typing import List
 
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
 from src.workspace.remarkable_workspace import RemarkableWorkspace
@@ -12,7 +13,7 @@ from test.test_data import (
     TEST_DATA,
     UUID_FAIRYTALE,
     UUID_A, UUID_A0,
-    UUID_B, UUID_B0, UUID_ROOT)
+    UUID_B, UUID_B0, UUID_ROOT, UUID_INVALID_LAST_MODIFIED)
 
 class RemarkableWorkspaceTest(unittest.TestCase):
 
@@ -232,6 +233,66 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.ws.handle_move_instruction("Fairytale.pdf", "/A")
         mock_write.assert_not_called()
         self.assertEqual(mock_write.call_count, 0)
+
+    # -------------------------------------
+    # Get wildcard matches
+    # -------------------------------------
+
+    def test_wild_card_match_finds_documents_with_pdf_extension(self) -> None:
+        matches: List[str] = self.ws.get_matches_for_wildcard(UUID_A, "*.pdf")
+        self.assertEqual(2, len(matches))
+        self.assertTrue(UUID_FAIRYTALE in matches)
+        self.assertTrue(UUID_INVALID_LAST_MODIFIED in matches)
+
+
+    def test_wild_card_match_finds_document_matches_with_prefix(self) -> None:
+        matches: List[str] = self.ws.get_matches_for_wildcard(UUID_A, "Fa*")
+        self.assertEqual(1, len(matches))
+        self.assertTrue(UUID_FAIRYTALE in matches)
+
+    def test_wild_card_match_finds_collection_matches_with_prefix(self) -> None:
+        matches: List[str] = self.ws.get_matches_for_wildcard(UUID_A, "A_*")
+        self.assertEqual(1, len(matches))
+        self.assertTrue(UUID_A0 in matches)
+
+    def test_wild_card_alone_matches_all_children(self) -> None:
+        matches: List[str] = self.ws.get_matches_for_wildcard(UUID_A, "*")
+        self.assertEqual(3, len(matches))
+        self.assertTrue(UUID_A0 in matches)
+        self.assertTrue(UUID_FAIRYTALE in matches)
+        self.assertTrue(UUID_INVALID_LAST_MODIFIED in matches)
+
+    def test_wild_card_with_multiple_stars_finds_matches(self) -> None:
+        matches: List[str] = self.ws.get_matches_for_wildcard(UUID_A, "*valid*.pdf")
+        self.assertEqual(1, len(matches))
+        self.assertTrue(UUID_INVALID_LAST_MODIFIED in matches)
+
+    def test_raises_not_found_exception_if_parent_not_found(self) -> None:
+        with self.assertRaises(NotFoundException) as ctx:
+            self.ws.get_matches_for_wildcard("123-123", "*valid*.pdf")
+        self.assertTrue(COLLECTION_NOT_FOUND in str(ctx.exception))
+
+    # -------------------------------------
+    # Check if an entry with the given visibleName exists in the provided collection
+    # -------------------------------------
+
+    def test_returns_true_when_entry_exists(self) -> None:
+        self.assertTrue(
+            self.ws.exists_entry_with_same_visible_name_in_target_path(UUID_FAIRYTALE, UUID_A)
+        )
+
+    def test_returns_false_when_entry_does_not_exist(self) -> None:
+        self.assertFalse(
+            self.ws.exists_entry_with_same_visible_name_in_target_path(UUID_FAIRYTALE, UUID_B)
+        )
+
+    def test_raise_not_found_exception_if_entry_does_not_exist(self) -> None:
+        with self.assertRaises(NotFoundException) as ctx:
+            self.assertFalse(
+                self.ws.exists_entry_with_same_visible_name_in_target_path("123-123", UUID_A)
+            )
+
+        self.assertTrue("Metadata not found for 123-123" in str(ctx.exception))
 
     # -------------------------------------
     # Get UUID with visibleName and parent

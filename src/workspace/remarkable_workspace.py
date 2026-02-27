@@ -4,7 +4,8 @@
 """
 
 import copy
-from typing import Dict, Any, Optional
+from fnmatch import fnmatchcase
+from typing import Dict, List, Any, Optional
 
 from src.data.metadata_source import MetadataSource
 from src.exception.constraint_violation_exception import ConstraintViolationException
@@ -277,6 +278,45 @@ class RemarkableWorkspace:
                 InvalidPathException,
                 ConstraintViolationException) as e:
             print(f"ERROR: {e} ")
+
+
+    def get_matches_for_wildcard(self, parent_uuid: str, wildcard: str) -> List[str]:
+        """
+        Finds all entries with the provided parent and visibleName
+        that matches the given wildcard.
+
+        Raises:
+            - NotFoundException if the parent UUID is not found
+
+        :param parent_uuid:
+        :param wildcard:
+        :return: a list of entry UUIDs matching the wildcard or an
+                    empty list, if no matches are found
+        """
+
+        if not self.get_data().get(parent_uuid):
+            raise NotFoundException(COLLECTION_NOT_FOUND)
+
+        wildcard_matches: List[str] = []
+
+        for k, v in self.get_data().items():
+            has_matching_visible_name: bool = self._visible_name_matches_wildcard(wildcard, v.get('visibleName'))
+            if v.get('parent') == parent_uuid and has_matching_visible_name:
+                wildcard_matches.append(k)
+
+        return wildcard_matches
+
+    @staticmethod
+    def _visible_name_matches_wildcard(pattern: str, visible_name: str) -> bool:
+        """
+        Verifies whether the provided visibleName matches with the given wildcard.
+
+        :param pattern: A string with a wildcard symbol '*'
+        :param visible_name: visibleName of an entry
+        :return: boolean indication whether it is a match
+        """
+
+        return fnmatchcase(visible_name, pattern)
 
     def exists_entry_with_same_visible_name_in_target_path(self, entry_uuid: str, target_collection_uuid: str) -> bool:
         """
