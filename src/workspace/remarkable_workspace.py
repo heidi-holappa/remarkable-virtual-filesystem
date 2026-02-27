@@ -7,6 +7,7 @@ import copy
 from typing import Dict, Any, Optional
 
 from src.data.metadata_source import MetadataSource
+from src.exception.constraint_violation_exception import ConstraintViolationException
 from src.exception.invalid_metadata_exception import InvalidMetadataException
 from src.exception.not_found_exception import NotFoundException
 from src.exception.invalid_path_exception import InvalidPathException
@@ -76,23 +77,39 @@ class RemarkableWorkspace:
         self._current_collection = collection
 
 
-    def get_parent(self, entity: Optional[str] = None) -> str:
+    def entry_is_a_collection(self, entity_uuid) -> bool:
         """
-        :param entity: optional uuid of an entity for which parent should be given
+        Validates whether the metadata entry with the given UUID
+        is of type CollectionType.
+
+        Raises:
+          - NotFoundException if a metadata entry for the given
+            UUID is not found
+
+        :param entity_uuid: UUID of the entry
+        :return: boolean indicating whether this entry has type CollectionType
+        """
+
+        return self.get_data_for_uuid(entity_uuid).get('type') == 'CollectionType'
+
+
+    def get_parent(self, entity_uuid: Optional[str] = None) -> str:
+        """
+        :param entity_uuid: optional uuid of an entity for which parent should be given
                         if no parameter is given, parent of current collection is returned
         :return: the parent of either the given entity or current collection. In case
                     parent is root or the current collection is root, an empty string is returned
         """
 
-        if entity is None:
-            entity = self._current_collection
+        if entity_uuid is None:
+            entity_uuid = self._current_collection
 
-        if not self._data.get(entity):
+        if not self._data.get(entity_uuid):
             raise NotFoundException(COLLECTION_NOT_FOUND)
 
-        if entity == ROOT_COLLECTION or self._data.get(entity) == ROOT_COLLECTION:
+        if entity_uuid == ROOT_COLLECTION or self._data.get(entity_uuid) == ROOT_COLLECTION:
             return ROOT_COLLECTION
-        return self._data.get(entity).get('parent')
+        return self._data.get(entity_uuid).get('parent')
 
     def get_collection(self, collection: str, parent: str) -> Optional[str]:
         """
@@ -157,7 +174,7 @@ class RemarkableWorkspace:
 
         self._current_collection = collection_pointer
 
-    def traverse_path(self, path: str) -> str:
+    def traverse_path(self, path: str) -> Optional[str]:
         """
         Splits the provided path into a list of entries and tries to
         traverse through the given path changes. At its simplest a path
@@ -177,10 +194,13 @@ class RemarkableWorkspace:
 
         for directory in directory_changes:
             match directory:
+                # No directory change
                 case '' | '.':
                     continue
+                # Traverse to parent
                 case '..':
                     collection_pointer = self.get_parent(collection_pointer)
+                # Traverse to descendant
                 case _:
                     collection_pointer = self.get_collection(directory, collection_pointer)
             if collection_pointer is None:
@@ -204,23 +224,41 @@ class RemarkableWorkspace:
         :return: None
         """
 
-        # Handle possible path in filename
-        if "/" in filename:
-            parent_path, file = filename.rsplit(sep='/', maxsplit=1)
-            parent_uuid = self.traverse_path(parent_path)
-        else:
-            file = filename
-            parent_uuid = self._current_collection
-
         try:
+            # Root path can not be moved
+            if filename == "":
+                raise ConstraintViolationException("Root path cannot be moved")
+
+            # Handle possible path in filename
+            if "/" in filename:
+                parent_path, file = filename.rsplit(sep='/', maxsplit=1)
+                parent_uuid = self.traverse_path(parent_path)
+            else:
+                file = filename
+                parent_uuid = self._current_collection
+
             # Get the UUID of the new parent
             target_uuid: Optional[str] = self.traverse_path(path)
             if target_uuid is None:
                 raise InvalidPathException(INVALID_PATH)
 
+
+            # moving to the same parent should result in a no-op
+            if parent_uuid == target_uuid:
+                return
+
             # Get the metadata and UUID of the file in question
             entry_uuid: str = self.get_uuid_with_visible_name_and_parent(
                 file, parent_uuid)
+
+            if self.entry_is_a_collection(entry_uuid) and \
+                self.is_target_path_descendant_of_source_path(target_uuid, entry_uuid):
+                raise ConstraintViolationException("Collection can not be moved into itself or its descendant")
+
+            if self.entry_is_a_collection(entry_uuid) and \
+                self.exists_entry_with_same_visible_name_in_target_path(entry_uuid, target_uuid):
+                raise ConstraintViolationException("Destination must not contain a child with the same name")
+
 
             new_metadata_entry: Dict[str, Any] = copy.deepcopy(self._data.get(entry_uuid))
             new_metadata_entry['parent'] = target_uuid
@@ -234,8 +272,57 @@ class RemarkableWorkspace:
             # Update local data
             self._data[entry_uuid] = new_metadata_entry
 
-        except (NotFoundException, InvalidMetadataException, InvalidPathException) as e:
+        except (NotFoundException,
+                InvalidMetadataException,
+                InvalidPathException,
+                ConstraintViolationException) as e:
             print(f"ERROR: {e} ")
+
+    def exists_entry_with_same_visible_name_in_target_path(self, entry_uuid: str, target_collection_uuid: str) -> bool:
+        """
+        Verifies whether an entry (either a Document or a Collection) with
+        identical visibleName matching the visibleName of entry_uuid already
+        exists in the target path.
+
+        Raises:
+          - NotFoundException if metadata for entry_uuid is not found
+
+        :param entry_uuid: an entry of metadata
+        :param target_collection_uuid: a target collection
+        :return: True, if entry with identical visibleName exists
+        """
+
+        data: dict[str, Dict[str, Any]] = self.get_data()
+
+        entry_visible_name: str = (self.get_data_for_uuid(entry_uuid)
+                                   .get('visibleName'))
+
+        for k, v in data.items():
+            if (v.get('parent') == target_collection_uuid and
+                    v.get('visibleName') == entry_visible_name):
+                return True
+
+        return False
+
+    def is_target_path_descendant_of_source_path(self, target_path_uuid: str, source_path_uuid: str) -> bool:
+        """
+        Verifies that the given target path is not a descendant of the source path,
+        i.e., the source path may not be an ancestor of the target path.
+
+        :param source_path_uuid:
+        :param target_path_uuid:
+        :return:
+        """
+
+        collection_pointer: str = target_path_uuid
+
+        while collection_pointer != '':
+            if collection_pointer == source_path_uuid:
+                return True
+            collection_pointer = self.get_parent(collection_pointer)
+
+        return False
+
 
     def get_uuid_with_visible_name_and_parent(self, filename: str, parent_uuid: str) -> str:
         """
@@ -246,12 +333,15 @@ class RemarkableWorkspace:
           1. the visibleName of the entry is the filename
           2. the parent of the entry is the parent_uuid
 
-        If no match is found, a NotFoundException is raised.
+        Note that the type of the entry is not consider, i.e., the entry
+        may either be a DocumentType or a CollectionType.
+
+        Raises:
+          - NotFoundException, if no match is found
 
         :param filename: the visibleName of the entry
         :param parent_uuid: the parent of the entry
-        :return: a tuple containing the UUID of the entry and
-                 a dictionary representation of the metadata
+        :return: the UUID of the entry
         """
 
         print(f"filename: {filename}, parent: {parent_uuid}")

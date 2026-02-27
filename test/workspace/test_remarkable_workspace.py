@@ -1,7 +1,7 @@
 import unittest
 from io import StringIO
 import copy
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
 from src.workspace.remarkable_workspace import RemarkableWorkspace
@@ -11,9 +11,8 @@ from src.constant import COLLECTION_NOT_FOUND, INVALID_PATH
 from test.test_data import (
     TEST_DATA,
     UUID_FAIRYTALE,
-    UUID_INVALID_LAST_MODIFIED,
     UUID_A, UUID_A0,
-    UUID_B, UUID_B0)
+    UUID_B, UUID_B0, UUID_ROOT)
 
 class RemarkableWorkspaceTest(unittest.TestCase):
 
@@ -22,7 +21,9 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         mock_load.return_value = copy.deepcopy(TEST_DATA)
         self.ws = RemarkableWorkspace(RemarkableSSHMetadataSource())
 
+    # ----------------------
     # Get parent
+    #-----------------------
     def test_get_parent_returns_correct_parent_when_parent_is_other_than_root(self) -> None:
         assert self.ws.get_parent(UUID_B0) == UUID_B
 
@@ -39,7 +40,9 @@ class RemarkableWorkspaceTest(unittest.TestCase):
 
         self.assertTrue(COLLECTION_NOT_FOUND in str(context.exception))
 
-    ## Get collection
+    # -----------------------
+    # Get collection
+    # -----------------------
     def test_get_collection_when_current_collection_is_root_and_collection_is_found(self) -> None:
         assert self.ws.get_collection("A", "") == UUID_A
 
@@ -49,7 +52,9 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     def test_get_collection_when_current_collection_is_root_and_collection_is_not_found(self) -> None:
         assert self.ws.get_collection("C", "") == None
 
+    # -----------------------
     # Set current collection
+    # -----------------------
     def test_set_current_collection_with_valid_collection(self) -> None:
         self.ws.set_current_collection(UUID_A)
         assert self.ws.get_current_collection() == UUID_A
@@ -60,7 +65,9 @@ class RemarkableWorkspaceTest(unittest.TestCase):
 
         self.assertTrue(COLLECTION_NOT_FOUND in str(context.exception))
 
-    ## Change collection/directory tests
+    # -----------------------
+    # Change collection/directory tests
+    # -----------------------
     def test_change_collection_from_root_to_direct_subpath(self) -> None:
 
         self.ws.change_collection("/A")
@@ -91,7 +98,9 @@ class RemarkableWorkspaceTest(unittest.TestCase):
 
         self.assertTrue(INVALID_PATH in str(context.exception))
 
+    # -----------------------
     # Get absolute path
+    # -----------------------
     def test_root_path_is_output_correctly(self) -> None:
         self.assertEqual("/", self.ws.generate_absolute_collection_path(""))
 
@@ -101,8 +110,9 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     def test_nested_subdirectory_output_correctly(self) -> None:
         self.assertEqual("/A/A_0", self.ws.generate_absolute_collection_path(UUID_A0))
 
-
+    # -----------------------
     # Get current path
+    # -----------------------
     def test_root_path_is_returned_correctly(self) -> None:
         self.ws.set_current_collection('')
         self.assertEqual('/', self.ws.get_current_path())
@@ -111,33 +121,33 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.ws.set_current_collection(UUID_A)
         self.assertEqual('/A', self.ws.get_current_path())
 
-
+    # -----------------------
     # Handle move instruction
+    # -----------------------
     @patch.object(RemarkableSSHMetadataSource, "write")
-    def test_after_successful_move_without_path_in_filename_parent_is_updated(self, mock_write) -> None:
+    def test_after_successful_move_without_path_in_filename_parent_is_updated(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A)
         self.ws.handle_move_instruction("Fairytale.pdf", "/B")
         self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
 
-    # Handle move instruction
     @patch.object(RemarkableSSHMetadataSource, "write")
-    def test_after_successful_move_with_absolute_path_in_filename_parent_is_updated(self, mock_write) -> None:
+    def test_after_successful_move_with_absolute_path_in_filename_parent_is_updated(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A)
         self.ws.handle_move_instruction("/A/Fairytale.pdf", "/B")
         self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
 
-    # Handle move instruction
     @patch.object(RemarkableSSHMetadataSource, "write")
-    def test_after_successful_move_with_relative_path_in_filename_parent_is_updated(self, mock_write) -> None:
+    def test_after_successful_move_with_relative_path_in_filename_parent_is_updated(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A0)
         self.ws.handle_move_instruction("../Fairytale.pdf", "/B")
         self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
 
+    # Constraint: Source must be a valid file or collection (case: moving DocumentType)
     @patch.object(RemarkableSSHMetadataSource, "write")
-    def test_with_invalid_filepath_error_is_shown_to_user(self, mock_write) -> None:
+    def test_invalid_source_filename_results_in_error_shown_to_user(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
@@ -145,8 +155,19 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             output: str = mock_out.getvalue()
             self.assertTrue("Metadata not found for" in output, msg=f"Output was: {output}")
 
+    # Constraint: Source must be a valid file or collection (case: moving CollectionType)
     @patch.object(RemarkableSSHMetadataSource, "write")
-    def test_with_invalid_target_path_error_is_shown_to_user(self, mock_write) -> None:
+    def test_invalid_source_path_results_in_error_shown_to_user(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.handle_move_instruction("/C", "/B")
+            output: str = mock_out.getvalue()
+            self.assertTrue("Metadata not found for" in output, msg=f"Output was: {output}")
+
+    # Constraint: destination must resolve to valid collection
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_with_invalid_target_path_error_is_shown_to_user(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
@@ -163,13 +184,63 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             output: str = mock_out.getvalue()
             self.assertTrue("One or more metadata fields have invalid values" in output, msg=f"Output was: {output}")
 
+    # Constraint: A collection can not be moved into itself or its descendant
+    def test_collection_type_cannot_be_moved_to_its_descendant_with_relative_target_path(self) -> None:
+        self.ws.set_current_collection(UUID_A)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.handle_move_instruction("/A", "A_0")
+            output: str = mock_out.getvalue()
+            self.assertTrue("Collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
+
+    # Constraint: A collection can not be moved into itself or its descendant
+    def test_collection_type_cannot_be_moved_to_its_descendant_with_absolute_target_path(self) -> None:
+        self.ws.set_current_collection(UUID_ROOT)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.handle_move_instruction("/A", "/A/A_0")
+            output: str = mock_out.getvalue()
+            self.assertTrue("Collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
+
+    # Constraint: A collection can not be moved into itself or its descendant
+    def test_collection_cannot_be_moved_into_itself(self) -> None:
+        self.ws.set_current_collection(UUID_ROOT)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.handle_move_instruction("/A", "/A")
+            output: str = mock_out.getvalue()
+            self.assertTrue("Collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
+
+    # Constraint: Root collection can not be moved
+    def test_root_collection_cannot_be_moved(self) -> None:
+        self.ws.set_current_collection(UUID_ROOT)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.handle_move_instruction("", "")
+            output: str = mock_out.getvalue()
+            self.assertTrue("Root path cannot be moved" in output, msg=f"Output was: {output}")
+
+    # Constraint: destination must not contain a child with the same name
+    def test_destination_cannot_contain_child_with_the_same_visible_name(self) -> None:
+        self.ws.set_current_collection(UUID_ROOT)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.handle_move_instruction("/A", "/B")
+            output: str = mock_out.getvalue()
+            self.assertTrue("Destination must not contain a child with the same name" in output, msg=f"Output was: {output}")
+
+    # Constraint: moving to the same parent should result in a no-op
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_moving_to_the_same_parent_should_result_in_no_op(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        self.ws.handle_move_instruction("Fairytale.pdf", "/A")
+        mock_write.assert_not_called()
+        self.assertEqual(mock_write.call_count, 0)
+
+    # -------------------------------------
     # Get UUID with visibleName and parent
+    # -------------------------------------
     def test_when_file_is_found_uuid_is_returned(self) -> None:
         actual_file_uuid: str = self.ws.get_uuid_with_visible_name_and_parent(
             'Fairytale.pdf', UUID_A)
         self.assertEqual(UUID_FAIRYTALE, actual_file_uuid)
 
-    # Get UUID with visibleName and parent
     def test_when_file_is_not_found_exception_is_raised(self) -> None:
 
         with self.assertRaises(NotFoundException) as context:
