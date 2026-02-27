@@ -27,6 +27,7 @@ class MetadataSource:
 
         :return: None
         """
+        raise NotImplementedError
 
 
     def write(self, entry_uuid: str, metadata: Metadata) -> None:
