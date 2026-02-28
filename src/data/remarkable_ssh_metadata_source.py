@@ -33,6 +33,15 @@ class RemarkableSSHMetadataSource(MetadataSource):
                 data[uuid]["size"] = size
         return data
 
+
+    def refresh(self) -> None:
+        """
+        Refresh will be implemented in ticket #25
+
+        :return: None
+        """
+        raise NotImplementedError
+
     def _fetch_metadata(self) -> Dict[str, Dict[str, Any]]:
         """
         Fetches the content of each *.metadata file in the filepath

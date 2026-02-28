@@ -41,7 +41,7 @@ def mv(args: List[str], workspace_manager: WorkspaceManager) -> None:
     ws: RemarkableWorkspace = workspace_manager.get()
 
     if len(args) == 2:
-        ws.handle_move_instruction(*args)
+        ws.process_move_command(*args)
     else:
         print("Usage (mvp): mv <filename without path> <path>")
 

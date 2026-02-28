@@ -2,6 +2,7 @@ import unittest
 from io import StringIO
 import copy
 from unittest.mock import patch, MagicMock
+from typing import List
 
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
 from src.workspace.remarkable_workspace import RemarkableWorkspace
@@ -10,9 +11,11 @@ from src.exception.invalid_path_exception import InvalidPathException
 from src.constant import COLLECTION_NOT_FOUND, INVALID_PATH
 from test.test_data import (
     TEST_DATA,
-    UUID_FAIRYTALE,
-    UUID_A, UUID_A0,
-    UUID_B, UUID_B0, UUID_ROOT)
+    UUID_ROOT,
+    UUID_A, UUID_A0, UUID_A1,
+    UUID_B, UUID_B0, UUID_A_UNDER_B,
+    UUID_FAIRYTALE, UUID_FAIRYTALE_2,
+    UUID_INVALID_LAST_MODIFIED)
 
 class RemarkableWorkspaceTest(unittest.TestCase):
 
@@ -128,21 +131,21 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     def test_after_successful_move_without_path_in_filename_parent_is_updated(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A)
-        self.ws.handle_move_instruction("Fairytale.pdf", "/B")
+        self.ws.process_move_command("Fairytale.pdf", "/B")
         self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
 
     @patch.object(RemarkableSSHMetadataSource, "write")
     def test_after_successful_move_with_absolute_path_in_filename_parent_is_updated(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A)
-        self.ws.handle_move_instruction("/A/Fairytale.pdf", "/B")
+        self.ws.process_move_command("/A/Fairytale.pdf", "/B")
         self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
 
     @patch.object(RemarkableSSHMetadataSource, "write")
     def test_after_successful_move_with_relative_path_in_filename_parent_is_updated(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A0)
-        self.ws.handle_move_instruction("../Fairytale.pdf", "/B")
+        self.ws.process_move_command("../Fairytale.pdf", "/B")
         self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
 
     # Constraint: Source must be a valid file or collection (case: moving DocumentType)
@@ -151,7 +154,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ws.handle_move_instruction("/C/non-existing-file.pdf", "/B")
+            self.ws.process_move_command("/C/non-existing-file.pdf", "/B")
             output: str = mock_out.getvalue()
             self.assertTrue("Metadata not found for" in output, msg=f"Output was: {output}")
 
@@ -161,7 +164,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ws.handle_move_instruction("/C", "/B")
+            self.ws.process_move_command("/C", "/B")
             output: str = mock_out.getvalue()
             self.assertTrue("Metadata not found for" in output, msg=f"Output was: {output}")
 
@@ -171,7 +174,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ws.handle_move_instruction("/A/Fairytale.pdf", "/C")
+            self.ws.process_move_command("/A/Fairytale.pdf", "/C")
             output: str = mock_out.getvalue()
             self.assertTrue(INVALID_PATH in output, msg=f"Output was: {output}")
 
@@ -180,7 +183,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ws.handle_move_instruction("/A/InvalidLastModified.pdf", "/B")
+            self.ws.process_move_command("/A/InvalidLastModified.pdf", "/B")
             output: str = mock_out.getvalue()
             self.assertTrue("One or more metadata fields have invalid values" in output, msg=f"Output was: {output}")
 
@@ -188,7 +191,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     def test_collection_type_cannot_be_moved_to_its_descendant_with_relative_target_path(self) -> None:
         self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ws.handle_move_instruction("/A", "A_0")
+            self.ws.process_move_command("/A", "A_0")
             output: str = mock_out.getvalue()
             self.assertTrue("Collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
 
@@ -196,7 +199,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     def test_collection_type_cannot_be_moved_to_its_descendant_with_absolute_target_path(self) -> None:
         self.ws.set_current_collection(UUID_ROOT)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ws.handle_move_instruction("/A", "/A/A_0")
+            self.ws.process_move_command("/A", "/A/A_0")
             output: str = mock_out.getvalue()
             self.assertTrue("Collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
 
@@ -204,7 +207,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     def test_collection_cannot_be_moved_into_itself(self) -> None:
         self.ws.set_current_collection(UUID_ROOT)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ws.handle_move_instruction("/A", "/A")
+            self.ws.process_move_command("/A", "/A")
             output: str = mock_out.getvalue()
             self.assertTrue("Collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
 
@@ -212,7 +215,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     def test_root_collection_cannot_be_moved(self) -> None:
         self.ws.set_current_collection(UUID_ROOT)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ws.handle_move_instruction("", "")
+            self.ws.process_move_command("", "")
             output: str = mock_out.getvalue()
             self.assertTrue("Root path cannot be moved" in output, msg=f"Output was: {output}")
 
@@ -220,7 +223,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     def test_destination_cannot_contain_child_with_the_same_visible_name(self) -> None:
         self.ws.set_current_collection(UUID_ROOT)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ws.handle_move_instruction("/A", "/B")
+            self.ws.process_move_command("/A", "/B")
             output: str = mock_out.getvalue()
             self.assertTrue("Destination must not contain a child with the same name" in output, msg=f"Output was: {output}")
 
@@ -229,22 +232,185 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     def test_moving_to_the_same_parent_should_result_in_no_op(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A)
-        self.ws.handle_move_instruction("Fairytale.pdf", "/A")
+        self.ws.process_move_command("Fairytale.pdf", "/A")
         mock_write.assert_not_called()
         self.assertEqual(mock_write.call_count, 0)
+
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_move_with_wild_card_single_document(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        self.ws.process_move_command("*le.pdf", "/B")
+        self.assertEqual(mock_write.call_count, 1)
+        self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
+
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_move_with_wild_card_single_document_absolute_path(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_ROOT)
+        self.ws.process_move_command("/A/*le.pdf", "/B")
+        self.assertEqual(mock_write.call_count, 1)
+        self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
+
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_move_with_wild_card_single_document_relative_path(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_B)
+        self.ws.process_move_command("../A/*le.pdf", "/B")
+        self.assertEqual(mock_write.call_count, 1)
+        self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
+
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_move_with_wild_card_single_collection_absolute_path(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_ROOT)
+        self.ws.process_move_command("/A/A_1", "/B")
+        self.assertEqual(mock_write.call_count, 1)
+        self.assertEqual(UUID_B, self.ws.get_data()[UUID_A1]['parent'])
+
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_move_with_wild_card_single_collection_relative_path(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_B)
+        self.ws.process_move_command("../A/A_1", "/B")
+        self.assertEqual(mock_write.call_count, 1)
+        self.assertEqual(UUID_B, self.ws.get_data()[UUID_A1]['parent'])
+
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_move_with_wild_card_multiple_valid_documents(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        self.ws.process_move_command("Fairytale*.pdf", "/B")
+        self.assertEqual(mock_write.call_count, 2)
+        self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
+        self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE_2]['parent'])
+
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_move_with_wild_card_one_collection_exists_in_destination_one_collection_moved(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.set_current_collection(UUID_B)
+            self.ws.process_move_command("A*", "/A")
+            self.assertEqual(mock_write.call_count, 1)
+            self.assertEqual(UUID_A, self.ws.get_data()[UUID_A_UNDER_B]['parent'])
+            output: str = mock_out.getvalue()
+            self.assertTrue("Destination must not contain a child with the same name: A_0" in output, msg=f"Output was: {output}")
+
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_move_with_wild_card_one_document_has_invalid_metadata(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.set_current_collection(UUID_A)
+            self.ws.process_move_command("*.pdf", "/B")
+            self.assertEqual(mock_write.call_count, 2)
+            self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
+            self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE_2]['parent'])
+            output: str = mock_out.getvalue()
+            self.assertTrue("ERROR: One or more metadata fields have invalid values: lastModified: -1" in output,
+                            msg=f"Output was: {output}")
+
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_move_with_wild_card_both_collections_and_documents_one_document_has_invalid_metadata_and_collection_with_same_name_exists_in_destination(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.set_current_collection(UUID_A)
+            self.ws.process_move_command("*", "/B")
+            self.assertEqual(mock_write.call_count, 3)
+            self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
+            self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE_2]['parent'])
+            self.assertEqual(UUID_B, self.ws.get_data()[UUID_A1]['parent'])
+            output: str = mock_out.getvalue()
+            self.assertTrue("ERROR: One or more metadata fields have invalid values: lastModified: -1" in output,
+                            msg=f"Output was: {output}")
+            self.assertTrue("Destination must not contain a child with the same name: A_0" in output,
+                            msg=f"Output was: {output}")
+
+    @patch.object(RemarkableSSHMetadataSource, "write")
+    def test_move_with_wild_card_three_matching_collections_but_one_has_filename_already_present_in_destination(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_B)
+        self.ws.process_move_command("*", "/A")
+        self.assertEqual(mock_write.call_count, 2)
+        self.assertEqual(UUID_A, self.ws.get_data()[UUID_B0]['parent'])
+        self.assertEqual(UUID_A, self.ws.get_data()[UUID_A_UNDER_B]['parent'])
+
+    # -------------------------------------
+    # Get wildcard matches
+    # -------------------------------------
+
+    def test_wild_card_match_finds_documents_with_pdf_extension(self) -> None:
+        matches: List[str] = self.ws._get_matches_for_wildcard(UUID_A, "*.pdf")
+        self.assertEqual(3, len(matches))
+        self.assertTrue(UUID_FAIRYTALE in matches)
+        self.assertTrue(UUID_FAIRYTALE_2 in matches)
+        self.assertTrue(UUID_INVALID_LAST_MODIFIED in matches)
+
+
+    def test_wild_card_match_finds_document_matches_with_prefix(self) -> None:
+        matches: List[str] = self.ws._get_matches_for_wildcard(UUID_A, "Fa*")
+        self.assertEqual(2, len(matches))
+        self.assertTrue(UUID_FAIRYTALE in matches)
+        self.assertTrue(UUID_FAIRYTALE_2 in matches)
+
+    def test_wild_card_match_finds_collection_matches_with_prefix(self) -> None:
+        matches: List[str] = self.ws._get_matches_for_wildcard(UUID_A, "A_*")
+        self.assertEqual(2, len(matches))
+        self.assertTrue(UUID_A0 in matches)
+        self.assertTrue(UUID_A1 in matches)
+
+    def test_wild_card_alone_matches_all_children(self) -> None:
+        matches: List[str] = self.ws._get_matches_for_wildcard(UUID_A, "*")
+        self.assertEqual(5, len(matches))
+        self.assertTrue(UUID_A0 in matches)
+        self.assertTrue(UUID_A1 in matches)
+        self.assertTrue(UUID_FAIRYTALE in matches)
+        self.assertTrue(UUID_FAIRYTALE_2 in matches)
+        self.assertTrue(UUID_INVALID_LAST_MODIFIED in matches)
+
+    def test_wild_card_with_multiple_stars_finds_matches(self) -> None:
+        matches: List[str] = self.ws._get_matches_for_wildcard(UUID_A, "*valid*.pdf")
+        self.assertEqual(1, len(matches))
+        self.assertTrue(UUID_INVALID_LAST_MODIFIED in matches)
+
+    def test_raises_not_found_exception_if_parent_not_found(self) -> None:
+        with self.assertRaises(NotFoundException) as ctx:
+            self.ws._get_matches_for_wildcard("123-123", "*valid*.pdf")
+        self.assertTrue(COLLECTION_NOT_FOUND in str(ctx.exception))
+
+    # -------------------------------------
+    # Check if an entry with the given visibleName exists in the provided collection
+    # -------------------------------------
+
+    def test_returns_true_when_entry_exists(self) -> None:
+        self.assertTrue(
+            self.ws._exists_entry_with_same_visible_name_in_target_path(UUID_FAIRYTALE, UUID_A)
+        )
+
+    def test_returns_false_when_entry_does_not_exist(self) -> None:
+        self.assertFalse(
+            self.ws._exists_entry_with_same_visible_name_in_target_path(UUID_FAIRYTALE, UUID_B)
+        )
+
+    def test_raise_not_found_exception_if_entry_does_not_exist(self) -> None:
+        with self.assertRaises(NotFoundException) as ctx:
+            self.assertFalse(
+                self.ws._exists_entry_with_same_visible_name_in_target_path("123-123", UUID_A)
+            )
+
+        self.assertTrue("Metadata not found for 123-123" in str(ctx.exception))
 
     # -------------------------------------
     # Get UUID with visibleName and parent
     # -------------------------------------
     def test_when_file_is_found_uuid_is_returned(self) -> None:
-        actual_file_uuid: str = self.ws.get_uuid_with_visible_name_and_parent(
+        actual_file_uuid: str = self.ws._get_uuid_with_visible_name_and_parent(
             'Fairytale.pdf', UUID_A)
         self.assertEqual(UUID_FAIRYTALE, actual_file_uuid)
 
     def test_when_file_is_not_found_exception_is_raised(self) -> None:
 
         with self.assertRaises(NotFoundException) as context:
-            self.ws.get_uuid_with_visible_name_and_parent(
+            self.ws._get_uuid_with_visible_name_and_parent(
                 'Sadtale.pdf', UUID_B)
 
         self.assertTrue("Metadata not found for" in str(context.exception))
