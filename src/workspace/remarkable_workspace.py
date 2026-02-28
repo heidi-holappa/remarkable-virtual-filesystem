@@ -5,7 +5,7 @@
 
 import copy
 from fnmatch import fnmatchcase
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Tuple, Any, Optional
 
 from src.data.metadata_source import MetadataSource
 from src.exception.constraint_violation_exception import ConstraintViolationException
@@ -215,30 +215,15 @@ class RemarkableWorkspace:
             if target_uuid is None:
                 raise InvalidPathException(INVALID_PATH)
 
-            # Handle possible path in filename
-            if "/" in source:
-                parent_path, visible_name = source.rsplit(sep='/', maxsplit=1)
-                parent_uuid = self._traverse_path(parent_path)
-            else:
-                visible_name = source
-                parent_uuid = self._current_collection
+            visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(source)
 
             # attempt to move entities to the same parent
             # should result in a no-op
             if parent_uuid == target_uuid:
                 return
 
-            entities_to_move: List[str] = []
-
-            if '*' in visible_name:
-                entities_to_move.extend(
-                    self._get_matches_for_wildcard(parent_uuid, visible_name)
-                )
-            else:
-                # Get the metadata and UUID of the file in question
-                entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
-                    visible_name, parent_uuid)
-                entities_to_move.append(entity_uuid)
+            entities_to_move: List[str] =  self._form_a_list_of_entities_to_write(
+                visible_name, parent_uuid)
 
             for entity in entities_to_move:
                 self._move_entity(entity, target_uuid)
@@ -248,10 +233,95 @@ class RemarkableWorkspace:
                 NotFoundException) as e:
             print(f"ERROR: {e} ")
 
+    def process_remove_command(self, source: str) -> None:
+        """
+        A remove command removes one or several entities
+        (documents and/or collections) from the reMarkable
+        device.
+
+        Raises:
+          - NotFoundException if source path is not found
+
+        :param source: source to remove
+        :return: None
+        """
+
+        visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(source)
+
+        entities_to_remove: List[str] = []
+
+        if '*' in visible_name:
+            entities_to_remove.extend(
+                self._get_matches_for_wildcard(parent_uuid, visible_name)
+            )
+        else:
+            # Get the metadata and UUID of the file in question
+            entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
+                visible_name, parent_uuid)
+            entities_to_remove.append(entity_uuid)
+
+
 
     # ----------------------------------
     # private methods
     # ----------------------------------
+
+
+    def _resolve_source_parent_and_visible_name(self, source: str) -> Tuple[str, str]:
+        """
+        Resolves the parent for an entity with a matching visible name
+        or for multiple entities matching a wild card.
+
+        Raises:
+            - NotFoundException if the parent can not be resolved
+                when path is provided with the source
+
+        :param source: a source for one or several entities
+        :return: a tuple containing the visible name or a wild card
+                    for entity/entities with the parent returned
+        """
+        # Handle possible path in filename
+        if "/" in source:
+            parent_path, visible_name = source.rsplit(sep='/', maxsplit=1)
+            parent_uuid = self._traverse_path(parent_path)
+            if parent_uuid is None:
+                raise NotFoundException(COLLECTION_NOT_FOUND)
+        else:
+            visible_name = source
+            parent_uuid = self._current_collection
+
+        return visible_name, parent_uuid
+
+    def _form_a_list_of_entities_to_write(self, visible_name: str, parent_uuid: str) -> List[str]:
+        """
+        Forms a list of entities that should be written
+        to reMarkable device. If the visibleName contains
+        a wild card, all entities with visibleName matching
+        to the pattern are removed. Otherwise, the visibleName
+        is returned in a list.
+
+        :param visible_name: an exact match to a visible name
+                                or a pattern to match against
+        :param parent_uuid: parent of the entity or entities
+        :return: list of entities on which a write operation
+                    is to be executed
+        """
+
+        entities_to_write: List[str] = []
+
+        if '*' in visible_name:
+            entities_to_write.extend(
+                self._get_matches_for_wildcard(parent_uuid, visible_name)
+            )
+        else:
+            # Get the metadata and UUID of the file in question
+            entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
+                visible_name, parent_uuid)
+            entities_to_write.append(entity_uuid)
+
+        return entities_to_write
+
+
 
     def _traverse_path(self, path: str) -> Optional[str]:
         """

@@ -156,7 +156,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_out:
             self.ws.process_move_command("/C/non-existing-file.pdf", "/B")
             output: str = mock_out.getvalue()
-            self.assertTrue("Metadata not found for" in output, msg=f"Output was: {output}")
+            self.assertTrue("ERROR: Collection with the given UUID was not found" in output, msg=f"Output was: {output}")
 
     # Constraint: Source must be a valid file or collection (case: moving CollectionType)
     @patch.object(RemarkableSSHMetadataSource, "write")
