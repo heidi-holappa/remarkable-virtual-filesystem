@@ -15,6 +15,8 @@ from src.exception.invalid_path_exception import InvalidPathException
 
 from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, INVALID_PATH
 from src.dto.metadata import Metadata
+from src.exception.remarkable_write_exception import RemarkableWriteException
+
 
 class RemarkableWorkspace:
     """
@@ -39,8 +41,10 @@ class RemarkableWorkspace:
 
     def get_data_for_uuid(self, entry_uuid: str) -> Dict[str, Any]:
         """
-        Returns the data for the provided UUID. If data
-        is not found, raises a NotFoundException
+        Returns the data for the provided UUID.
+
+        Raises:
+          - NotFoundException if data is not found
 
         :return: a dictionary of metadata
         """
@@ -51,6 +55,26 @@ class RemarkableWorkspace:
             raise NotFoundException(f"Metadata not found for {entry_uuid}")
 
         return data
+
+    def get_visible_name_for_uuid(self, entity_uuid: str) -> str:
+        """
+        Returns the visibleName of the given entity.
+
+        Raises:
+          - NotFoundException if the entity is not found
+
+        :param entity_uuid: UUID for a Document or Collection type
+        :return: visible name of the entity
+        """
+
+        data: Optional[Dict[str, Any]] = self._data.get(entity_uuid)
+
+        if not data:
+            raise NotFoundException(f"Metadata not found for {entity_uuid}")
+
+        return data.get('visibleName')
+
+
 
 
     def get_current_collection(self) -> str:
@@ -65,7 +89,7 @@ class RemarkableWorkspace:
     def set_current_collection(self, collection: str) -> None:
         """
         Setter for the current collection. The collection
-        must be either an UUID of a CollectionType or an
+        must be either a UUID of a CollectionType or an
         empty string for root.
 
         :return: None
@@ -76,22 +100,6 @@ class RemarkableWorkspace:
         if not (is_root or is_valid_collection):
             raise NotFoundException(COLLECTION_NOT_FOUND)
         self._current_collection = collection
-
-
-    def entry_is_a_collection(self, entity_uuid) -> bool:
-        """
-        Validates whether the metadata entry with the given UUID
-        is of type CollectionType.
-
-        Raises:
-          - NotFoundException if a metadata entry for the given
-            UUID is not found
-
-        :param entity_uuid: UUID of the entry
-        :return: boolean indicating whether this entry has type CollectionType
-        """
-
-        return self.get_data_for_uuid(entity_uuid).get('type') == 'CollectionType'
 
 
     def get_parent(self, entity_uuid: Optional[str] = None) -> str:
@@ -114,8 +122,9 @@ class RemarkableWorkspace:
 
     def get_collection(self, collection: str, parent: str) -> Optional[str]:
         """
-        As a first version returns the uuid of the collection with the given parent
-        and a matching visible name
+        Returns the UUID of the collection with the given
+        parent and a matching visible name
+
         :param collection: a name of the collection
         :param parent: UUID of the parent
         :return: an optional UUID of the collection
@@ -209,78 +218,121 @@ class RemarkableWorkspace:
 
         return collection_pointer
 
-    def handle_move_instruction(self, filename: str, path: str) -> None:
+    def process_move_command(self, source: str, path: str) -> None:
         """
-        As an MVP the move instruction moves one DocumentType,
-        i.e., changes the parent of the given DocumentType to the
-        provided parent.
+        A single move instruction moves one or several entities
+        with a common parent to the provided target path. This
+        method prepares a list of source entities to be moved
+        and then separately invokes a helper method to handle
+        the move operation for each entity. The list of entries
+        will be sorted in alphabetical order based on the visible
+        names of the entities.
 
         In try-except following exceptions may occur:
           - InvalidPathException if target path does not exist
           - InvalidMetadataException if metadata validation fails
           - NotFoundException if the file to move is not found
 
-        :param filename: name of the file to be moved
+
+        TODO:   V2 will replace the first version of the move command
+                and will be the final version of the command for the
+                0.1 public release of this tool.
+
+        :param source: name of the file to be moved
         :param path: the directory of the target parent
         :return: None
         """
 
         try:
             # Root path can not be moved
-            if filename == "":
+            if source == "":
                 raise ConstraintViolationException("Root path cannot be moved")
 
-            # Handle possible path in filename
-            if "/" in filename:
-                parent_path, file = filename.rsplit(sep='/', maxsplit=1)
-                parent_uuid = self.traverse_path(parent_path)
-            else:
-                file = filename
-                parent_uuid = self._current_collection
-
-            # Get the UUID of the new parent
+            # Attempt to resolve the target UUID
+            # from the provided target path
             target_uuid: Optional[str] = self.traverse_path(path)
             if target_uuid is None:
                 raise InvalidPathException(INVALID_PATH)
 
+            # Handle possible path in filename
+            if "/" in source:
+                parent_path, visible_name = source.rsplit(sep='/', maxsplit=1)
+                parent_uuid = self.traverse_path(parent_path)
+            else:
+                visible_name = source
+                parent_uuid = self._current_collection
 
-            # moving to the same parent should result in a no-op
+            # attempt to move entities to the same parent
+            # should result in a no-op
             if parent_uuid == target_uuid:
                 return
 
-            # Get the metadata and UUID of the file in question
-            entry_uuid: str = self.get_uuid_with_visible_name_and_parent(
-                file, parent_uuid)
+            entities_to_move: List[str] = []
 
-            if self.entry_is_a_collection(entry_uuid) and \
-                self.is_target_path_descendant_of_source_path(target_uuid, entry_uuid):
-                raise ConstraintViolationException("Collection can not be moved into itself or its descendant")
+            if '*' in visible_name:
+                entities_to_move.extend(
+                    self._get_matches_for_wildcard(parent_uuid, visible_name)
+                )
+            else:
+                # Get the metadata and UUID of the file in question
+                entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
+                    visible_name, parent_uuid)
+                entities_to_move.append(entity_uuid)
 
-            if self.entry_is_a_collection(entry_uuid) and \
-                self.exists_entry_with_same_visible_name_in_target_path(entry_uuid, target_uuid):
-                raise ConstraintViolationException("Destination must not contain a child with the same name")
+            for entity in entities_to_move:
+                self._move_entity(entity, target_uuid)
+
+        except (ConstraintViolationException,
+                InvalidPathException,
+                NotFoundException) as e:
+            print(f"ERROR: {e} ")
 
 
-            new_metadata_entry: Dict[str, Any] = copy.deepcopy(self._data.get(entry_uuid))
+    # ----------------------------------
+    # private methods
+    # ----------------------------------
+
+    def _move_entity(self, entity_uuid: str, target_uuid: str) -> None:
+        """
+        Sets the parent of the provided entity to be the
+        target UUID
+
+        :param entity_uuid: entity which parent is updated
+        :param target_uuid: the new parent of the entity
+        :return: None
+        """
+
+        try:
+            if self._entry_is_a_collection(entity_uuid) and \
+                self._is_target_path_descendant_of_source_path(target_uuid, entity_uuid):
+                raise ConstraintViolationException(
+                    "Collection can not be moved into itself or its descendant")
+
+            if self._entry_is_a_collection(entity_uuid) and \
+                self._exists_entry_with_same_visible_name_in_target_path(entity_uuid, target_uuid):
+                raise ConstraintViolationException(
+                    f"Destination must not contain a child with the same name: "
+                    f"{self.get_visible_name_for_uuid(entity_uuid)}")
+
+            new_metadata_entry: Dict[str, Any] = copy.deepcopy(self._data.get(entity_uuid))
             new_metadata_entry['parent'] = target_uuid
 
             # Create a Metadata DTO for given UUID
             metadata: Metadata = Metadata.from_dict(new_metadata_entry)
 
             # Call RemarkableSshMetadataSource to store the metadata entry
-            self._source.write(entry_uuid, metadata)
+            self._source.write(entity_uuid, metadata)
 
             # Update local data
-            self._data[entry_uuid] = new_metadata_entry
+            self._data[entity_uuid] = new_metadata_entry
 
         except (NotFoundException,
                 InvalidMetadataException,
-                InvalidPathException,
-                ConstraintViolationException) as e:
+                ConstraintViolationException,
+                RemarkableWriteException) as e:
             print(f"ERROR: {e} ")
 
-
-    def get_matches_for_wildcard(self, parent_uuid: str, wildcard: str) -> List[str]:
+    def _get_matches_for_wildcard(self, parent_uuid: str, wildcard: str) -> List[str]:
         """
         Finds all entries with the provided parent and visibleName
         that matches the given wildcard.
@@ -300,7 +352,8 @@ class RemarkableWorkspace:
         wildcard_matches: List[str] = []
 
         for k, v in self.get_data().items():
-            has_matching_visible_name: bool = self._visible_name_matches_wildcard(wildcard, v.get('visibleName'))
+            has_matching_visible_name: bool = self._visible_name_matches_wildcard(
+                wildcard, v.get('visibleName'))
             if v.get('parent') == parent_uuid and has_matching_visible_name:
                 wildcard_matches.append(k)
 
@@ -318,7 +371,8 @@ class RemarkableWorkspace:
 
         return fnmatchcase(visible_name, pattern)
 
-    def exists_entry_with_same_visible_name_in_target_path(self, entry_uuid: str, target_collection_uuid: str) -> bool:
+    def _exists_entry_with_same_visible_name_in_target_path(
+            self, entry_uuid: str, target_collection_uuid: str) -> bool:
         """
         Verifies whether an entry (either a Document or a Collection) with
         identical visibleName matching the visibleName of entry_uuid already
@@ -337,14 +391,15 @@ class RemarkableWorkspace:
         entry_visible_name: str = (self.get_data_for_uuid(entry_uuid)
                                    .get('visibleName'))
 
-        for k, v in data.items():
+        for v in data.values():
             if (v.get('parent') == target_collection_uuid and
                     v.get('visibleName') == entry_visible_name):
                 return True
 
         return False
 
-    def is_target_path_descendant_of_source_path(self, target_path_uuid: str, source_path_uuid: str) -> bool:
+    def _is_target_path_descendant_of_source_path(
+            self, target_path_uuid: str, source_path_uuid: str) -> bool:
         """
         Verifies that the given target path is not a descendant of the source path,
         i.e., the source path may not be an ancestor of the target path.
@@ -364,7 +419,7 @@ class RemarkableWorkspace:
         return False
 
 
-    def get_uuid_with_visible_name_and_parent(self, filename: str, parent_uuid: str) -> str:
+    def _get_uuid_with_visible_name_and_parent(self, filename: str, parent_uuid: str) -> str:
         """
         Gets the data for the given entry and composes a dictionary
         representation of the metadata. The entry is identified by
@@ -394,3 +449,18 @@ class RemarkableWorkspace:
 
         path: Optional[str] = self.generate_absolute_collection_path(parent_uuid)
         raise NotFoundException(f"Metadata not found for {path}/{filename}")
+
+    def _entry_is_a_collection(self, entity_uuid) -> bool:
+        """
+        Validates whether the metadata entry with the given UUID
+        is of type CollectionType.
+
+        Raises:
+          - NotFoundException if a metadata entry for the given
+            UUID is not found
+
+        :param entity_uuid: UUID of the entry
+        :return: boolean indicating whether this entry has type CollectionType
+        """
+
+        return self.get_data_for_uuid(entity_uuid).get('type') == 'CollectionType'
