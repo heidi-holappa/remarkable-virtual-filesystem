@@ -86,6 +86,10 @@ class Metadata:
         additional keys that are not present in metadata, and
         it MUST contain all keys that are present in metadata
 
+        Raises:
+            - InvalidMetadataException if the provided dictionary
+                violates the validation rules of Metadata instance
+
         :param metadata_dict: a dictionary from which metadata is generated
         :return: an instance of metadata dataclass
         """
