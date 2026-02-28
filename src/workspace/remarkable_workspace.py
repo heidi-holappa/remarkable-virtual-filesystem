@@ -178,45 +178,11 @@ class RemarkableWorkspace:
         :param path: a string representation of a path
         :return: an optional uuid of the target collection or None if collection could not be found
         """
-        collection_pointer = self.traverse_path(path)
+        collection_pointer = self._traverse_path(path)
         if collection_pointer is None:
             raise InvalidPathException(INVALID_PATH)
 
         self._current_collection = collection_pointer
-
-    def traverse_path(self, path: str) -> Optional[str]:
-        """
-        Splits the provided path into a list of entries and tries to
-        traverse through the given path changes. At its simplest a path
-        change can be traversing to one directory above the current position
-        with '..' or into a direct subdirectory.
-
-        See the project wiki for a comprehensive list of path changing rules.
-
-        :param path: a string representation of a path
-        :return: an optional uuid of the target collection or None if collection could not be found
-        """
-        directory_changes: list[str] = path.split(sep="/")
-        collection_pointer = self._current_collection
-        if directory_changes[0] == '':
-            # In absolute path traversal begins at root
-            collection_pointer = ROOT_COLLECTION
-
-        for directory in directory_changes:
-            match directory:
-                # No directory change
-                case '' | '.':
-                    continue
-                # Traverse to parent
-                case '..':
-                    collection_pointer = self.get_parent(collection_pointer)
-                # Traverse to descendant
-                case _:
-                    collection_pointer = self.get_collection(directory, collection_pointer)
-            if collection_pointer is None:
-                break
-
-        return collection_pointer
 
     def process_move_command(self, source: str, path: str) -> None:
         """
@@ -233,11 +199,6 @@ class RemarkableWorkspace:
           - InvalidMetadataException if metadata validation fails
           - NotFoundException if the file to move is not found
 
-
-        TODO:   V2 will replace the first version of the move command
-                and will be the final version of the command for the
-                0.1 public release of this tool.
-
         :param source: name of the file to be moved
         :param path: the directory of the target parent
         :return: None
@@ -250,14 +211,14 @@ class RemarkableWorkspace:
 
             # Attempt to resolve the target UUID
             # from the provided target path
-            target_uuid: Optional[str] = self.traverse_path(path)
+            target_uuid: Optional[str] = self._traverse_path(path)
             if target_uuid is None:
                 raise InvalidPathException(INVALID_PATH)
 
             # Handle possible path in filename
             if "/" in source:
                 parent_path, visible_name = source.rsplit(sep='/', maxsplit=1)
-                parent_uuid = self.traverse_path(parent_path)
+                parent_uuid = self._traverse_path(parent_path)
             else:
                 visible_name = source
                 parent_uuid = self._current_collection
@@ -291,6 +252,40 @@ class RemarkableWorkspace:
     # ----------------------------------
     # private methods
     # ----------------------------------
+
+    def _traverse_path(self, path: str) -> Optional[str]:
+        """
+        Splits the provided path into a list of entries and tries to
+        traverse through the given path changes. At its simplest a path
+        change can be traversing to one directory above the current position
+        with '..' or into a direct subdirectory.
+
+        See the project wiki for a comprehensive list of path changing rules.
+
+        :param path: a string representation of a path
+        :return: an optional uuid of the target collection or None if collection could not be found
+        """
+        directory_changes: list[str] = path.split(sep="/")
+        collection_pointer = self._current_collection
+        if directory_changes[0] == '':
+            # In absolute path traversal begins at root
+            collection_pointer = ROOT_COLLECTION
+
+        for directory in directory_changes:
+            match directory:
+                # No directory change
+                case '' | '.':
+                    continue
+                # Traverse to parent
+                case '..':
+                    collection_pointer = self.get_parent(collection_pointer)
+                # Traverse to descendant
+                case _:
+                    collection_pointer = self.get_collection(directory, collection_pointer)
+            if collection_pointer is None:
+                break
+
+        return collection_pointer
 
     def _move_entity(self, entity_uuid: str, target_uuid: str) -> None:
         """
