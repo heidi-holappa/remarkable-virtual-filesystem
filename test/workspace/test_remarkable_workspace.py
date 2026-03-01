@@ -15,7 +15,7 @@ from test.test_data import (
     UUID_A, UUID_A0, UUID_A1,
     UUID_B, UUID_B0, UUID_A_UNDER_B,
     UUID_FAIRYTALE, UUID_FAIRYTALE_2,
-    UUID_INVALID_LAST_MODIFIED)
+    UUID_INVALID_LAST_MODIFIED, UUID_A0_UNDER_B)
 
 class RemarkableWorkspaceTest(unittest.TestCase):
 
@@ -105,7 +105,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     # Get absolute path
     # -----------------------
     def test_root_path_is_output_correctly(self) -> None:
-        self.assertEqual("/", self.ws.generate_absolute_collection_path(""))
+        self.assertEqual("/", self.ws.generate_absolute_collection_path(UUID_ROOT))
 
     def test_direct_subdirectory_to_root_output_correctly(self) -> None:
         self.assertEqual("/A", self.ws.generate_absolute_collection_path(UUID_A))
@@ -377,6 +377,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             self.ws._get_matches_for_wildcard("123-123", "*valid*.pdf")
         self.assertTrue(COLLECTION_NOT_FOUND in str(ctx.exception))
 
+
     # -------------------------------------
     # Check if an entry with the given visibleName exists in the provided collection
     # -------------------------------------
@@ -415,3 +416,43 @@ class RemarkableWorkspaceTest(unittest.TestCase):
 
         self.assertTrue("Metadata not found for" in str(context.exception))
 
+
+    # -------------------------------------
+    # Get descendants for CollectionType
+    # -------------------------------------
+
+    def test_descendants_are_returned_correctly_for_path_root(self) -> None:
+        actual_descendants: List[str] = self.ws._get_descendant_uuids(UUID_ROOT)
+        expected_descendants: List[str] = [
+            UUID_A, UUID_A0, UUID_A1,
+            UUID_FAIRYTALE, UUID_FAIRYTALE_2,
+            UUID_INVALID_LAST_MODIFIED,
+            UUID_B, UUID_B0,
+            UUID_A_UNDER_B, UUID_A0_UNDER_B
+        ]
+        self.assertEqual(sorted(expected_descendants), sorted(actual_descendants))
+
+
+    def test_descendants_are_returned_correctly_for_path_a(self) -> None:
+        actual_descendants: List[str] = self.ws._get_descendant_uuids(UUID_A)
+        expected_descendants: List[str] = [
+            UUID_A0, UUID_A1,
+            UUID_FAIRYTALE, UUID_FAIRYTALE_2,
+            UUID_INVALID_LAST_MODIFIED
+        ]
+        self.assertEqual(sorted(expected_descendants), sorted(actual_descendants))
+
+    def test_when_no_descendants_exists_an_empty_list_is_returned(self) -> None:
+        self.assertEqual([], self.ws._get_descendant_uuids(UUID_A0))
+
+    # -------------------------------------
+    # Get descendants for CollectionType matching a pattern and all their children
+    # -------------------------------------
+
+    def test_descendants_for_collection_b_are_returned_correctly(self) -> None:
+
+        actual_uuids = self.ws._collect_uuids_matching_name_or_pattern_and_all_descendants_of_matches(
+            "B*", UUID_ROOT
+        )
+        expected_uuids: List[str] = [UUID_B, UUID_B0, UUID_A_UNDER_B, UUID_A0_UNDER_B]
+        self.assertEqual(sorted(expected_uuids), sorted(actual_uuids))

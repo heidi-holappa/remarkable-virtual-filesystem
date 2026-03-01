@@ -40,3 +40,14 @@ class MetadataSource:
         :return: None
         """
         raise NotImplementedError
+
+    def remove(self, entry_uuid: str) -> None:
+        """
+        A public method to remove a given file and
+        all related files and folders from the
+        reMarkable device
+
+        :param entry_uuid: UUID of the file to remove
+        :return: None
+        """
+        raise NotImplementedError

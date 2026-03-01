@@ -113,11 +113,12 @@ class RemarkableWorkspace:
         if entity_uuid is None:
             entity_uuid = self._current_collection
 
+        if entity_uuid == ROOT_COLLECTION or self._data.get(entity_uuid) == ROOT_COLLECTION:
+            return ROOT_COLLECTION
+
         if not self._data.get(entity_uuid):
             raise NotFoundException(COLLECTION_NOT_FOUND)
 
-        if entity_uuid == ROOT_COLLECTION or self._data.get(entity_uuid) == ROOT_COLLECTION:
-            return ROOT_COLLECTION
         return self._data.get(entity_uuid).get('parent')
 
     def get_collection(self, collection: str, parent: str) -> Optional[str]:
@@ -155,6 +156,9 @@ class RemarkableWorkspace:
         :param remarkable_metadata: a reference to the dictionary of metadata
         :return: a string representation of the path
         """
+
+        if uuid == ROOT_COLLECTION:
+            return "/"
 
         if not self._data.get(uuid):
             return './<NA>'
@@ -222,7 +226,7 @@ class RemarkableWorkspace:
             if parent_uuid == target_uuid:
                 return
 
-            entities_to_move: List[str] =  self._form_a_list_of_entities_to_write(
+            entities_to_move: List[str] =  self._collect_uuids_for_children_matching_name_or_pattern(
                 visible_name, parent_uuid)
 
             for entity in entities_to_move:
@@ -248,19 +252,17 @@ class RemarkableWorkspace:
 
         visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(source)
 
-        entities_to_remove: List[str] = []
-
-        if '*' in visible_name:
-            entities_to_remove.extend(
-                self._get_matches_for_wildcard(parent_uuid, visible_name)
-            )
-        else:
-            # Get the metadata and UUID of the file in question
-            entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
-                visible_name, parent_uuid)
-            entities_to_remove.append(entity_uuid)
+        entities_to_remove: List[str] = self._collect_uuids_for_children_matching_name_or_pattern(
+            visible_name, parent_uuid)
 
 
+
+        # TODO: What about the children?!?!?!
+        #       Collections have descendants. Those should be removed too.
+        #       Add another private method for adding descendants to the list
+
+        for uuid in entities_to_remove:
+            self._remove_entity(uuid)
 
     # ----------------------------------
     # private methods
@@ -292,13 +294,10 @@ class RemarkableWorkspace:
 
         return visible_name, parent_uuid
 
-    def _form_a_list_of_entities_to_write(self, visible_name: str, parent_uuid: str) -> List[str]:
+    def _collect_uuids_for_children_matching_name_or_pattern(self, visible_name: str, parent_uuid: str) -> List[str]:
         """
-        Forms a list of entities that should be written
-        to reMarkable device. If the visibleName contains
-        a wild card, all entities with visibleName matching
-        to the pattern are removed. Otherwise, the visibleName
-        is returned in a list.
+        Collects the UUIDs of all children with the provided
+        parent collection matching a visible name or a pattern.
 
         :param visible_name: an exact match to a visible name
                                 or a pattern to match against
@@ -322,6 +321,63 @@ class RemarkableWorkspace:
         return entities_to_write
 
 
+    def _collect_uuids_matching_name_or_pattern_and_all_descendants_of_matches(self, visible_name: str, parent_uuid: str) -> List[str]:
+        """
+        Collects the UUIDs of all children with the provided
+        parent collection matching a visible name or a pattern.
+        In addition, also collects all the descendants of
+        matching CollectionTypes
+
+        :param visible_name: an exact match to a visible name
+                                or a pattern to match against
+        :param parent_uuid: parent of the entity or entities
+        :return: list of entities on which a write operation
+                    is to be executed
+        """
+
+        entities_to_write: List[str] = []
+
+        if '*' in visible_name:
+            entities_to_write.extend(
+                self._get_matches_for_wildcard(parent_uuid, visible_name)
+            )
+            for entity_uuid in entities_to_write:
+                if self._entry_is_a_collection(entity_uuid):
+                    entities_to_write.extend(self._get_descendant_uuids(entity_uuid))
+        else:
+            # Get the metadata and UUID of the file in question
+            entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
+                visible_name, parent_uuid)
+            entities_to_write.append(entity_uuid)
+            if self._entry_is_a_collection(entity_uuid):
+                entities_to_write.extend(self._get_descendant_uuids(entity_uuid))
+
+        return entities_to_write
+
+    def _get_descendant_uuids(self, entity_uuid: str) -> List[str]:
+        """
+        Collects UUIDs of all descendants for the given entity_uuid.
+
+        Raises:
+          - InvalidPathException if the given UUID is not a valid
+            UUID for a CollectionType metadata entry.
+
+        :param entity_uuid: a UUID for a CollectionType
+        :return: a list of entity UUIDs
+        """
+
+        if not self._entry_is_a_collection(entity_uuid):
+            raise InvalidPathException(f"Metadata for CollectionType not found: {entity_uuid}")
+
+        descendants: List[str] = []
+
+        for k in self.get_data().keys():
+            if self.get_parent(k) == entity_uuid:
+                descendants.append(k)
+                if self._entry_is_a_collection(k):
+                    descendants.extend(self._get_descendant_uuids(k))
+
+        return descendants
 
     def _traverse_path(self, path: str) -> Optional[str]:
         """
@@ -397,6 +453,24 @@ class RemarkableWorkspace:
                 RemarkableWriteException) as e:
             print(f"ERROR: {e} ")
 
+
+    def _remove_entity(self, entity_uuid: str) -> None:
+        """
+        Attempts to remove the provided entity from the reMarkable
+        tablet.
+
+        Raises:
+
+        :param entity_uuid: UUID of the entity to remove
+        :return: None
+        """
+
+        try:
+            raise NotImplementedError
+        except Exception as e:
+            print(e)
+
+
     def _get_matches_for_wildcard(self, parent_uuid: str, wildcard: str) -> List[str]:
         """
         Finds all entries with the provided parent and visibleName
@@ -411,7 +485,7 @@ class RemarkableWorkspace:
                     empty list, if no matches are found
         """
 
-        if not self.get_data().get(parent_uuid):
+        if not self._entry_is_a_collection(parent_uuid):
             raise NotFoundException(COLLECTION_NOT_FOUND)
 
         wildcard_matches: List[str] = []
@@ -527,5 +601,8 @@ class RemarkableWorkspace:
         :param entity_uuid: UUID of the entry
         :return: boolean indicating whether this entry has type CollectionType
         """
+
+        if entity_uuid == ROOT_COLLECTION:
+            return True
 
         return self.get_data_for_uuid(entity_uuid).get('type') == 'CollectionType'

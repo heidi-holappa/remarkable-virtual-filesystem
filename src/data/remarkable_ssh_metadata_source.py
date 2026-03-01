@@ -42,6 +42,67 @@ class RemarkableSSHMetadataSource(MetadataSource):
         """
         raise NotImplementedError
 
+    def write(self, entry_uuid: str, metadata: Metadata) -> None:
+        """Write metadata file to reMarkable
+
+        Writes the provided metadata dictionary into reMarkable user file
+        directory in a file named ``<uuid>.metadata``. A possible existing
+        file on the device is overwritten.
+
+        raises:
+          **RemarkableWriteException**: indicates an exception occurred during write operation
+
+        :param entry_uuid: the UUID for which a metadata-file is to be written
+        :param metadata: a Metadata DTO containing the metadata to be written
+        :return: None
+        """
+
+        metadata_filename = f"{entry_uuid}.metadata"
+        metadata_content = json.dumps(metadata.to_dict(), indent=4)
+
+        cmd = REMOTE_PREFIX + f"cat > '{metadata_filename}'"
+
+        try:
+            with subprocess.Popen(
+                    SSH_CONNECT + [cmd],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+            ) as proc:
+
+                stdout, stderr = proc.communicate(metadata_content)
+
+                if proc.returncode != 0:
+                    raise RemarkableWriteException(
+                        f"Failed to write metadata: {stderr.strip()}"
+                    )
+
+        except OSError as e:
+            raise RemarkableWriteException(
+                f"OS error while writing metadata: {e}"
+            ) from e
+
+    def remove(self, entity_uuid: str) -> None:
+        """
+        Attempts to remove an entity with the given UUID
+        from the reMarkable device. This operation is
+        undoable and removes all files and paths with the
+        given UUID as a suffix.
+
+        Raises:
+          - TODO: what can be raised?
+
+        :param entity_uuid: UUID of the entity to remove
+        :return: None
+        """
+
+        raise NotImplementedError
+
+    # ------------------------------
+    # Private methods
+    # -------------------------------
+
     def _fetch_metadata(self) -> Dict[str, Dict[str, Any]]:
         """
         Fetches the content of each *.metadata file in the filepath
@@ -146,44 +207,3 @@ class RemarkableSSHMetadataSource(MetadataSource):
             sizes[uuid] = int(size)
 
         return sizes
-
-    def write(self, entry_uuid: str, metadata: Metadata) -> None:
-        """Write metadata file to reMarkable
-
-        Writes the provided metadata dictionary into reMarkable user file
-        directory in a file named ``<uuid>.metadata``. A possible existing
-        file on the device is overwritten.
-
-        raises:
-          **RemarkableWriteException**: indicates an exception occurred during write operation
-
-        :param entry_uuid: the UUID for which a metadata-file is to be written
-        :param metadata: a Metadata DTO containing the metadata to be written
-        :return: None
-        """
-
-        metadata_filename = f"{entry_uuid}.metadata"
-        metadata_content = json.dumps(metadata.to_dict(), indent=4)
-
-        cmd = REMOTE_PREFIX + f"cat > '{metadata_filename}'"
-
-        try:
-            with subprocess.Popen(
-                    SSH_CONNECT + [cmd],
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-            ) as proc:
-
-                stdout, stderr = proc.communicate(metadata_content)
-
-                if proc.returncode != 0:
-                    raise RemarkableWriteException(
-                        f"Failed to write metadata: {stderr.strip()}"
-                    )
-
-        except OSError as e:
-            raise RemarkableWriteException(
-                f"OS error while writing metadata: {e}"
-            ) from e
