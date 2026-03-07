@@ -1,7 +1,7 @@
 """
     Base module for the source of metadata
 """
-from typing import Dict, Any
+from typing import Dict, List, Any
 
 from src.dto.metadata import Metadata
 
@@ -41,13 +41,13 @@ class MetadataSource:
         """
         raise NotImplementedError
 
-    def remove(self, entry_uuid: str) -> None:
+    def remove(self, entry_uuids: List[str]) -> None:
         """
-        A public method to remove a given file and
-        all related files and folders from the
-        reMarkable device
+        A public method to remove all files and
+        files and folders from the reMarkable device
+        matching any of the provided UUIDs
 
-        :param entry_uuid: UUID of the file to remove
+        :param entry_uuids: a list of UUIDs
         :return: None
         """
         raise NotImplementedError

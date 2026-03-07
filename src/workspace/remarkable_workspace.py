@@ -13,7 +13,7 @@ from src.exception.invalid_metadata_exception import InvalidMetadataException
 from src.exception.not_found_exception import NotFoundException
 from src.exception.invalid_path_exception import InvalidPathException
 
-from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, INVALID_PATH
+from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, INVALID_PATH, PARENT_NOT_FOUND
 from src.dto.metadata import Metadata
 from src.exception.remarkable_write_exception import RemarkableWriteException
 
@@ -237,32 +237,33 @@ class RemarkableWorkspace:
                 NotFoundException) as e:
             print(f"ERROR: {e} ")
 
-    def process_remove_command(self, source: str) -> None:
+    def process_remove_command(self, target_pattern: str) -> None:
         """
         A remove command removes one or several entities
         (documents and/or collections) from the reMarkable
         device.
 
-        Raises:
+        Handles following exceptions
           - NotFoundException if source path is not found
+          - KeyError: if UUID is not found from data
 
-        :param source: source to remove
+        :param target_pattern: source to remove
         :return: None
         """
 
-        visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(source)
+        try:
+            visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(target_pattern)
 
-        entities_to_remove: List[str] = self._collect_uuids_for_children_matching_name_or_pattern(
-            visible_name, parent_uuid)
+            entities_to_remove: List[str] = self._collect_uuids_matching_name_or_pattern_and_all_descendants_of_matches(
+                visible_name, parent_uuid)
 
+            self._remove_entities(entities_to_remove)
 
+            for uuid in entities_to_remove:
+                self._data.pop(uuid)
 
-        # TODO: What about the children?!?!?!
-        #       Collections have descendants. Those should be removed too.
-        #       Add another private method for adding descendants to the list
-
-        for uuid in entities_to_remove:
-            self._remove_entity(uuid)
+        except (NotFoundException, KeyError) as e:
+            print(f"ERROR: {e}")
 
     # ----------------------------------
     # private methods
@@ -454,21 +455,19 @@ class RemarkableWorkspace:
             print(f"ERROR: {e} ")
 
 
-    def _remove_entity(self, entity_uuid: str) -> None:
+    def _remove_entities(self, entity_uuids: List[str]) -> None:
         """
         Attempts to remove the provided entity from the reMarkable
         tablet.
-
-        Raises:
 
         :param entity_uuid: UUID of the entity to remove
         :return: None
         """
 
         try:
-            raise NotImplementedError
-        except Exception as e:
-            print(e)
+            self._source.remove(entity_uuids)
+        except RemarkableWriteException as e:
+            print(f"ERROR: {e}")
 
 
     def _get_matches_for_wildcard(self, parent_uuid: str, wildcard: str) -> List[str]:
@@ -485,8 +484,12 @@ class RemarkableWorkspace:
                     empty list, if no matches are found
         """
 
-        if not self._entry_is_a_collection(parent_uuid):
-            raise NotFoundException(COLLECTION_NOT_FOUND)
+        try:
+            if not self._entry_is_a_collection(parent_uuid):
+                raise NotFoundException(PARENT_NOT_FOUND.format(parent=parent_uuid, entity=wildcard))
+        except NotFoundException:
+            raise NotFoundException(PARENT_NOT_FOUND.format(parent=parent_uuid, entity=wildcard))
+
 
         wildcard_matches: List[str] = []
 

@@ -2,13 +2,13 @@ import unittest
 from io import StringIO
 import copy
 from unittest.mock import patch, MagicMock
-from typing import List
+from typing import List, Set
 
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from src.exception.not_found_exception import NotFoundException
 from src.exception.invalid_path_exception import InvalidPathException
-from src.constant import COLLECTION_NOT_FOUND, INVALID_PATH
+from src.constant import COLLECTION_NOT_FOUND, INVALID_PATH, PARENT_NOT_FOUND
 from test.test_data import (
     TEST_DATA,
     UUID_ROOT,
@@ -335,6 +335,64 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.assertEqual(UUID_A, self.ws.get_data()[UUID_A_UNDER_B]['parent'])
 
     # -------------------------------------
+    # Process remove instruction
+    # -------------------------------------
+
+    @patch.object(RemarkableSSHMetadataSource, "remove")
+    def test_remove_one_document_positive_case(self, mock_remove: MagicMock) -> None:
+        mock_remove.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        self.assertIn(UUID_FAIRYTALE, self.ws.get_data())
+        self.ws.process_remove_command(target_pattern="Fairytale.pdf")
+        self.assertEqual(mock_remove.call_count, 1)
+        self.assertIsNone(self.ws.get_data().get(UUID_FAIRYTALE))
+
+        args, kwargs = mock_remove.call_args
+        passed_list = args[0]
+        expected_uuids_to_remove = [UUID_FAIRYTALE]
+        self.assertEqual(expected_uuids_to_remove, sorted(passed_list),
+                         msg=f"Assertion failed. Passed list: {passed_list}")
+
+    @patch.object(RemarkableSSHMetadataSource, "remove")
+    def test_remove_two_documents_with_wildcard_positive_case(self, mock_remove: MagicMock) -> None:
+        mock_remove.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        self.assertIn(UUID_FAIRYTALE, self.ws.get_data())
+        self.assertIn(UUID_FAIRYTALE_2, self.ws.get_data())
+        self.ws.process_remove_command(target_pattern="Fairytale*.pdf")
+        self.assertEqual(mock_remove.call_count, 1)
+        self.assertIsNone(self.ws.get_data().get(UUID_FAIRYTALE))
+        self.assertIsNone(self.ws.get_data().get(UUID_FAIRYTALE_2))
+
+        args, kwargs = mock_remove.call_args
+        passed_list = args[0]
+        expected_uuids_to_remove = sorted([UUID_FAIRYTALE, UUID_FAIRYTALE_2])
+        self.assertEqual(expected_uuids_to_remove, sorted(passed_list),
+                         msg=f"Assertion failed. Passed list: {passed_list}")
+
+    @patch.object(RemarkableSSHMetadataSource, "remove")
+    def test_remove_collection_recursively(self, mock_remove: MagicMock) -> None:
+        mock_remove.return_value = None
+        self.ws.set_current_collection(UUID_ROOT)
+
+        expected_removals: Set[str] = {
+            UUID_A, UUID_A0, UUID_A1,
+            UUID_FAIRYTALE,
+            UUID_FAIRYTALE_2,
+            UUID_INVALID_LAST_MODIFIED
+        }
+        self.assertTrue(expected_removals.issubset(self.ws.get_data()))
+
+        self.ws.process_remove_command(target_pattern="A")
+        self.assertEqual(mock_remove.call_count, 1)
+
+        args, kwargs = mock_remove.call_args
+        passed_list = args[0]
+
+        self.assertEqual(sorted(expected_removals), sorted(passed_list),
+                         msg=f"Assertion failed. Passed list: {passed_list}")
+
+    # -------------------------------------
     # Get wildcard matches
     # -------------------------------------
 
@@ -373,9 +431,12 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.assertTrue(UUID_INVALID_LAST_MODIFIED in matches)
 
     def test_raises_not_found_exception_if_parent_not_found(self) -> None:
+        parent: str = "123-123"
+        entity_wildcard = "*valid*.pdf"
         with self.assertRaises(NotFoundException) as ctx:
-            self.ws._get_matches_for_wildcard("123-123", "*valid*.pdf")
-        self.assertTrue(COLLECTION_NOT_FOUND in str(ctx.exception))
+            self.ws._get_matches_for_wildcard(parent, entity_wildcard)
+        self.assertTrue(PARENT_NOT_FOUND.format(
+            parent=parent, entity=entity_wildcard) in str(ctx.exception), msg=ctx.exception)
 
 
     # -------------------------------------

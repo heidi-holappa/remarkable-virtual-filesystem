@@ -7,7 +7,8 @@
 import subprocess
 import tarfile
 import json
-from typing import Dict, Any
+import shlex
+from typing import Dict, List, Any
 from io import BytesIO
 from src.dto.metadata import Metadata
 
@@ -83,7 +84,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
                 f"OS error while writing metadata: {e}"
             ) from e
 
-    def remove(self, entity_uuid: str) -> None:
+    def remove(self, entity_uuids: List[str]) -> None:
         """
         Attempts to remove an entity with the given UUID
         from the reMarkable device. This operation is
@@ -91,13 +92,41 @@ class RemarkableSSHMetadataSource(MetadataSource):
         given UUID as a suffix.
 
         Raises:
-          - TODO: what can be raised?
+          - **RemarkableWriteException**: indicates an exception occurred during write operation
 
-        :param entity_uuid: UUID of the entity to remove
+        :param entity_uuids: UUID of the entity to remove
         :return: None
         """
 
-        raise NotImplementedError
+        if not entity_uuids:
+            return
+
+        patterns = [f"{uuid}*" for uuid in entity_uuids]
+        quoted = " ".join(shlex.quote(p) for p in patterns)
+
+        cmd = REMOTE_PREFIX + f"rm -rf -- {quoted}"
+
+        try:
+            with subprocess.Popen(
+                    SSH_CONNECT + [cmd],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+            ) as proc:
+
+                stdout, stderr = proc.communicate()
+
+                if proc.returncode != 0:
+                    raise RemarkableWriteException(
+                        f"Failed to remove files: {stderr.strip()}"
+                    )
+
+        except OSError as e:
+            raise RemarkableWriteException(
+                f"OS error while removign files: {e}"
+            ) from e
+
 
     # ------------------------------
     # Private methods
