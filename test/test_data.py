@@ -24,7 +24,6 @@ UUID_A_UNDER_B = "b21ca949-1d94-4b61-afd8-59bcf7330721"
 UUID_A0_UNDER_B = "40b7fe05-1c55-4944-b434-74e3f1c48bff"
 
 TEST_DATA: Dict[str, Dict[str, str]] = {
-            "": {"type": "CollectionType", "parent": "", "visibleName": ""},
             UUID_A: {
                 "type": "CollectionType",
                 "parent": "",

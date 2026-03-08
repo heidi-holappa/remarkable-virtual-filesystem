@@ -11,6 +11,7 @@ REMOTE_PREFIX: str = "cd /home/root/.local/share/remarkable/xochitl && "
 ROOT_COLLECTION: str = ''
 
 COLLECTION_NOT_FOUND: str = "Collection with the given UUID was not found"
+PARENT_NOT_FOUND: str = "Parent for entity not found. Parent UUID: {parent}, entity UUID: {entity}"
 INVALID_PATH: str = 'The given path does not exist'
 
 

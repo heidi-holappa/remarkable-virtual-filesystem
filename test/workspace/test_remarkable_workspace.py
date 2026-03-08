@@ -2,20 +2,20 @@ import unittest
 from io import StringIO
 import copy
 from unittest.mock import patch, MagicMock
-from typing import List
+from typing import List, Set
 
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from src.exception.not_found_exception import NotFoundException
 from src.exception.invalid_path_exception import InvalidPathException
-from src.constant import COLLECTION_NOT_FOUND, INVALID_PATH
+from src.constant import COLLECTION_NOT_FOUND, INVALID_PATH, PARENT_NOT_FOUND
 from test.test_data import (
     TEST_DATA,
     UUID_ROOT,
     UUID_A, UUID_A0, UUID_A1,
     UUID_B, UUID_B0, UUID_A_UNDER_B,
     UUID_FAIRYTALE, UUID_FAIRYTALE_2,
-    UUID_INVALID_LAST_MODIFIED)
+    UUID_INVALID_LAST_MODIFIED, UUID_A0_UNDER_B)
 
 class RemarkableWorkspaceTest(unittest.TestCase):
 
@@ -105,7 +105,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     # Get absolute path
     # -----------------------
     def test_root_path_is_output_correctly(self) -> None:
-        self.assertEqual("/", self.ws.generate_absolute_collection_path(""))
+        self.assertEqual("/", self.ws.generate_absolute_collection_path(UUID_ROOT))
 
     def test_direct_subdirectory_to_root_output_correctly(self) -> None:
         self.assertEqual("/A", self.ws.generate_absolute_collection_path(UUID_A))
@@ -156,7 +156,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_out:
             self.ws.process_move_command("/C/non-existing-file.pdf", "/B")
             output: str = mock_out.getvalue()
-            self.assertTrue("Metadata not found for" in output, msg=f"Output was: {output}")
+            self.assertTrue("ERROR: Collection with the given UUID was not found" in output, msg=f"Output was: {output}")
 
     # Constraint: Source must be a valid file or collection (case: moving CollectionType)
     @patch.object(RemarkableSSHMetadataSource, "write")
@@ -335,6 +335,64 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.assertEqual(UUID_A, self.ws.get_data()[UUID_A_UNDER_B]['parent'])
 
     # -------------------------------------
+    # Process remove instruction
+    # -------------------------------------
+
+    @patch.object(RemarkableSSHMetadataSource, "remove")
+    def test_remove_one_document_positive_case(self, mock_remove: MagicMock) -> None:
+        mock_remove.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        self.assertIn(UUID_FAIRYTALE, self.ws.get_data())
+        self.ws.process_remove_command(target_pattern="Fairytale.pdf")
+        self.assertEqual(mock_remove.call_count, 1)
+        self.assertIsNone(self.ws.get_data().get(UUID_FAIRYTALE))
+
+        args, kwargs = mock_remove.call_args
+        passed_list = args[0]
+        expected_uuids_to_remove = [UUID_FAIRYTALE]
+        self.assertEqual(expected_uuids_to_remove, sorted(passed_list),
+                         msg=f"Assertion failed. Passed list: {passed_list}")
+
+    @patch.object(RemarkableSSHMetadataSource, "remove")
+    def test_remove_two_documents_with_wildcard_positive_case(self, mock_remove: MagicMock) -> None:
+        mock_remove.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        self.assertIn(UUID_FAIRYTALE, self.ws.get_data())
+        self.assertIn(UUID_FAIRYTALE_2, self.ws.get_data())
+        self.ws.process_remove_command(target_pattern="Fairytale*.pdf")
+        self.assertEqual(mock_remove.call_count, 1)
+        self.assertIsNone(self.ws.get_data().get(UUID_FAIRYTALE))
+        self.assertIsNone(self.ws.get_data().get(UUID_FAIRYTALE_2))
+
+        args, kwargs = mock_remove.call_args
+        passed_list = args[0]
+        expected_uuids_to_remove = sorted([UUID_FAIRYTALE, UUID_FAIRYTALE_2])
+        self.assertEqual(expected_uuids_to_remove, sorted(passed_list),
+                         msg=f"Assertion failed. Passed list: {passed_list}")
+
+    @patch.object(RemarkableSSHMetadataSource, "remove")
+    def test_remove_collection_recursively(self, mock_remove: MagicMock) -> None:
+        mock_remove.return_value = None
+        self.ws.set_current_collection(UUID_ROOT)
+
+        expected_removals: Set[str] = {
+            UUID_A, UUID_A0, UUID_A1,
+            UUID_FAIRYTALE,
+            UUID_FAIRYTALE_2,
+            UUID_INVALID_LAST_MODIFIED
+        }
+        self.assertTrue(expected_removals.issubset(self.ws.get_data()))
+
+        self.ws.process_remove_command(target_pattern="A")
+        self.assertEqual(mock_remove.call_count, 1)
+
+        args, kwargs = mock_remove.call_args
+        passed_list = args[0]
+
+        self.assertEqual(sorted(expected_removals), sorted(passed_list),
+                         msg=f"Assertion failed. Passed list: {passed_list}")
+
+    # -------------------------------------
     # Get wildcard matches
     # -------------------------------------
 
@@ -373,9 +431,13 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.assertTrue(UUID_INVALID_LAST_MODIFIED in matches)
 
     def test_raises_not_found_exception_if_parent_not_found(self) -> None:
+        parent: str = "123-123"
+        entity_wildcard = "*valid*.pdf"
         with self.assertRaises(NotFoundException) as ctx:
-            self.ws._get_matches_for_wildcard("123-123", "*valid*.pdf")
-        self.assertTrue(COLLECTION_NOT_FOUND in str(ctx.exception))
+            self.ws._get_matches_for_wildcard(parent, entity_wildcard)
+        self.assertTrue(PARENT_NOT_FOUND.format(
+            parent=parent, entity=entity_wildcard) in str(ctx.exception), msg=ctx.exception)
+
 
     # -------------------------------------
     # Check if an entry with the given visibleName exists in the provided collection
@@ -415,3 +477,43 @@ class RemarkableWorkspaceTest(unittest.TestCase):
 
         self.assertTrue("Metadata not found for" in str(context.exception))
 
+
+    # -------------------------------------
+    # Get descendants for CollectionType
+    # -------------------------------------
+
+    def test_descendants_are_returned_correctly_for_path_root(self) -> None:
+        actual_descendants: List[str] = self.ws._get_descendant_uuids(UUID_ROOT)
+        expected_descendants: List[str] = [
+            UUID_A, UUID_A0, UUID_A1,
+            UUID_FAIRYTALE, UUID_FAIRYTALE_2,
+            UUID_INVALID_LAST_MODIFIED,
+            UUID_B, UUID_B0,
+            UUID_A_UNDER_B, UUID_A0_UNDER_B
+        ]
+        self.assertEqual(sorted(expected_descendants), sorted(actual_descendants))
+
+
+    def test_descendants_are_returned_correctly_for_path_a(self) -> None:
+        actual_descendants: List[str] = self.ws._get_descendant_uuids(UUID_A)
+        expected_descendants: List[str] = [
+            UUID_A0, UUID_A1,
+            UUID_FAIRYTALE, UUID_FAIRYTALE_2,
+            UUID_INVALID_LAST_MODIFIED
+        ]
+        self.assertEqual(sorted(expected_descendants), sorted(actual_descendants))
+
+    def test_when_no_descendants_exists_an_empty_list_is_returned(self) -> None:
+        self.assertEqual([], self.ws._get_descendant_uuids(UUID_A0))
+
+    # -------------------------------------
+    # Get descendants for CollectionType matching a pattern and all their children
+    # -------------------------------------
+
+    def test_descendants_for_collection_b_are_returned_correctly(self) -> None:
+
+        actual_uuids = self.ws._collect_uuids_matching_name_or_pattern_and_all_descendants_of_matches(
+            "B*", UUID_ROOT
+        )
+        expected_uuids: List[str] = [UUID_B, UUID_B0, UUID_A_UNDER_B, UUID_A0_UNDER_B]
+        self.assertEqual(sorted(expected_uuids), sorted(actual_uuids))

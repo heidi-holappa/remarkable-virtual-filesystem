@@ -5,7 +5,7 @@
 
 import copy
 from fnmatch import fnmatchcase
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Tuple, Any, Optional
 
 from src.data.metadata_source import MetadataSource
 from src.exception.constraint_violation_exception import ConstraintViolationException
@@ -13,7 +13,7 @@ from src.exception.invalid_metadata_exception import InvalidMetadataException
 from src.exception.not_found_exception import NotFoundException
 from src.exception.invalid_path_exception import InvalidPathException
 
-from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, INVALID_PATH
+from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, INVALID_PATH, PARENT_NOT_FOUND
 from src.dto.metadata import Metadata
 from src.exception.remarkable_write_exception import RemarkableWriteException
 
@@ -113,11 +113,12 @@ class RemarkableWorkspace:
         if entity_uuid is None:
             entity_uuid = self._current_collection
 
+        if entity_uuid == ROOT_COLLECTION or self._data.get(entity_uuid) == ROOT_COLLECTION:
+            return ROOT_COLLECTION
+
         if not self._data.get(entity_uuid):
             raise NotFoundException(COLLECTION_NOT_FOUND)
 
-        if entity_uuid == ROOT_COLLECTION or self._data.get(entity_uuid) == ROOT_COLLECTION:
-            return ROOT_COLLECTION
         return self._data.get(entity_uuid).get('parent')
 
     def get_collection(self, collection: str, parent: str) -> Optional[str]:
@@ -156,6 +157,9 @@ class RemarkableWorkspace:
         :return: a string representation of the path
         """
 
+        if uuid == ROOT_COLLECTION:
+            return "/"
+
         if not self._data.get(uuid):
             return './<NA>'
 
@@ -178,13 +182,205 @@ class RemarkableWorkspace:
         :param path: a string representation of a path
         :return: an optional uuid of the target collection or None if collection could not be found
         """
-        collection_pointer = self.traverse_path(path)
+        collection_pointer = self._traverse_path(path)
         if collection_pointer is None:
             raise InvalidPathException(INVALID_PATH)
 
         self._current_collection = collection_pointer
 
-    def traverse_path(self, path: str) -> Optional[str]:
+    def process_move_command(self, source: str, path: str) -> None:
+        """
+        A single move instruction moves one or several entities
+        with a common parent to the provided target path. This
+        method prepares a list of source entities to be moved
+        and then separately invokes a helper method to handle
+        the move operation for each entity. The list of entries
+        will be sorted in alphabetical order based on the visible
+        names of the entities.
+
+        In try-except following exceptions may occur:
+          - InvalidPathException if target path does not exist
+          - InvalidMetadataException if metadata validation fails
+          - NotFoundException if the file to move is not found
+
+        :param source: name of the file to be moved
+        :param path: the directory of the target parent
+        :return: None
+        """
+
+        try:
+            # Root path can not be moved
+            if source == "":
+                raise ConstraintViolationException("Root path cannot be moved")
+
+            # Attempt to resolve the target UUID
+            # from the provided target path
+            target_uuid: Optional[str] = self._traverse_path(path)
+            if target_uuid is None:
+                raise InvalidPathException(INVALID_PATH)
+
+            visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(source)
+
+            # attempt to move entities to the same parent
+            # should result in a no-op
+            if parent_uuid == target_uuid:
+                return
+
+            entities_to_move: List[str] =  self._collect_uuids_for_children_matching_name_or_pattern(
+                visible_name, parent_uuid)
+
+            for entity in entities_to_move:
+                self._move_entity(entity, target_uuid)
+
+        except (ConstraintViolationException,
+                InvalidPathException,
+                NotFoundException) as e:
+            print(f"ERROR: {e} ")
+
+    def process_remove_command(self, target_pattern: str) -> None:
+        """
+        A remove command removes one or several entities
+        (documents and/or collections) from the reMarkable
+        device.
+
+        Handles following exceptions
+          - NotFoundException if source path is not found
+          - KeyError: if UUID is not found from data
+
+        :param target_pattern: source to remove
+        :return: None
+        """
+
+        try:
+            visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(target_pattern)
+
+            entities_to_remove: List[str] = self._collect_uuids_matching_name_or_pattern_and_all_descendants_of_matches(
+                visible_name, parent_uuid)
+
+            self._remove_entities(entities_to_remove)
+
+            for uuid in entities_to_remove:
+                self._data.pop(uuid)
+
+        except (NotFoundException, KeyError) as e:
+            print(f"ERROR: {e}")
+
+    # ----------------------------------
+    # private methods
+    # ----------------------------------
+
+
+    def _resolve_source_parent_and_visible_name(self, source: str) -> Tuple[str, str]:
+        """
+        Resolves the parent for an entity with a matching visible name
+        or for multiple entities matching a wild card.
+
+        Raises:
+            - NotFoundException if the parent can not be resolved
+                when path is provided with the source
+
+        :param source: a source for one or several entities
+        :return: a tuple containing the visible name or a wild card
+                    for entity/entities with the parent returned
+        """
+        # Handle possible path in filename
+        if "/" in source:
+            parent_path, visible_name = source.rsplit(sep='/', maxsplit=1)
+            parent_uuid = self._traverse_path(parent_path)
+            if parent_uuid is None:
+                raise NotFoundException(COLLECTION_NOT_FOUND)
+        else:
+            visible_name = source
+            parent_uuid = self._current_collection
+
+        return visible_name, parent_uuid
+
+    def _collect_uuids_for_children_matching_name_or_pattern(self, visible_name: str, parent_uuid: str) -> List[str]:
+        """
+        Collects the UUIDs of all children with the provided
+        parent collection matching a visible name or a pattern.
+
+        :param visible_name: an exact match to a visible name
+                                or a pattern to match against
+        :param parent_uuid: parent of the entity or entities
+        :return: list of entities on which a write operation
+                    is to be executed
+        """
+
+        entities_to_write: List[str] = []
+
+        if '*' in visible_name:
+            entities_to_write.extend(
+                self._get_matches_for_wildcard(parent_uuid, visible_name)
+            )
+        else:
+            # Get the metadata and UUID of the file in question
+            entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
+                visible_name, parent_uuid)
+            entities_to_write.append(entity_uuid)
+
+        return entities_to_write
+
+
+    def _collect_uuids_matching_name_or_pattern_and_all_descendants_of_matches(self, visible_name: str, parent_uuid: str) -> List[str]:
+        """
+        Collects the UUIDs of all children with the provided
+        parent collection matching a visible name or a pattern.
+        In addition, also collects all the descendants of
+        matching CollectionTypes
+
+        :param visible_name: an exact match to a visible name
+                                or a pattern to match against
+        :param parent_uuid: parent of the entity or entities
+        :return: list of entities on which a write operation
+                    is to be executed
+        """
+
+        entities_to_write: List[str] = []
+
+        if '*' in visible_name:
+            entities_to_write.extend(
+                self._get_matches_for_wildcard(parent_uuid, visible_name)
+            )
+            for entity_uuid in entities_to_write:
+                if self._entry_is_a_collection(entity_uuid):
+                    entities_to_write.extend(self._get_descendant_uuids(entity_uuid))
+        else:
+            # Get the metadata and UUID of the file in question
+            entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
+                visible_name, parent_uuid)
+            entities_to_write.append(entity_uuid)
+            if self._entry_is_a_collection(entity_uuid):
+                entities_to_write.extend(self._get_descendant_uuids(entity_uuid))
+
+        return entities_to_write
+
+    def _get_descendant_uuids(self, entity_uuid: str) -> List[str]:
+        """
+        Collects UUIDs of all descendants for the given entity_uuid.
+
+        Raises:
+          - InvalidPathException if the given UUID is not a valid
+            UUID for a CollectionType metadata entry.
+
+        :param entity_uuid: a UUID for a CollectionType
+        :return: a list of entity UUIDs
+        """
+
+        if not self._entry_is_a_collection(entity_uuid):
+            raise InvalidPathException(f"Metadata for CollectionType not found: {entity_uuid}")
+
+        descendants: List[str] = []
+
+        for k in self.get_data().keys():
+            if self.get_parent(k) == entity_uuid:
+                descendants.append(k)
+                if self._entry_is_a_collection(k):
+                    descendants.extend(self._get_descendant_uuids(k))
+
+        return descendants
+
+    def _traverse_path(self, path: str) -> Optional[str]:
         """
         Splits the provided path into a list of entries and tries to
         traverse through the given path changes. At its simplest a path
@@ -217,80 +413,6 @@ class RemarkableWorkspace:
                 break
 
         return collection_pointer
-
-    def process_move_command(self, source: str, path: str) -> None:
-        """
-        A single move instruction moves one or several entities
-        with a common parent to the provided target path. This
-        method prepares a list of source entities to be moved
-        and then separately invokes a helper method to handle
-        the move operation for each entity. The list of entries
-        will be sorted in alphabetical order based on the visible
-        names of the entities.
-
-        In try-except following exceptions may occur:
-          - InvalidPathException if target path does not exist
-          - InvalidMetadataException if metadata validation fails
-          - NotFoundException if the file to move is not found
-
-
-        TODO:   V2 will replace the first version of the move command
-                and will be the final version of the command for the
-                0.1 public release of this tool.
-
-        :param source: name of the file to be moved
-        :param path: the directory of the target parent
-        :return: None
-        """
-
-        try:
-            # Root path can not be moved
-            if source == "":
-                raise ConstraintViolationException("Root path cannot be moved")
-
-            # Attempt to resolve the target UUID
-            # from the provided target path
-            target_uuid: Optional[str] = self.traverse_path(path)
-            if target_uuid is None:
-                raise InvalidPathException(INVALID_PATH)
-
-            # Handle possible path in filename
-            if "/" in source:
-                parent_path, visible_name = source.rsplit(sep='/', maxsplit=1)
-                parent_uuid = self.traverse_path(parent_path)
-            else:
-                visible_name = source
-                parent_uuid = self._current_collection
-
-            # attempt to move entities to the same parent
-            # should result in a no-op
-            if parent_uuid == target_uuid:
-                return
-
-            entities_to_move: List[str] = []
-
-            if '*' in visible_name:
-                entities_to_move.extend(
-                    self._get_matches_for_wildcard(parent_uuid, visible_name)
-                )
-            else:
-                # Get the metadata and UUID of the file in question
-                entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
-                    visible_name, parent_uuid)
-                entities_to_move.append(entity_uuid)
-
-            for entity in entities_to_move:
-                self._move_entity(entity, target_uuid)
-
-        except (ConstraintViolationException,
-                InvalidPathException,
-                NotFoundException) as e:
-            print(f"ERROR: {e} ")
-
-
-    # ----------------------------------
-    # private methods
-    # ----------------------------------
 
     def _move_entity(self, entity_uuid: str, target_uuid: str) -> None:
         """
@@ -332,6 +454,22 @@ class RemarkableWorkspace:
                 RemarkableWriteException) as e:
             print(f"ERROR: {e} ")
 
+
+    def _remove_entities(self, entity_uuids: List[str]) -> None:
+        """
+        Attempts to remove the provided entity from the reMarkable
+        tablet.
+
+        :param entity_uuid: UUID of the entity to remove
+        :return: None
+        """
+
+        try:
+            self._source.remove(entity_uuids)
+        except RemarkableWriteException as e:
+            print(f"ERROR: {e}")
+
+
     def _get_matches_for_wildcard(self, parent_uuid: str, wildcard: str) -> List[str]:
         """
         Finds all entries with the provided parent and visibleName
@@ -346,8 +484,12 @@ class RemarkableWorkspace:
                     empty list, if no matches are found
         """
 
-        if not self.get_data().get(parent_uuid):
-            raise NotFoundException(COLLECTION_NOT_FOUND)
+        try:
+            if not self._entry_is_a_collection(parent_uuid):
+                raise NotFoundException(PARENT_NOT_FOUND.format(parent=parent_uuid, entity=wildcard))
+        except NotFoundException:
+            raise NotFoundException(PARENT_NOT_FOUND.format(parent=parent_uuid, entity=wildcard))
+
 
         wildcard_matches: List[str] = []
 
@@ -462,5 +604,8 @@ class RemarkableWorkspace:
         :param entity_uuid: UUID of the entry
         :return: boolean indicating whether this entry has type CollectionType
         """
+
+        if entity_uuid == ROOT_COLLECTION:
+            return True
 
         return self.get_data_for_uuid(entity_uuid).get('type') == 'CollectionType'
