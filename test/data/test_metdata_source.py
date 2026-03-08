@@ -29,4 +29,4 @@ class TestMetadataSource(unittest.TestCase):
 
     def test_remove_raises_not_implemented_error(self) -> None:
         with self.assertRaises(NotImplementedError) as ctx:
-            self.source.remove(UUID_FAIRYTALE)
+            self.source.remove([UUID_FAIRYTALE])

@@ -29,20 +29,18 @@ LLM used:
 
 import unittest
 import subprocess
-import time
-import uuid
 from unittest.mock import patch, MagicMock
-from io import BytesIO, StringIO
+from io import BytesIO
 import tarfile
 import json
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 from src.dto.entry_type_enum import EntityType
 from src.dto.metadata import Metadata
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
 from src.constant import SSH_CONNECT, REMOTE_PREFIX
-from src.exception.invalid_metadata_exception import InvalidMetadataException
 from src.exception.remarkable_write_exception import RemarkableWriteException
+from test.test_data import UUID_FAIRYTALE, UUID_FAIRYTALE_2
 
 
 class TestRemarkableSSHMetadataSource(unittest.TestCase):
@@ -185,7 +183,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         self.assertEqual(result["uuid2"], 200)
 
     @patch("subprocess.Popen")
-    def test_get_file_sizes_nonzero_returncode_raises(self, mock_popen):
+    def test_get_file_sizes_nonzero_return_code_raises(self, mock_popen):
         mock_proc = MagicMock()
         mock_proc.communicate.return_value = ("", "error")
         mock_proc.returncode = 1
@@ -202,8 +200,6 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
     @patch("subprocess.Popen")
     def test_metadata_write_operation_succeeds(self, mock_popen) -> None:
-
-
         # And assuming the process finished successfully
         mock_proc = MagicMock()
         mock_proc.communicate.return_value = ("", "")
@@ -249,18 +245,10 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
     @patch("subprocess.Popen", side_effect=OSError('test'))
     def test_metadata_write_fails_due_to_os_error(self, mock_popen) -> None:
-        # And assuming the process finished successfully
-        mock_proc = MagicMock()
-        mock_proc.communicate.return_value = ("", "")
-        mock_proc.returncode = 0
-
-        mock_popen.return_value.__enter__.return_value = mock_proc
-
         with self.assertRaises(RemarkableWriteException) as context:
             self.call_write_metadata_to_remarkable_with_valid_data()
 
         self.assertTrue("OS error while writing metadata" in str(context.exception))
-
 
 
     def call_write_metadata_to_remarkable_with_valid_data(self) -> Tuple[str, Dict[str, str | bool]]:
@@ -283,4 +271,52 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
         return entry_uuid, valid_metadata.to_dict()
 
+    # --------------------------------------------------
+    # remove()
+    # --------------------------------------------------
 
+    @patch("subprocess.Popen")
+    def test_remove_positive_case(self, mock_popen) -> None:
+        # Assuming popen process finished successfully
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = ("", "")
+        mock_proc.returncode = 0
+
+        mock_popen.return_value.__enter__.return_value = mock_proc
+
+        uuids: List[str] = [UUID_FAIRYTALE, UUID_FAIRYTALE_2]
+
+        # When method under test is invoked
+        self.source.remove(uuids)
+
+        # Then the remote device is called with the correct instruction
+        expected_cmd = REMOTE_PREFIX + f"rm -rf -- '{UUID_FAIRYTALE}*' '{UUID_FAIRYTALE_2}*'"
+
+        mock_popen.assert_called_once_with(
+            SSH_CONNECT + [expected_cmd],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+    @patch("subprocess.Popen", side_effect=OSError('test'))
+    def test_remove_fails_due_to_os_error(self, mock_popen) -> None:
+        with self.assertRaises(RemarkableWriteException) as context:
+            self.source.remove([UUID_FAIRYTALE])
+
+        self.assertTrue("OS error while removing files:" in str(context.exception))
+
+    @patch("subprocess.Popen")
+    def test_remove_fails_due_process_error_code(self, mock_popen) -> None:
+        # And assuming the process finished successfully
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = ("", "")
+        mock_proc.returncode = 1
+
+        mock_popen.return_value.__enter__.return_value = mock_proc
+
+        with self.assertRaises(RemarkableWriteException) as context:
+            self.source.remove([UUID_FAIRYTALE])
+
+        self.assertTrue("Failed to remove files:" in str(context.exception))
