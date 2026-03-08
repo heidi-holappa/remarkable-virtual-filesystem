@@ -124,7 +124,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
 
         except OSError as e:
             raise RemarkableWriteException(
-                f"OS error while removign files: {e}"
+                f"OS error while removing files: {e}"
             ) from e
 
 
