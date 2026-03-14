@@ -240,14 +240,14 @@ class RemarkableWorkspace:
     def process_remove_command(self, target_pattern: str) -> None:
         """
         A remove command removes one or several entities
-        (documents and/or collections) from the reMarkable
-        device.
+        (documents and/or collections) matching the provided
+        pattern from the reMarkable device.
 
-        Handles following exceptions
+        Handles following exceptions and informs user of an error:
           - NotFoundException if source path is not found
-          - KeyError: if UUID is not found from data
+          - KeyError: if UUID is not found for data to be removed
 
-        :param target_pattern: source to remove
+        :param target_pattern: pattern for sources to be removed
         :return: None
         """
 
