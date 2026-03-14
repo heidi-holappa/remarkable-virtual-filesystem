@@ -92,11 +92,11 @@ class TestCommon(unittest.TestCase):
     # -------------------------------
     # mv instruction
     # -------------------------------
-    def test_mv(self) -> None:
+    def test_mv_without_args(self) -> None:
         """
-        Move instruction is not yet implemented. This test will
-        break when the implementation occurs. A useful remainder
-        to update tests.
+        When user attempts to use mv instruction without
+        arguments, they are instructed of the usage of
+        the command
         """
         self.ws.set_current_collection("")
         with patch('sys.stdout', new=StringIO()) as mock_out:
@@ -104,17 +104,41 @@ class TestCommon(unittest.TestCase):
             output: str = mock_out.getvalue()
             self.assertTrue("Usage (mvp):" in output, msg=f"Output was: {output}")
 
-    # -------------------------------
-    # rm instruction
-    # -------------------------------
-    def test_rm(self) -> None:
+    def test_mv_with_multiple_args(self) -> None:
         """
-        Move instruction is not yet implemented. This test will
-        break when the implementation occurs. A useful remainder
-        to update tests.
+        When user attempts to use mv instruction without
+        arguments, they are instructed of the usage of
+        the command
         """
         self.ws.set_current_collection("")
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            rm([])
+            mv(["-r", "foo.pdf", "bar/"], self.manager)
             output: str = mock_out.getvalue()
-            self.assertTrue("Remove not implemented." in output, msg=f"Output was: {output}")
+            self.assertTrue("Usage (mvp):" in output, msg=f"Output was: {output}")
+
+    # -------------------------------
+    # rm instruction
+    # -------------------------------
+    def test_rm_no_args(self) -> None:
+        """
+        When user attempts to use mv instruction without
+        arguments, they are instructed of the usage of
+        the command
+        """
+        self.ws.set_current_collection("")
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            rm([], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue("Usage: rm <file or path>" in output, msg=f"Output was: {output}")
+
+    def test_rm_too_many_args(self) -> None:
+        """
+        When user attempts to use mv instruction with
+        multiple arguments, they are instructed of the
+        usage of the command
+        """
+        self.ws.set_current_collection("")
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            rm(["-rf", "/foo"], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue("Usage: rm <file or path>" in output, msg=f"Output was: {output}")

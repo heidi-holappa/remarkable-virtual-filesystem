@@ -22,7 +22,7 @@ def main_loop() -> None:
             case "clear":
                 clear()
             case "rm":
-                rm(args)
+                rm(args, workspace_manager)
             case "ls":
                 ls(args, workspace_manager)
             case "mv":

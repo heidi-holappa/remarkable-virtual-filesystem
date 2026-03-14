@@ -46,24 +46,25 @@ def mv(args: List[str], workspace_manager: WorkspaceManager) -> None:
         print("Usage (mvp): mv <filename without path> <path>")
 
 
-
-
-def rm(args: List[str]) -> None:
+def rm(args: List[str], workspace_manager: WorkspaceManager) -> None:
     """
     A light implementation of remove command.
 
-    TODO: implement rm
-
     :param args: possible arguments
+    :param workspace_manager: manager for reMarkable workspace
     :return: None
     """
-    print(f"Remove not implemented. Called with args: {args}")
+    ws: RemarkableWorkspace = workspace_manager.get()
+
+    if len(args) == 1:
+        ws.process_remove_command(args[0])
+    else:
+        print("Usage: rm <file or path>")
+
 
 def ls(args: List[str], workspace_manager: WorkspaceManager) -> None:
     """
     A light implementation of the list command.
-
-    TODO: add support for args
 
     :param args: arguments for the ls command
     :param workspace_manager: manager for reMarkable workspace
