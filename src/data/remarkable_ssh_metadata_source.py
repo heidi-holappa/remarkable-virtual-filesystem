@@ -13,7 +13,7 @@ from io import BytesIO
 from src.dto.metadata import Metadata
 
 from src.data.metadata_source import MetadataSource
-from src.constant import REMOTE_PREFIX, SSH_CONNECT
+from src.constant import REMOTE_PREFIX, REMOTE_UPDATE_XOCHITL, SSH_CONNECT
 from src.exception.remarkable_write_exception import RemarkableWriteException
 
 class RemarkableSSHMetadataSource(MetadataSource):
@@ -102,10 +102,9 @@ class RemarkableSSHMetadataSource(MetadataSource):
             return
 
         patterns = [f"{uuid}*" for uuid in entity_uuids]
-        quoted = " ".join(shlex.quote(p) for p in patterns)
+        removable_entities = " ".join(patterns)
 
-        cmd = REMOTE_PREFIX + f"rm -rf -- {quoted}"
-
+        cmd = REMOTE_PREFIX + f"rm -rf -- {removable_entities}" + REMOTE_UPDATE_XOCHITL
         try:
             with subprocess.Popen(
                     SSH_CONNECT + [cmd],

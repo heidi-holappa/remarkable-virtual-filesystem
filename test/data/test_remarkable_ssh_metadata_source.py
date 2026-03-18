@@ -38,7 +38,7 @@ from typing import Dict, List, Tuple
 from src.dto.entry_type_enum import EntityType
 from src.dto.metadata import Metadata
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
-from src.constant import SSH_CONNECT, REMOTE_PREFIX
+from src.constant import SSH_CONNECT, REMOTE_PREFIX, REMOTE_UPDATE_XOCHITL
 from src.exception.remarkable_write_exception import RemarkableWriteException
 from test.test_data import UUID_FAIRYTALE, UUID_FAIRYTALE_2
 
@@ -290,7 +290,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         self.source.remove(uuids)
 
         # Then the remote device is called with the correct instruction
-        expected_cmd = REMOTE_PREFIX + f"rm -rf -- '{UUID_FAIRYTALE}*' '{UUID_FAIRYTALE_2}*'"
+        expected_cmd = REMOTE_PREFIX + f"rm -rf -- {UUID_FAIRYTALE}* {UUID_FAIRYTALE_2}*" + REMOTE_UPDATE_XOCHITL
 
         mock_popen.assert_called_once_with(
             SSH_CONNECT + [expected_cmd],
