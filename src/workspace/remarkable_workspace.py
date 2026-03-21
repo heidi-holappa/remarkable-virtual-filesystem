@@ -129,6 +129,9 @@ class RemarkableWorkspace:
         Returns the UUID of the collection with the given
         parent and a matching visible name
 
+        raises:
+          - NotADirectoryException: if only match for a segment of a path is a DocumentType (file)
+
         :param file_name: a name of the collection
         :param parent: UUID of the parent
         :return: an optional UUID of the collection
@@ -188,6 +191,11 @@ class RemarkableWorkspace:
         Attempts to change current collection to the provided
         collection. If traversal of given path fails to locate
         a collection, InvalidPathException is raised.
+
+        raises:
+          - NotADirectoryException: instead of passing the raised exception a
+          new one is thrown to include the full path in error message
+          - NoSuchFileOrDirectoryException: no matching file or directory was found
 
         :param path: a string representation of a path
         :return: an optional uuid of the target collection or None if collection could not be found
