@@ -5,10 +5,11 @@ from unittest.mock import patch, MagicMock
 from typing import List, Set
 
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
+from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirectoryException
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from src.exception.not_found_exception import NotFoundException
 from src.exception.invalid_path_exception import InvalidPathException
-from src.constant import COLLECTION_NOT_FOUND, INVALID_PATH, PARENT_NOT_FOUND
+from src.constant import COLLECTION_NOT_FOUND, INVALID_PATH, PARENT_NOT_FOUND, NO_SUCH_FILE_OR_DIRECTORY
 from test.test_data import (
     TEST_DATA,
     UUID_ROOT,
@@ -96,10 +97,10 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         assert self.ws.get_current_collection() == UUID_B0
 
     def test_change_collection_with_invalid_path_raises_error(self) -> None:
-        with self.assertRaises(InvalidPathException) as context:
+        with self.assertRaises(NoSuchFileOrDirectoryException) as context:
             self.ws.change_collection("C")
 
-        self.assertTrue(INVALID_PATH in str(context.exception))
+        self.assertTrue(NO_SUCH_FILE_OR_DIRECTORY in str(context.exception))
 
     # -----------------------
     # Get absolute path

@@ -14,6 +14,8 @@ ROOT_COLLECTION: str = ''
 COLLECTION_NOT_FOUND: str = "Collection with the given UUID was not found"
 PARENT_NOT_FOUND: str = "Parent for entity not found. Parent UUID: {parent}, entity UUID: {entity}"
 INVALID_PATH: str = 'The given path does not exist'
+NO_SUCH_FILE_OR_DIRECTORY: str = 'No such file or directory'
+NOT_A_DIRECTORY: str = 'Not a directory'
 
 
 UUID_REGEX = re.compile(
