@@ -413,7 +413,6 @@ class RemarkableWorkspace:
         See the project wiki for a comprehensive list of path changing rules.
 
         raises:
-          - `NoSuchFileOrDirectoryException`: if no matching Collection or Document is found
           - `NotADirectoryException`: if the only match is a DocumentType (file)
 
         :param path: a string representation of a path
@@ -426,23 +425,19 @@ class RemarkableWorkspace:
             # In absolute path traversal begins at root
             collection_pointer = ROOT_COLLECTION
 
-
-        try:
-            for directory in directory_changes:
-                match directory:
-                    # No directory change
-                    case '' | '.':
-                        continue
-                    # Traverse to parent
-                    case '..':
-                        collection_pointer = self.get_parent(collection_pointer)
-                    # Traverse to descendant
-                    case _:
-                        collection_pointer = self.get_collection(directory, collection_pointer)
-                if collection_pointer is None:
-                    break
-        except NotADirectoryException as e:
-            raise e
+        for directory in directory_changes:
+            match directory:
+                # No directory change
+                case '' | '.':
+                    continue
+                # Traverse to parent
+                case '..':
+                    collection_pointer = self.get_parent(collection_pointer)
+                # Traverse to descendant
+                case _:
+                    collection_pointer = self.get_collection(directory, collection_pointer)
+            if collection_pointer is None:
+                break
         return collection_pointer
 
     def _move_entity(self, entity_uuid: str, target_uuid: str) -> None:
