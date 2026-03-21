@@ -10,10 +10,13 @@ from typing import Dict, List, Tuple, Any, Optional
 from src.data.metadata_source import MetadataSource
 from src.exception.constraint_violation_exception import ConstraintViolationException
 from src.exception.invalid_metadata_exception import InvalidMetadataException
+from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirectoryException
+from src.exception.not_a_directory_exception import NotADirectoryException
 from src.exception.not_found_exception import NotFoundException
 from src.exception.invalid_path_exception import InvalidPathException
 
-from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, INVALID_PATH, PARENT_NOT_FOUND
+from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, INVALID_PATH, PARENT_NOT_FOUND, NOT_A_DIRECTORY, \
+    NO_SUCH_FILE_OR_DIRECTORY
 from src.dto.metadata import Metadata
 from src.exception.remarkable_write_exception import RemarkableWriteException
 
@@ -121,20 +124,27 @@ class RemarkableWorkspace:
 
         return self._data.get(entity_uuid).get('parent')
 
-    def get_collection(self, collection: str, parent: str) -> Optional[str]:
+    def get_collection(self, file_name: str, parent: str) -> Optional[str]:
         """
         Returns the UUID of the collection with the given
         parent and a matching visible name
 
-        :param collection: a name of the collection
+        :param file_name: a name of the collection
         :param parent: UUID of the parent
         :return: an optional UUID of the collection
         """
+        has_document_type_with_given_file_name: bool = False
+                
         for k, v in self._data.items():
             if v.get('parent') != parent:
                 continue
-            if v.get('type') == 'CollectionType' and v.get('visibleName') == collection:
+            if v.get('type') == 'CollectionType' and v.get('visibleName') == file_name:
                 return k
+            if v.get('visibleName') == file_name:
+                has_document_type_with_given_file_name = True
+        if has_document_type_with_given_file_name:
+            raise NotADirectoryException(f'{file_name}: {NOT_A_DIRECTORY}')
+
         return None
 
     def get_current_path(self) -> str:
@@ -182,9 +192,14 @@ class RemarkableWorkspace:
         :param path: a string representation of a path
         :return: an optional uuid of the target collection or None if collection could not be found
         """
-        collection_pointer = self._traverse_path(path)
+
+
+        try:
+            collection_pointer = self._traverse_path(path)
+        except NotADirectoryException as e:
+            raise NotADirectoryException(f"{path}: {NOT_A_DIRECTORY}")
         if collection_pointer is None:
-            raise InvalidPathException(INVALID_PATH)
+            raise NoSuchFileOrDirectoryException(f"{path}: {NO_SUCH_FILE_OR_DIRECTORY}")
 
         self._current_collection = collection_pointer
 
@@ -389,8 +404,13 @@ class RemarkableWorkspace:
 
         See the project wiki for a comprehensive list of path changing rules.
 
+        raises:
+          - `NoSuchFileOrDirectoryException`: if no matching Collection or Document is found
+          - `NotADirectoryException`: if the only match is a DocumentType (file)
+
         :param path: a string representation of a path
-        :return: an optional uuid of the target collection or None if collection could not be found
+        :return: an optional uuid of the target collection or None if
+                    collection could not be found
         """
         directory_changes: list[str] = path.split(sep="/")
         collection_pointer = self._current_collection
@@ -398,20 +418,23 @@ class RemarkableWorkspace:
             # In absolute path traversal begins at root
             collection_pointer = ROOT_COLLECTION
 
-        for directory in directory_changes:
-            match directory:
-                # No directory change
-                case '' | '.':
-                    continue
-                # Traverse to parent
-                case '..':
-                    collection_pointer = self.get_parent(collection_pointer)
-                # Traverse to descendant
-                case _:
-                    collection_pointer = self.get_collection(directory, collection_pointer)
-            if collection_pointer is None:
-                break
 
+        try:
+            for directory in directory_changes:
+                match directory:
+                    # No directory change
+                    case '' | '.':
+                        continue
+                    # Traverse to parent
+                    case '..':
+                        collection_pointer = self.get_parent(collection_pointer)
+                    # Traverse to descendant
+                    case _:
+                        collection_pointer = self.get_collection(directory, collection_pointer)
+                if collection_pointer is None:
+                    break
+        except NotADirectoryException as e:
+            raise e
         return collection_pointer
 
     def _move_entity(self, entity_uuid: str, target_uuid: str) -> None:

@@ -7,13 +7,15 @@ import subprocess
 from typing import List
 
 from src.constant import ROOT_COLLECTION
+from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirectoryException
+from src.exception.not_a_directory_exception import NotADirectoryException
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from src.workspace.workspace_manager import WorkspaceManager
 
 
 def cd(args: List[str], workspace_manager: WorkspaceManager) -> None:
     """
-    Instruction for change directory command
+    Handles command to change directory
 
     :param args: the path to which directory should be changed to
     :param workspace_manager: manager for reMarkable workspace
@@ -28,7 +30,11 @@ def cd(args: List[str], workspace_manager: WorkspaceManager) -> None:
         print("Usage: cd OR cd <path>")
         return
     else:
-        ws.change_collection(args[0])
+        try:
+            ws.change_collection(args[0])
+        except (NoSuchFileOrDirectoryException,
+                NotADirectoryException) as e:
+            print(f"cd: {str(e)}")
 
 def mv(args: List[str], workspace_manager: WorkspaceManager) -> None:
     """

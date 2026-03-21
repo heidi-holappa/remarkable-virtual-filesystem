@@ -47,6 +47,22 @@ class TestCommon(unittest.TestCase):
             output: str = mock_out.getvalue()
             self.assertTrue("Usage: cd OR cd <path>" in output, msg=f"Output was: {output}")
 
+    def test_cd_with_non_existing_path_informs_user_path_does_not_exist(self) -> None:
+        self.ws.set_current_collection("")
+        path: str = "/path/does/not/exist"
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            cd([path], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue(f"cd: {path}: No such file or directory" in output, msg=f"Output was: {output}")
+
+    def test_cd_to_file_informs_user_the_targer_is_not_a_directory(self) -> None:
+        self.ws.set_current_collection("")
+        path: str = "/A/Fairytale.pdf"
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            cd([path], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue(f"cd: {path}: Not a directory" in output, msg=f"Output was: {output}")
+
     # -------------------------------
     # ls instruction
     # -------------------------------
