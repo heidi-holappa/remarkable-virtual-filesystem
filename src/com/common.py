@@ -80,7 +80,9 @@ def ls(args: List[str], workspace_manager: WorkspaceManager) -> None:
 
     remarkable_metadata = ws.get_data()
 
-    print(f"List called with args: {args}")
+    if args:
+        print("ls: usage: ls")
+        return
 
     result = []
     for uuid, v in remarkable_metadata.items():

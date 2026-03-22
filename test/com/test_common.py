@@ -95,6 +95,13 @@ class TestCommon(unittest.TestCase):
             self.assertTrue("1024 kB" in output, msg=f"Output was: {output}")
             self.assertTrue("/A/Fairytale.pdf" in output, msg=f"Output was: {output}")
 
+    def test_ls_with_args_informs_of_usage(self) -> None:
+        self.ws.set_current_collection(UUID_A)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            ls(["a"], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue("ls: usage: ls" in output, msg=f"Output was: {output}")
+
     # -------------------------------
     # clear instruction
     # -------------------------------
