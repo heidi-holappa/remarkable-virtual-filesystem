@@ -6,7 +6,8 @@ from src.com.common import cd, ls, mv, rm, clear
 from test.stub_remarkable_metadata_source import StubRemarkableMetadataSource
 from src.workspace.workspace_manager import WorkspaceManager
 
-from test.test_data import UUID_A
+from test.test_data import UUID_A, UUID_D_1
+
 
 class TestCommon(unittest.TestCase):
 
@@ -62,6 +63,11 @@ class TestCommon(unittest.TestCase):
             cd([path], self.manager)
             output: str = mock_out.getvalue()
             self.assertTrue(f"cd: {path}: Not a directory" in output, msg=f"Output was: {output}")
+
+    def test_cd_to_collection_with_a_whitespace_in_its_visble_name(self) -> None:
+        self.ws.set_current_collection("")
+        cd(["D 1"], self.manager)
+        self.assertTrue(self.ws.get_current_collection() == UUID_D_1)
 
     # -------------------------------
     # ls instruction

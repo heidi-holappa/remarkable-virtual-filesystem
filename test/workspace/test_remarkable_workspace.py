@@ -16,7 +16,7 @@ from test.test_data import (
     UUID_A, UUID_A0, UUID_A1,
     UUID_B, UUID_B0, UUID_A_UNDER_B,
     UUID_FAIRYTALE, UUID_FAIRYTALE_2,
-    UUID_INVALID_LAST_MODIFIED, UUID_A0_UNDER_B)
+    UUID_INVALID_LAST_MODIFIED, UUID_A0_UNDER_B, UUID_D_1)
 
 class RemarkableWorkspaceTest(unittest.TestCase):
 
@@ -490,7 +490,8 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             UUID_FAIRYTALE, UUID_FAIRYTALE_2,
             UUID_INVALID_LAST_MODIFIED,
             UUID_B, UUID_B0,
-            UUID_A_UNDER_B, UUID_A0_UNDER_B
+            UUID_A_UNDER_B, UUID_A0_UNDER_B,
+            UUID_D_1
         ]
         self.assertEqual(sorted(expected_descendants), sorted(actual_descendants))
 

@@ -22,109 +22,120 @@ UUID_B = "48635ee3-f8af-4013-98f3-7f2bfc2de0e4"
 UUID_B0 = "52da29a9-96fd-47fc-bd7d-7eb825be10a3"
 UUID_A_UNDER_B = "b21ca949-1d94-4b61-afd8-59bcf7330721"
 UUID_A0_UNDER_B = "40b7fe05-1c55-4944-b434-74e3f1c48bff"
+UUID_D_1 = "0cee4351-e773-4f83-858d-0e4f52c82627"
 
 TEST_DATA: Dict[str, Dict[str, str]] = {
-            UUID_A: {
-                "type": "CollectionType",
-                "parent": "",
-                "visibleName": "A",
-                "createdTime" :1,
-                "lastModified": 0,
-                "new": False,
-                "pinned": False,
-                "source": ""
-            },
-            UUID_A0: {
-                "type": "CollectionType",
-                "parent": UUID_A,
-                "visibleName": "A_0",
-                "createdTime" :1,
-                "lastModified": 0,
-                "new": False,
-                "pinned": False,
-                "source": ""
-            },
-            UUID_A1: {
-                "type": "CollectionType",
-                "parent": UUID_A,
-                "visibleName": "A_1",
-                "createdTime" :1,
-                "lastModified": 0,
-                "new": False,
-                "pinned": False,
-                "source": ""
-            },
-            UUID_FAIRYTALE: {
-                "type": "DocumentType",
-                "parent": UUID_A,
-                "visibleName": "Fairytale.pdf",
-                "size": "1024 kB",
-                "createdTime": 0,
-                "lastModified": 123456789,
-                "new": False,
-                "pinned": False,
-                "source": ""
-            },
-            UUID_FAIRYTALE_2: {
-                "type": "DocumentType",
-                "parent": UUID_A,
-                "visibleName": "Fairytale-2.pdf",
-                "size": "1024 kB",
-                "createdTime": 0,
-                "lastModified": 123456789,
-                "new": False,
-                "pinned": False,
-                "source": ""
-            },
-            UUID_INVALID_LAST_MODIFIED: {
-                "type": "DocumentType",
-                "parent": UUID_A,
-                "visibleName": "InvalidLastModified.pdf",
-                "size": "1024 kB",
-                "createdTime": 0,
-                "lastModified": -1,
-                "new": False,
-                "pinned": False,
-                "source": ""
-            },
-            UUID_B: {
-                "type": "CollectionType",
-                "parent": "",
-                "visibleName": "B",
-                "createdTime": 1,
-                "lastModified": 0,
-                "new": False,
-                "pinned": False,
-                "source": ""
-            },
-            UUID_B0: {
-                "type": "CollectionType",
-                "parent": UUID_B,
-                "visibleName": "B_0",
-                "createdTime": 1,
-                "lastModified": 0,
-                "new": False,
-                "pinned": False,
-                "source": ""
-            },
-            UUID_A_UNDER_B: {
-                "type": "CollectionType",
-                "parent": UUID_B,
-                "visibleName": "A",
-                "createdTime": 1,
-                "lastModified": 0,
-                "new": False,
-                "pinned": False,
-                "source": ""
-            },
-            UUID_A0_UNDER_B: {
-                "type": "CollectionType",
-                "parent": UUID_B,
-                "visibleName": "A_0",
-                "createdTime": 1,
-                "lastModified": 0,
-                "new": False,
-                "pinned": False,
-                "source": ""
-            },
-        }
+    UUID_A: {
+        "type": "CollectionType",
+        "parent": "",
+        "visibleName": "A",
+        "createdTime" :1,
+        "lastModified": 0,
+        "new": False,
+        "pinned": False,
+        "source": ""
+    },
+    UUID_A0: {
+        "type": "CollectionType",
+        "parent": UUID_A,
+        "visibleName": "A_0",
+        "createdTime" :1,
+        "lastModified": 0,
+        "new": False,
+        "pinned": False,
+        "source": ""
+    },
+    UUID_A1: {
+        "type": "CollectionType",
+        "parent": UUID_A,
+        "visibleName": "A_1",
+        "createdTime" :1,
+        "lastModified": 0,
+        "new": False,
+        "pinned": False,
+        "source": ""
+    },
+    UUID_FAIRYTALE: {
+        "type": "DocumentType",
+        "parent": UUID_A,
+        "visibleName": "Fairytale.pdf",
+        "size": "1024 kB",
+        "createdTime": 0,
+        "lastModified": 123456789,
+        "new": False,
+        "pinned": False,
+        "source": ""
+    },
+    UUID_FAIRYTALE_2: {
+        "type": "DocumentType",
+        "parent": UUID_A,
+        "visibleName": "Fairytale-2.pdf",
+        "size": "1024 kB",
+        "createdTime": 0,
+        "lastModified": 123456789,
+        "new": False,
+        "pinned": False,
+        "source": ""
+    },
+    UUID_INVALID_LAST_MODIFIED: {
+        "type": "DocumentType",
+        "parent": UUID_A,
+        "visibleName": "InvalidLastModified.pdf",
+        "size": "1024 kB",
+        "createdTime": 0,
+        "lastModified": -1,
+        "new": False,
+        "pinned": False,
+        "source": ""
+    },
+    UUID_B: {
+        "type": "CollectionType",
+        "parent": "",
+        "visibleName": "B",
+        "createdTime": 1,
+        "lastModified": 0,
+        "new": False,
+        "pinned": False,
+        "source": ""
+    },
+    UUID_B0: {
+        "type": "CollectionType",
+        "parent": UUID_B,
+        "visibleName": "B_0",
+        "createdTime": 1,
+        "lastModified": 0,
+        "new": False,
+        "pinned": False,
+        "source": ""
+    },
+    UUID_A_UNDER_B: {
+        "type": "CollectionType",
+        "parent": UUID_B,
+        "visibleName": "A",
+        "createdTime": 1,
+        "lastModified": 0,
+        "new": False,
+        "pinned": False,
+        "source": ""
+    },
+    UUID_A0_UNDER_B: {
+        "type": "CollectionType",
+        "parent": UUID_B,
+        "visibleName": "A_0",
+        "createdTime": 1,
+        "lastModified": 0,
+        "new": False,
+        "pinned": False,
+        "source": ""
+    },
+    UUID_D_1: {
+        "type": "CollectionType",
+        "parent": "",
+        "visibleName": "D 1",
+        "createdTime": 1,
+        "lastModified": 0,
+        "new": False,
+        "pinned": False,
+        "source": ""
+    },
+}
