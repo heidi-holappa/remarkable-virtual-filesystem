@@ -10,7 +10,6 @@ def main_loop() -> None:
 
     while True:
         path = ws.get_current_path()
-        # user_input: List[str] = input(f"remarkable~{path}$ ").split(' ')
         user_input: List[str] = shlex.split(input(f"remarkable~{path}$ "))
 
         if not user_input:
