@@ -95,6 +95,9 @@ class RemarkableWorkspace:
         must be either a UUID of a CollectionType or an
         empty string for root.
 
+        raises:
+          - NotFoundException: if collection is not found
+
         :return: None
         """
         is_root = collection == ''
@@ -107,6 +110,9 @@ class RemarkableWorkspace:
 
     def get_parent(self, entity_uuid: Optional[str] = None) -> str:
         """
+        raises:
+          - NotFoundException: if parent is not found
+
         :param entity_uuid: optional uuid of an entity for which parent should be given
                         if no parameter is given, parent of current collection is returned
         :return: the parent of either the given entity or current collection. In case
@@ -234,13 +240,13 @@ class RemarkableWorkspace:
         try:
             # Root path can not be moved
             if source == "":
-                raise ConstraintViolationException("Root path cannot be moved")
+                raise ConstraintViolationException("root path cannot be moved")
 
             # Attempt to resolve the target UUID
             # from the provided target path
             target_uuid: Optional[str] = self._traverse_path(path)
             if target_uuid is None:
-                raise InvalidPathException(INVALID_PATH)
+                raise InvalidPathException(f'{path}: {NO_SUCH_FILE_OR_DIRECTORY}')
 
             visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(source)
 
@@ -252,13 +258,16 @@ class RemarkableWorkspace:
             entities_to_move: List[str] =  self._collect_uuids_for_children_matching_name_or_pattern(
                 visible_name, parent_uuid)
 
+            if not entities_to_move:
+                raise NotFoundException(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}")
+
             for entity in entities_to_move:
                 self._move_entity(entity, target_uuid)
 
         except (ConstraintViolationException,
                 InvalidPathException,
                 NotFoundException) as e:
-            print(f"ERROR: {e} ")
+            print(f"mv: {e} ")
 
     def process_remove_command(self, target_pattern: str) -> None:
         """
@@ -311,7 +320,7 @@ class RemarkableWorkspace:
             parent_path, visible_name = source.rsplit(sep='/', maxsplit=1)
             parent_uuid = self._traverse_path(parent_path)
             if parent_uuid is None:
-                raise NotFoundException(COLLECTION_NOT_FOUND)
+                raise NotFoundException(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}")
         else:
             visible_name = source
             parent_uuid = self._current_collection
@@ -414,6 +423,7 @@ class RemarkableWorkspace:
 
         raises:
           - `NotADirectoryException`: if the only match is a DocumentType (file)
+          - `NotFoundException`: if parent is not found
 
         :param path: a string representation of a path
         :return: an optional uuid of the target collection or None if
@@ -454,12 +464,12 @@ class RemarkableWorkspace:
             if self._entry_is_a_collection(entity_uuid) and \
                 self._is_target_path_descendant_of_source_path(target_uuid, entity_uuid):
                 raise ConstraintViolationException(
-                    "Collection can not be moved into itself or its descendant")
+                    "collection can not be moved into itself or its descendant")
 
             if self._entry_is_a_collection(entity_uuid) and \
                 self._exists_entry_with_same_visible_name_in_target_path(entity_uuid, target_uuid):
                 raise ConstraintViolationException(
-                    f"Destination must not contain a child with the same name: "
+                    f"destination must not contain a child with the same name: "
                     f"{self.get_visible_name_for_uuid(entity_uuid)}")
 
             new_metadata_entry: Dict[str, Any] = copy.deepcopy(self._data.get(entity_uuid))
@@ -478,7 +488,7 @@ class RemarkableWorkspace:
                 InvalidMetadataException,
                 ConstraintViolationException,
                 RemarkableWriteException) as e:
-            print(f"ERROR: {e} ")
+            print(f"mv: {e} ")
 
 
     def _remove_entities(self, entity_uuids: List[str]) -> None:
@@ -607,16 +617,22 @@ class RemarkableWorkspace:
         :return: the UUID of the entry
         """
 
-        print(f"filename: {filename}, parent: {parent_uuid}")
+        # TODO: make this a debug level log entry
+        # print(f"filename: {filename}, parent: {parent_uuid}")
 
         for k, v in self._data.items():
-            if v.get('parent') == parent_uuid:
-                print(v.get('visibleName'))
+            # TODO: this could be debug level log entry too
+            # if v.get('parent') == parent_uuid:
+                # print(v.get('visibleName'))
             if v.get('parent') == parent_uuid and v.get('visibleName') == filename:
                 return k
 
-        path: Optional[str] = self.generate_absolute_collection_path(parent_uuid)
-        raise NotFoundException(f"Metadata not found for {path}/{filename}")
+        path_prefix = ""
+        if parent_uuid != ROOT_COLLECTION:
+            path: Optional[str] = self.generate_absolute_collection_path(parent_uuid)
+            if path:
+                path_prefix = f"{path}"
+        raise NotFoundException(f"cannot access {path_prefix}/{filename}: {NO_SUCH_FILE_OR_DIRECTORY}")
 
     def _entry_is_a_collection(self, entity_uuid) -> bool:
         """

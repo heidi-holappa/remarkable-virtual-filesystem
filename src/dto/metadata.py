@@ -59,7 +59,7 @@ class Metadata:
 
         if validation_errors:
             raise InvalidMetadataException(
-                f"One or more metadata fields have invalid values: {','.join(validation_errors)}")
+                f"one or more metadata fields have invalid values: {','.join(validation_errors)}")
 
     # -------------------------------
     #   dictionary operations
