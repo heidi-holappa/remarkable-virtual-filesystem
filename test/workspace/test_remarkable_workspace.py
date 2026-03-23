@@ -155,9 +155,11 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ws.process_move_command("/C/non-existing-file.pdf", "/B")
+            source = "/C/non-existing-file.pdf"
+            self.ws.process_move_command(source, "/B")
             output: str = mock_out.getvalue()
-            self.assertTrue("ERROR: Collection with the given UUID was not found" in output, msg=f"Output was: {output}")
+            self.assertTrue(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}" in output,
+                            msg=f"Output was: {output}")
 
     # Constraint: Source must be a valid file or collection (case: moving CollectionType)
     @patch.object(RemarkableSSHMetadataSource, "write")
@@ -167,7 +169,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_out:
             self.ws.process_move_command("/C", "/B")
             output: str = mock_out.getvalue()
-            self.assertTrue("Metadata not found for" in output, msg=f"Output was: {output}")
+            self.assertTrue(f"mv: cannot access /C: {NO_SUCH_FILE_OR_DIRECTORY} " in output, msg=f"Output was: {output}")
 
     # Constraint: destination must resolve to valid collection
     @patch.object(RemarkableSSHMetadataSource, "write")
@@ -177,7 +179,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_out:
             self.ws.process_move_command("/A/Fairytale.pdf", "/C")
             output: str = mock_out.getvalue()
-            self.assertTrue(INVALID_PATH in output, msg=f"Output was: {output}")
+            self.assertTrue(f"mv: /C: {NO_SUCH_FILE_OR_DIRECTORY}" in output, msg=f"Output was: {output}")
 
     @patch.object(RemarkableSSHMetadataSource, "write")
     def test_document_with_invalid_metadata_cannot_be_moved_and_error_is_shown(self, mock_write) -> None:
@@ -186,7 +188,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_out:
             self.ws.process_move_command("/A/InvalidLastModified.pdf", "/B")
             output: str = mock_out.getvalue()
-            self.assertTrue("One or more metadata fields have invalid values" in output, msg=f"Output was: {output}")
+            self.assertTrue("one or more metadata fields have invalid values" in output, msg=f"Output was: {output}")
 
     # Constraint: A collection can not be moved into itself or its descendant
     def test_collection_type_cannot_be_moved_to_its_descendant_with_relative_target_path(self) -> None:
@@ -194,7 +196,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_out:
             self.ws.process_move_command("/A", "A_0")
             output: str = mock_out.getvalue()
-            self.assertTrue("Collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
+            self.assertTrue("collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
 
     # Constraint: A collection can not be moved into itself or its descendant
     def test_collection_type_cannot_be_moved_to_its_descendant_with_absolute_target_path(self) -> None:
@@ -202,7 +204,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_out:
             self.ws.process_move_command("/A", "/A/A_0")
             output: str = mock_out.getvalue()
-            self.assertTrue("Collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
+            self.assertTrue("collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
 
     # Constraint: A collection can not be moved into itself or its descendant
     def test_collection_cannot_be_moved_into_itself(self) -> None:
@@ -210,7 +212,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_out:
             self.ws.process_move_command("/A", "/A")
             output: str = mock_out.getvalue()
-            self.assertTrue("Collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
+            self.assertTrue("collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
 
     # Constraint: Root collection can not be moved
     def test_root_collection_cannot_be_moved(self) -> None:
@@ -218,7 +220,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_out:
             self.ws.process_move_command("", "")
             output: str = mock_out.getvalue()
-            self.assertTrue("Root path cannot be moved" in output, msg=f"Output was: {output}")
+            self.assertTrue("mv: root path cannot be moved" in output, msg=f"Output was: {output}")
 
     # Constraint: destination must not contain a child with the same name
     def test_destination_cannot_contain_child_with_the_same_visible_name(self) -> None:
@@ -226,7 +228,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_out:
             self.ws.process_move_command("/A", "/B")
             output: str = mock_out.getvalue()
-            self.assertTrue("Destination must not contain a child with the same name" in output, msg=f"Output was: {output}")
+            self.assertTrue("destination must not contain a child with the same name" in output, msg=f"Output was: {output}")
 
     # Constraint: moving to the same parent should result in a no-op
     @patch.object(RemarkableSSHMetadataSource, "write")
@@ -295,7 +297,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             self.assertEqual(mock_write.call_count, 1)
             self.assertEqual(UUID_A, self.ws.get_data()[UUID_A_UNDER_B]['parent'])
             output: str = mock_out.getvalue()
-            self.assertTrue("Destination must not contain a child with the same name: A_0" in output, msg=f"Output was: {output}")
+            self.assertTrue("destination must not contain a child with the same name: A_0" in output, msg=f"Output was: {output}")
 
     @patch.object(RemarkableSSHMetadataSource, "write")
     def test_move_with_wild_card_one_document_has_invalid_metadata(self, mock_write: MagicMock) -> None:
@@ -307,7 +309,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE]['parent'])
             self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE_2]['parent'])
             output: str = mock_out.getvalue()
-            self.assertTrue("ERROR: One or more metadata fields have invalid values: lastModified: -1" in output,
+            self.assertTrue("mv: one or more metadata fields have invalid values: lastModified: -1" in output,
                             msg=f"Output was: {output}")
 
     @patch.object(RemarkableSSHMetadataSource, "write")
@@ -321,9 +323,9 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             self.assertEqual(UUID_B, self.ws.get_data()[UUID_FAIRYTALE_2]['parent'])
             self.assertEqual(UUID_B, self.ws.get_data()[UUID_A1]['parent'])
             output: str = mock_out.getvalue()
-            self.assertTrue("ERROR: One or more metadata fields have invalid values: lastModified: -1" in output,
+            self.assertTrue("mv: one or more metadata fields have invalid values: lastModified: -1" in output,
                             msg=f"Output was: {output}")
-            self.assertTrue("Destination must not contain a child with the same name: A_0" in output,
+            self.assertTrue("mv: destination must not contain a child with the same name: A_0" in output,
                             msg=f"Output was: {output}")
 
     @patch.object(RemarkableSSHMetadataSource, "write")
@@ -476,7 +478,8 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             self.ws._get_uuid_with_visible_name_and_parent(
                 'Sadtale.pdf', UUID_B)
 
-        self.assertTrue("Metadata not found for" in str(context.exception))
+        self.assertTrue(f"cannot access /B/Sadtale.pdf: {NO_SUCH_FILE_OR_DIRECTORY}" in str(context.exception),
+                        msg=context.exception)
 
 
     # -------------------------------------
