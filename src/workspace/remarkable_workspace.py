@@ -235,7 +235,7 @@ class RemarkableWorkspace:
         for entry in list_result:
             print(entry)
 
-        
+
     def change_collection(self, path: str) -> None:
         """
         Attempts to change current collection to the provided

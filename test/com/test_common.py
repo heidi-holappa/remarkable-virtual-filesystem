@@ -77,23 +77,23 @@ class TestCommon(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_out:
             ls([], self.manager)
             output: str = mock_out.getvalue()
-            self.assertTrue("/A" in output, msg=f"Output was: {output}")
-            self.assertTrue("/B" in output, msg=f"Output was: {output}")
+            self.assertTrue("A/" in output, msg=f"Output was: {output}")
+            self.assertTrue("B/" in output, msg=f"Output was: {output}")
 
     def test_ls_sub_path(self) -> None:
         self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
             ls([], self.manager)
             output: str = mock_out.getvalue()
-            self.assertTrue("/A_0" in output, msg=f"Output was: {output}")
+            self.assertTrue("A_0/" in output, msg=f"Output was: {output}")
 
     def test_ls_file_with_size(self) -> None:
         self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
             ls([], self.manager)
             output: str = mock_out.getvalue()
-            self.assertTrue("1024 kB" in output, msg=f"Output was: {output}")
-            self.assertTrue("/A/Fairytale.pdf" in output, msg=f"Output was: {output}")
+            self.assertTrue("1024" in output, msg=f"Output was: {output}")
+            self.assertTrue("Fairytale.pdf" in output, msg=f"Output was: {output}")
 
     def test_ls_with_args_informs_of_usage(self) -> None:
         self.ws.set_current_collection(UUID_A)

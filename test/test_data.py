@@ -33,7 +33,8 @@ TEST_DATA: Dict[str, Dict[str, str]] = {
         "lastModified": 0,
         "new": False,
         "pinned": False,
-        "source": ""
+        "source": "",
+        "size": 4
     },
     UUID_A0: {
         "type": "CollectionType",
@@ -43,7 +44,8 @@ TEST_DATA: Dict[str, Dict[str, str]] = {
         "lastModified": 0,
         "new": False,
         "pinned": False,
-        "source": ""
+        "source": "",
+        "size": 4
     },
     UUID_A1: {
         "type": "CollectionType",
@@ -53,40 +55,41 @@ TEST_DATA: Dict[str, Dict[str, str]] = {
         "lastModified": 0,
         "new": False,
         "pinned": False,
-        "source": ""
+        "source": "",
+        "size": 4
     },
     UUID_FAIRYTALE: {
         "type": "DocumentType",
         "parent": UUID_A,
         "visibleName": "Fairytale.pdf",
-        "size": "1024 kB",
         "createdTime": 0,
         "lastModified": 123456789,
         "new": False,
         "pinned": False,
-        "source": ""
+        "source": "",
+        "size": 1024,
     },
     UUID_FAIRYTALE_2: {
         "type": "DocumentType",
         "parent": UUID_A,
         "visibleName": "Fairytale-2.pdf",
-        "size": "1024 kB",
         "createdTime": 0,
         "lastModified": 123456789,
         "new": False,
         "pinned": False,
-        "source": ""
+        "source": "",
+        "size": 4096,
     },
     UUID_INVALID_LAST_MODIFIED: {
         "type": "DocumentType",
         "parent": UUID_A,
         "visibleName": "InvalidLastModified.pdf",
-        "size": "1024 kB",
         "createdTime": 0,
         "lastModified": -1,
         "new": False,
         "pinned": False,
-        "source": ""
+        "source": "",
+        "size": 2048,
     },
     UUID_B: {
         "type": "CollectionType",
@@ -96,7 +99,8 @@ TEST_DATA: Dict[str, Dict[str, str]] = {
         "lastModified": 0,
         "new": False,
         "pinned": False,
-        "source": ""
+        "source": "",
+        "size": 4
     },
     UUID_B0: {
         "type": "CollectionType",
@@ -106,7 +110,8 @@ TEST_DATA: Dict[str, Dict[str, str]] = {
         "lastModified": 0,
         "new": False,
         "pinned": False,
-        "source": ""
+        "source": "",
+        "size": 4
     },
     UUID_A_UNDER_B: {
         "type": "CollectionType",
@@ -116,7 +121,8 @@ TEST_DATA: Dict[str, Dict[str, str]] = {
         "lastModified": 0,
         "new": False,
         "pinned": False,
-        "source": ""
+        "source": "",
+        "size": 4
     },
     UUID_A0_UNDER_B: {
         "type": "CollectionType",
@@ -126,7 +132,8 @@ TEST_DATA: Dict[str, Dict[str, str]] = {
         "lastModified": 0,
         "new": False,
         "pinned": False,
-        "source": ""
+        "source": "",
+        "size": 4
     },
     UUID_D_1: {
         "type": "CollectionType",
@@ -136,6 +143,7 @@ TEST_DATA: Dict[str, Dict[str, str]] = {
         "lastModified": 0,
         "new": False,
         "pinned": False,
-        "source": ""
+        "source": "",
+        "size": 4
     },
 }
