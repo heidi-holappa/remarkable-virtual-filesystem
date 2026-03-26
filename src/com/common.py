@@ -76,25 +76,13 @@ def ls(args: List[str], workspace_manager: WorkspaceManager) -> None:
     :param workspace_manager: manager for reMarkable workspace
     :return: None
     """
-    ws = workspace_manager.get()
-
-    remarkable_metadata = ws.get_data()
 
     if args:
         print("ls: usage: ls")
         return
 
-    result = []
-    for uuid, v in remarkable_metadata.items():
-        if v.get('parent') != ws.get_current_collection():
-            continue
-        path_and_file = ws.generate_absolute_collection_path(uuid)
-        if v.get('size'):
-            path_and_file = str(v.get('size')) + '\t' + path_and_file
-        result.append(path_and_file)
-
-    for e in sorted(result):
-        print(e)
+    ws = workspace_manager.get()
+    ws.process_ls()
 
 def clear() -> None:
     """

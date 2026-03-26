@@ -17,6 +17,8 @@ INVALID_PATH: str = 'The given path does not exist'
 NO_SUCH_FILE_OR_DIRECTORY: str = 'No such file or directory'
 NOT_A_DIRECTORY: str = 'Not a directory'
 
+LS_COLUMN_WIDTH: int = 16
+
 
 UUID_REGEX = re.compile(
         r"^[0-9a-f]{8}-"

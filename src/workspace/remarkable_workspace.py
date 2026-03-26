@@ -16,7 +16,7 @@ from src.exception.not_found_exception import NotFoundException
 from src.exception.invalid_path_exception import InvalidPathException
 
 from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, INVALID_PATH, PARENT_NOT_FOUND, NOT_A_DIRECTORY, \
-    NO_SUCH_FILE_OR_DIRECTORY
+    NO_SUCH_FILE_OR_DIRECTORY, LS_COLUMN_WIDTH
 from src.dto.metadata import Metadata
 from src.exception.remarkable_write_exception import RemarkableWriteException
 
@@ -191,6 +191,50 @@ class RemarkableWorkspace:
 
         return (self.generate_absolute_collection_path(self._data[uuid]['parent']) +
                 "/" + self._data[uuid].get('visibleName'))
+
+    def process_ls(self) -> None:
+
+        remarkable_metadata = self.get_data()
+
+        list_result: List[str] = []
+        collections: List[Tuple[str, str]] = []
+        documents: List[Tuple[str, str]] = []
+
+
+        collection_uuid = self.get_current_collection()
+
+        if not collection_uuid == ROOT_COLLECTION:
+            list_result.append(f"{' '*LS_COLUMN_WIDTH}../")
+        list_result.append(f"{' '*LS_COLUMN_WIDTH}./")
+
+        for uuid, v in remarkable_metadata.items():
+            if v.get('parent') != self.get_current_collection():
+                continue
+            if v.get('type') == 'CollectionType':
+                collections.append((f"{v.get('visibleName')}/", f"{v.get('size')}"))
+            elif v.get('type') == 'DocumentType':
+                documents.append((f"{v.get('visibleName')}", f"{v.get('size')}"))
+            else:
+                print(f"ls: entry is neither a file or a directory: {uuid}")
+
+        for t in sorted(collections, key=lambda x: x[0].lower()):
+            name, size = t
+            padding: str = ' '*(LS_COLUMN_WIDTH - len(size))
+            list_result.append(f"{size}{padding}{name}")
+
+        for t in sorted(documents, key=lambda x: x[0].lower()):
+            name, size = t
+            padding: str = ' ' * (LS_COLUMN_WIDTH - len(size))
+            list_result.append(f"{size}{padding}{name}")
+
+        size_header = "size (kB)"
+        header_padding = " "*(LS_COLUMN_WIDTH - len(size_header))
+        name_header = "name"
+        header = f"{size_header}{header_padding}{name_header}"
+        print(header)
+        for entry in list_result:
+            print(entry)
+
 
     def change_collection(self, path: str) -> None:
         """
