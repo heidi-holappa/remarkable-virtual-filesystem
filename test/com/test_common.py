@@ -6,7 +6,7 @@ from src.com.common import cd, ls, mv, rm, clear
 from test.stub_remarkable_metadata_source import StubRemarkableMetadataSource
 from src.workspace.workspace_manager import WorkspaceManager
 
-from test.test_data import UUID_A, UUID_D_1
+from test.test_data import UUID_A, UUID_D_1, UUID_ROOT, UUID_A0
 
 
 class TestCommon(unittest.TestCase):
@@ -101,6 +101,44 @@ class TestCommon(unittest.TestCase):
             ls(["a"], self.manager)
             output: str = mock_out.getvalue()
             self.assertTrue("ls: usage: ls" in output, msg=f"Output was: {output}")
+
+    def test_ls_full_output_for_root(self) -> None:
+        self.ws.set_current_collection(UUID_ROOT)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            ls([], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue("size (kB)       name" in output, msg=f"Output was: {output}")
+            self.assertTrue("                ./" in output, msg=f"Output was: {output}")
+            self.assertTrue("4               A/" in output, msg=f"Output was: {output}")
+            self.assertTrue("4               B/" in output, msg=f"Output was: {output}")
+            self.assertTrue("4               D 1/" in output, msg=f"Output was: {output}")
+
+    def test_ls_full_output_for_dir_with_files(self) -> None:
+        self.ws.set_current_collection(UUID_A)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            ls([], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue("size (kB)       name" in output, msg=f"Output was: {output}")
+            self.assertTrue("                ../" in output, msg=f"Output was: {output}")
+            self.assertTrue("                ./" in output, msg=f"Output was: {output}")
+            self.assertTrue("4               A_0/" in output, msg=f"Output was: {output}")
+            self.assertTrue("4               A_1/" in output, msg=f"Output was: {output}")
+            self.assertTrue("4096            Fairytale-2.pdf" in output, msg=f"Output was: {output}")
+            self.assertTrue("1024            Fairytale.pdf" in output, msg=f"Output was: {output}")
+            self.assertTrue("2048            InvalidLastModified.pdf" in output, msg=f"Output was: {output}")
+
+
+    def test_ls_full_output_for_dir_without_files_or_subdirectories(self) -> None:
+        self.ws.set_current_collection(UUID_A0)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            ls([], self.manager)
+            output: str = mock_out.getvalue()
+            expected_output = """size (kB)       name
+                ../
+                ./
+"""
+            self.assertEqual(expected_output, output, msg=f"Output was: {output}")
+
 
     # -------------------------------
     # clear instruction

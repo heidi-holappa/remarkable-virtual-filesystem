@@ -203,7 +203,7 @@ class RemarkableWorkspace:
 
         collection_uuid = self.get_current_collection()
 
-        if collection_uuid == ROOT_COLLECTION:
+        if not collection_uuid == ROOT_COLLECTION:
             list_result.append(f"{' '*LS_COLUMN_WIDTH}../")
         list_result.append(f"{' '*LS_COLUMN_WIDTH}./")
 
