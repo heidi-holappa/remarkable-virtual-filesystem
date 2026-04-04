@@ -192,7 +192,27 @@ class RemarkableWorkspace:
         return (self.generate_absolute_collection_path(self._data[uuid]['parent']) +
                 "/" + self._data[uuid].get('visibleName'))
 
-    def process_ls(self) -> None:
+    def process_ls(self, args: Optional[List[str]]) -> None:
+        """
+        Processes ls command and lists files either in current
+        collection or matching the provided argument. The argument
+        is expected to be a path (collection). If argument is provided,
+        and it does not match any collection, raises NotFoundException.
+
+        :param args: optional arguments for ls
+        :return: None
+        """
+
+        collection_to_list_uuid: str
+
+        if args:
+            path: str = args.pop()
+            collection_to_list_uuid = self._traverse_path(path)
+            if collection_to_list_uuid is None:
+                raise NotFoundException("ls: no such path")
+        else:
+            collection_to_list_uuid = self.get_current_collection()
+
 
         remarkable_metadata = self.get_data()
 
@@ -201,14 +221,12 @@ class RemarkableWorkspace:
         documents: List[Tuple[str, str]] = []
 
 
-        collection_uuid = self.get_current_collection()
-
-        if not collection_uuid == ROOT_COLLECTION:
+        if not collection_to_list_uuid == ROOT_COLLECTION:
             list_result.append(f"{' '*LS_COLUMN_WIDTH}../")
         list_result.append(f"{' '*LS_COLUMN_WIDTH}./")
 
         for uuid, v in remarkable_metadata.items():
-            if v.get('parent') != self.get_current_collection():
+            if v.get('parent') != collection_to_list_uuid:
                 continue
             if v.get('type') == 'CollectionType':
                 collections.append((f"{v.get('visibleName')}/", f"{v.get('size')}"))
