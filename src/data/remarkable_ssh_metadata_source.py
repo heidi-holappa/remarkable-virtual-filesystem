@@ -48,7 +48,8 @@ class RemarkableSSHMetadataSource(MetadataSource):
 
         Writes the provided metadata dictionary into reMarkable user file
         directory in a file named ``<uuid>.metadata``. A possible existing
-        file on the device is overwritten.
+        file on the device is overwritten. After the write operation restarts
+        the Xochitl process.
 
         raises:
           **RemarkableWriteException**: indicates an exception occurred during write operation
@@ -61,7 +62,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
         metadata_filename = f"{entry_uuid}.metadata"
         metadata_content = json.dumps(metadata.to_dict(), indent=4)
 
-        cmd = REMOTE_PREFIX + f"cat > '{metadata_filename}'"
+        cmd = REMOTE_PREFIX + f"cat > '{metadata_filename}'" + REMOTE_UPDATE_XOCHITL
 
         try:
             with subprocess.Popen(
