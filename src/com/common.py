@@ -9,6 +9,7 @@ from typing import List
 from src.constant import ROOT_COLLECTION
 from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirectoryException
 from src.exception.not_a_directory_exception import NotADirectoryException
+from src.exception.not_found_exception import NotFoundException
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from src.workspace.workspace_manager import WorkspaceManager
 
@@ -77,12 +78,16 @@ def ls(args: List[str], workspace_manager: WorkspaceManager) -> None:
     :return: None
     """
 
-    if args:
-        print("ls: usage: ls")
+    if len(args) > 1:
+        print("ls: usage: ls or ls <path or file>")
         return
 
     ws = workspace_manager.get()
-    ws.process_ls()
+
+    try:
+        ws.process_ls(args)
+    except NotFoundException as e:
+        print(e)
 
 def clear() -> None:
     """

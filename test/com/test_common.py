@@ -6,7 +6,7 @@ from src.com.common import cd, ls, mv, rm, clear
 from test.stub_remarkable_metadata_source import StubRemarkableMetadataSource
 from src.workspace.workspace_manager import WorkspaceManager
 
-from test.test_data import UUID_A, UUID_D_1, UUID_ROOT, UUID_A0
+from test.test_data import UUID_A, UUID_D_1, UUID_ROOT, UUID_A0, UUID_B
 
 
 class TestCommon(unittest.TestCase):
@@ -95,12 +95,35 @@ class TestCommon(unittest.TestCase):
             self.assertTrue("1024" in output, msg=f"Output was: {output}")
             self.assertTrue("Fairytale.pdf" in output, msg=f"Output was: {output}")
 
-    def test_ls_with_args_informs_of_usage(self) -> None:
+    def test_ls_with_too_many_args_informs_of_usage(self) -> None:
         self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            ls(["a"], self.manager)
+            ls(["a", "b"], self.manager)
             output: str = mock_out.getvalue()
             self.assertTrue("ls: usage: ls" in output, msg=f"Output was: {output}")
+
+    def test_ls_with_valid_absolute_path_as_arg_lists_files_in_path(self) -> None:
+        self.ws.set_current_collection(UUID_ROOT)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            ls(["A"], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue("1024" in output, msg=f"Output was: {output}")
+            self.assertTrue("Fairytale.pdf" in output, msg=f"Output was: {output}")
+
+    def test_ls_with_valid_relative_path_as_arg_lists_files_in_path(self) -> None:
+        self.ws.set_current_collection(UUID_B)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            ls(["../A"], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue("1024" in output, msg=f"Output was: {output}")
+            self.assertTrue("Fairytale.pdf" in output, msg=f"Output was: {output}")
+
+    def test_ls_with_invalid_path_informs_user_path_not_found(self) -> None:
+        self.ws.set_current_collection(UUID_ROOT)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            ls(["path-does-not-exist"], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue("ls: no such path" in output, msg=f"Output was: {output}")
 
     def test_ls_full_output_for_root(self) -> None:
         self.ws.set_current_collection(UUID_ROOT)
