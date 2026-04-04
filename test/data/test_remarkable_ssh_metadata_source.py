@@ -213,7 +213,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
         # Then the remote device is called with the correct instruction
         expected_filename = f"{entry_uuid}.metadata"
-        expected_cmd = REMOTE_PREFIX + f"cat > '{expected_filename}'"
+        expected_cmd = REMOTE_PREFIX + f"cat > '{expected_filename}' && systemctl restart xochitl"
 
         mock_popen.assert_called_once_with(
             SSH_CONNECT + [expected_cmd],
