@@ -5,15 +5,23 @@
 """
 
 import subprocess
+import os
+import shutil
+import uuid
 import tarfile
 import json
-import shlex
 from typing import Dict, List, Any
 from io import BytesIO
+import tempfile
+
+from src.dto.content import Content
 from src.dto.metadata import Metadata
 
 from src.data.metadata_source import MetadataSource
-from src.constant import REMOTE_PREFIX, REMOTE_UPDATE_XOCHITL, SSH_CONNECT
+from src.constant import (
+    REMOTE_PREFIX, REMOTE_UPDATE_XOCHITL, SSH_CONNECT,
+    REMARKABLE_FILE_PATH, SSH_REMOTE_HOST)
+from src.exception.remarkable_operation_exception import RemarkableOperationException
 from src.exception.remarkable_write_exception import RemarkableWriteException
 
 class RemarkableSSHMetadataSource(MetadataSource):
@@ -127,6 +135,78 @@ class RemarkableSSHMetadataSource(MetadataSource):
                 f"OS error while removing files: {e}"
             ) from e
 
+
+    def remote_copy(self, source_file: str,
+                    metadata: Metadata, content: Content) -> None:
+        """
+        Attempts to copy a file from host machine to the
+        target machine (reMarkable).
+
+        :param source_file: absolute path to source file to be copied
+        :param metadata: a metadata entry for the file
+        :param content: a content entry for the file
+        :return: None
+        """
+
+        entry_uuid: str = str(uuid.uuid4())
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            try:
+                # copy source file with UUID filename
+                filename: str = os.path.basename(source_file)
+                uuid_filename: str = entry_uuid + os.path.splitext(filename)[1]
+
+                target_file_path = os.path.join(tmp_dir, uuid_filename)
+                shutil.copy(source_file, target_file_path)
+
+                # write metadata + content
+                metadata_file: str = os.path.join(tmp_dir, f"{entry_uuid}.metadata")
+                content_file: str = os.path.join(tmp_dir, f"{entry_uuid}.content")
+
+                with open(metadata_file, mode="w", encoding="utf-8") as file:
+                    json.dump(obj=metadata.to_dict(), fp=file, indent=4)
+
+                with open(content_file, mode="w", encoding="utf-8") as file:
+                    json.dump(obj=content.to_dict(), fp=file, indent=4)
+
+                # ---- Transfer using tar over ssh ----
+
+                tar_cmd = ["tar", "cf", "-", "-C", tmp_dir, "."]
+                ssh_cmd = ["ssh", SSH_REMOTE_HOST, f"tar xf - -C {REMARKABLE_FILE_PATH}"]
+
+                tar_proc = subprocess.Popen(tar_cmd, stdout=subprocess.PIPE)
+                ssh_proc = subprocess.Popen(ssh_cmd, stdin=tar_proc.stdout)
+
+                tar_proc.stdout.close()  # allow tar to receive SIGPIPE if ssh fails
+                ssh_proc.communicate()
+
+                if ssh_proc.returncode != 0:
+                    raise RuntimeError("SSH transfer failed")
+
+            except Exception as e:
+                raise RemarkableWriteException(f"rcp: failed to copy file: {e}")
+
+    @staticmethod
+    def restart_xochitl() -> None:
+        """
+        Restarts the xochitl service on the remote reMarkable device via SSH.
+
+        This is typically required after modifying files in the xochitl data
+        directory for changes to take effect.
+
+        :raises RemarkableOperationException: if the restart command fails
+        """
+
+        cmd = ["ssh", SSH_REMOTE_HOST, "systemctl restart xochitl"]
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            raise RemarkableOperationException(
+                f"Failed to restart xochitl:\n"
+                f"STDOUT: {result.stdout}\n"
+                f"STDERR: {result.stderr}"
+            )
 
     # ------------------------------
     # Private methods
