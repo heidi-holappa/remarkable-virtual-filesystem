@@ -29,19 +29,25 @@ LLM used:
 
 import unittest
 import subprocess
+import time
 from unittest.mock import patch, MagicMock
 from io import BytesIO
 import tarfile
 import json
 from typing import Dict, List, Tuple
 
+from src.dto.content import Content
 from src.dto.entry_type_enum import EntityType
+from src.dto.file_type_enum import FileType
 from src.dto.metadata import Metadata
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
-from src.constant import SSH_CONNECT, REMOTE_PREFIX, REMOTE_UPDATE_XOCHITL
+from src.constant import SSH_CONNECT, REMOTE_PREFIX, REMOTE_UPDATE_XOCHITL, SSH_REMOTE_HOST, REMARKABLE_FILE_PATH
 from src.exception.remarkable_write_exception import RemarkableWriteException
 from test.test_data import UUID_FAIRYTALE, UUID_FAIRYTALE_2
 
+
+# System under test (SUT)
+SUT: str = "src.data.remarkable_ssh_metadata_source"
 
 class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
@@ -320,3 +326,143 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
             self.source.remove([UUID_FAIRYTALE])
 
         self.assertTrue("Failed to remove files:" in str(context.exception))
+
+    # --------------------------------------------------
+    # remote copy
+    # --------------------------------------------------
+
+    @patch(f"{SUT}.subprocess.Popen")
+    def test_remote_copy_success(self, mock_popen) -> None:
+        # ---- Mock processes ----
+        mock_tar_proc = MagicMock()
+        mock_ssh_proc = MagicMock()
+
+        # tar stdout must exist (pipe to ssh)
+        mock_tar_proc.stdout = MagicMock()
+
+        # ssh behavior
+        mock_ssh_proc.communicate.return_value = (None, None)
+        mock_ssh_proc.returncode = 0
+
+        # Popen is called twice: return tar, then ssh
+        mock_popen.side_effect = [mock_tar_proc, mock_ssh_proc]
+
+
+        source_file: str = "e2e-test/test/document-0.pdf"
+
+
+        metadata: Metadata = Metadata(
+            created_time=int(time.time()),
+            last_modified=int(time.time()),
+            new=False,
+            parent="",
+            pinned=False,
+            source="",
+            type=EntityType.DOCUMENT_TYPE,
+            visible_name="file.pdf"
+        )
+
+        content: Content = Content(file_type=FileType.PDF)
+
+        with patch(f"{SUT}.shutil.copy"), \
+                patch(f"{SUT}.open", create=True), \
+                patch(f"{SUT}.json.dump"):
+
+            self.source.remote_copy(source_file=source_file, metadata=metadata, content=content)
+
+        # ---- Assertions ----
+        self.assertEqual(mock_popen.call_count, 2)
+
+        mock_ssh_proc.communicate.assert_called_once()
+        mock_tar_proc.stdout.close.assert_called_once()
+
+        calls = mock_popen.call_args_list
+
+        tar_cmd = calls[0][0][0]
+        ssh_cmd = calls[1][0][0]
+
+        self.assertEqual(tar_cmd[0], "tar")
+        self.assertEqual(ssh_cmd[0], "ssh")
+
+        _, ssh_kwargs = mock_popen.call_args_list[1]
+        self.assertEqual(ssh_kwargs["stdin"], mock_tar_proc.stdout)
+
+    @patch(f"{SUT}.subprocess.Popen")
+    def test_remote_copy_ssh_failure(self, mock_popen) -> None:
+        # ---- Mock processes ----
+        mock_tar_proc = MagicMock()
+        mock_ssh_proc = MagicMock()
+
+        mock_tar_proc.stdout = MagicMock()
+
+        # Simulate failure
+        mock_ssh_proc.communicate.return_value = (None, None)
+        mock_ssh_proc.returncode = 1  # <-- key change
+
+        mock_popen.side_effect = [mock_tar_proc, mock_ssh_proc]
+
+        source_file = "e2e-test/test/document-0.pdf"
+
+        metadata = Metadata(
+            created_time=int(time.time()),
+            last_modified=int(time.time()),
+            new=False,
+            parent="",
+            pinned=False,
+            source="",
+            type=EntityType.DOCUMENT_TYPE,
+            visible_name="file.pdf"
+        )
+
+        content = Content(file_type=FileType.PDF)
+
+        with patch(f"{SUT}.shutil.copy"), \
+                patch(f"{SUT}.open", create=True), \
+                patch(f"{SUT}.json.dump"):
+            with self.assertRaises(RemarkableWriteException):
+                self.source.remote_copy(
+                    source_file=source_file,
+                    metadata=metadata,
+                    content=content
+                )
+
+        # ---- Assertions  ----
+        self.assertEqual(mock_popen.call_count, 2)
+        mock_ssh_proc.communicate.assert_called_once()
+        mock_tar_proc.stdout.close.assert_called_once()
+
+        # Verify piping still happened before failure
+        _, ssh_kwargs = mock_popen.call_args_list[1]
+        self.assertEqual(ssh_kwargs["stdin"], mock_tar_proc.stdout)
+
+    from unittest.mock import patch, MagicMock
+
+    # --------------------------------------------------
+    # restart xochitl
+    # --------------------------------------------------
+
+    @patch("src.data.remarkable_ssh_metadata_source.subprocess.run")
+    def test_restart_xochitl_success(self, mock_run) -> None:
+        # ---- Mock subprocess result ----
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = ""
+        mock_result.stderr = ""
+
+        mock_run.return_value = mock_result
+
+        # ---- Call method ----
+        RemarkableSSHMetadataSource.restart_xochitl()
+
+        # ---- Assertions ----
+        mock_run.assert_called_once()
+
+        args, kwargs = mock_run.call_args
+
+        # Verify command
+        assert args[0][0] == "ssh"
+        assert "systemctl restart xochitl" in args[0]
+
+        # Verify subprocess options
+        assert kwargs["capture_output"] is True
+        assert kwargs["text"] is True

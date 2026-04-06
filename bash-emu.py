@@ -1,5 +1,5 @@
 import shlex
-from src.com.common import clear, ls, mv, rm, cd
+from src.com.common import clear, ls, mv, rm, cd, rcp
 from typing import List
 from src.com.help import help_instruction
 from src.workspace.workspace_manager import default_workspace_manager as workspace_manager
@@ -28,12 +28,14 @@ def main_loop() -> None:
                 ls(args, workspace_manager)
             case "mv":
                 mv(args, workspace_manager)
+            case "rcp":
+                rcp(args, workspace_manager)
             case "help":
                 help_instruction()
             case "exit" | "x":
                 break
             case _:
-                print("Unknown command. Type help for a list of supported commands")
+                print(f"Command '{command}' not found.\nTry: help")
 
 
 if __name__ == "__main__":

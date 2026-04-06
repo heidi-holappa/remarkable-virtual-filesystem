@@ -1,14 +1,18 @@
 import unittest
+import time
 from io import StringIO
 import copy
 from unittest.mock import patch, MagicMock
 from typing import List, Set
 
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
+from src.dto.metadata import Metadata
+from src.dto.content import Content
+from src.dto.file_type_enum import FileType
+from src.dto.entry_type_enum import EntityType
 from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirectoryException
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from src.exception.not_found_exception import NotFoundException
-from src.exception.invalid_path_exception import InvalidPathException
 from src.constant import COLLECTION_NOT_FOUND, INVALID_PATH, PARENT_NOT_FOUND, NO_SUCH_FILE_OR_DIRECTORY
 from test.test_data import (
     TEST_DATA,
@@ -394,6 +398,126 @@ class RemarkableWorkspaceTest(unittest.TestCase):
 
         self.assertEqual(sorted(expected_removals), sorted(passed_list),
                          msg=f"Assertion failed. Passed list: {passed_list}")
+
+    # -------------------------------------
+    # Process remote copy command
+    # -------------------------------------
+
+    from unittest.mock import patch, MagicMock
+
+    @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
+    @patch.object(RemarkableSSHMetadataSource, "load")
+    @patch.object(RemarkableSSHMetadataSource, "restart_xochitl")
+    @patch.object(RemarkableSSHMetadataSource, "remote_copy")
+    def test_process_rcp_success(
+            self,
+            mock_remote_copy: MagicMock,
+            mock_restart: MagicMock,
+            mock_load: MagicMock,
+            mock_exists: MagicMock
+    ) -> None:
+        # ---- Setup mocks ----
+        mock_exists.return_value = True
+        mock_load.return_value = ["new_data"]
+
+        self.ws._traverse_path = MagicMock(return_value=UUID_ROOT)
+
+        source_file = "/path/to/file.pdf"
+        target_path = "/"
+
+        # ---- Execute ----
+        self.ws.process_rcp_command(source_file, target_path)
+
+        # ---- Assertions ----
+
+        # remote_copy called once
+        mock_remote_copy.assert_called_once()
+
+        # restart called
+        mock_restart.assert_called_once()
+
+        # load called and assigned
+        mock_load.assert_called_once()
+        self.assertEqual(self.ws._data, ["new_data"])
+
+        # ---- Inspect arguments passed to remote_copy ----
+        _, kwargs = mock_remote_copy.call_args
+
+        self.assertEqual(kwargs["source_file"], source_file)
+
+        metadata = kwargs["metadata"]
+        content = kwargs["content"]
+
+        # Verify metadata
+        self.assertEqual(metadata.parent, UUID_ROOT)
+        self.assertEqual(metadata.visible_name, "file.pdf")
+
+        # Verify content
+        self.assertEqual(content.file_type, "pdf")
+
+    @patch("builtins.print")
+    @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
+    @patch.object(RemarkableSSHMetadataSource, "load")
+    @patch.object(RemarkableSSHMetadataSource, "restart_xochitl")
+    @patch.object(RemarkableSSHMetadataSource, "remote_copy")
+    def test_process_rcp_source_not_found(
+            self,
+            mock_remote_copy: MagicMock,
+            mock_restart: MagicMock,
+            mock_load: MagicMock,
+            mock_exists: MagicMock,
+            mock_print: MagicMock
+    ) -> None:
+        # ---- Setup ----
+        mock_exists.return_value = False  # <-- triggers first branch
+
+        source_file = "/does/not/exist.pdf"
+        target_path = "/"
+
+        # ---- Execute ----
+        self.ws.process_rcp_command(source_file, target_path)
+
+        # ---- Assertions ----
+
+        # Nothing should be called
+        mock_remote_copy.assert_not_called()
+        mock_restart.assert_not_called()
+        mock_load.assert_not_called()
+
+        # Error was printed
+        mock_print.assert_called_once()
+
+    @patch("builtins.print")
+    @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
+    @patch.object(RemarkableSSHMetadataSource, "load")
+    @patch.object(RemarkableSSHMetadataSource, "restart_xochitl")
+    @patch.object(RemarkableSSHMetadataSource, "remote_copy")
+    def test_process_rcp_source_not_found(
+            self,
+            mock_remote_copy: MagicMock,
+            mock_restart: MagicMock,
+            mock_load: MagicMock,
+            mock_exists: MagicMock,
+            mock_print: MagicMock
+    ) -> None:
+        # ---- Setup ----
+        mock_exists.return_value = False  # <-- triggers first branch
+
+        source_file = "/does/not/exist.pdf"
+        target_path = "/"
+
+        # ---- Execute ----
+        self.ws.process_rcp_command(source_file, target_path)
+
+        # ---- Assertions ----
+
+        # Nothing should be called
+        mock_remote_copy.assert_not_called()
+        mock_restart.assert_not_called()
+        mock_load.assert_not_called()
+
+        # Error was printed
+        mock_print.assert_called_once()
 
     # -------------------------------------
     # Get wildcard matches

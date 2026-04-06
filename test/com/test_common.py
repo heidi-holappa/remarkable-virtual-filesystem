@@ -2,7 +2,8 @@ import unittest
 from io import StringIO
 from unittest.mock import patch, MagicMock
 
-from src.com.common import cd, ls, mv, rm, clear
+from src.com.common import cd, ls, mv, rm, rcp, clear
+from src.workspace.remarkable_workspace import RemarkableWorkspace
 from test.stub_remarkable_metadata_source import StubRemarkableMetadataSource
 from src.workspace.workspace_manager import WorkspaceManager
 
@@ -206,6 +207,57 @@ class TestCommon(unittest.TestCase):
             output: str = mock_out.getvalue()
             self.assertTrue("Usage (mvp):" in output, msg=f"Output was: {output}")
 
+    @patch.object(RemarkableWorkspace, "process_move_command")
+    def test_mv_positive_case(self, mock_move: MagicMock) -> None:
+        source = "file.txt"
+        target = "./foo"
+        mv([source, target], self.manager)
+
+        mock_move.assert_called_once()
+
+        args, _ = mock_move.call_args
+        self.assertEqual(args[0], source)
+        self.assertEqual(args[1], target)
+
+    # -------------------------------
+    # rcp instruction
+    # -------------------------------
+    def test_rcp_without_args(self) -> None:
+        """
+        When user attempts to use rcp instruction without
+        arguments, they are instructed of the usage of
+        the command
+        """
+        self.ws.set_current_collection("")
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            rcp([], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue("rcp: usage:" in output, msg=f"Output was: {output}")
+
+    def test_rcp_with_too_many_args(self) -> None:
+        """
+        When user attempts to use rcp instruction with
+        too many arguments, they are instructed of the
+        usage of the command
+        """
+        self.ws.set_current_collection("")
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            rcp(["-r", "/path/to/foo.pdf", "bar/"], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue("rcp: usage:" in output, msg=f"Output was: {output}")
+
+    @patch.object(RemarkableWorkspace, "process_rcp_command")
+    def test_rcp_positive_case(self, mock_rcp: MagicMock) -> None:
+        source = "path/to/file.txt"
+        target = "./foo"
+        rcp([source, target], self.manager)
+
+        mock_rcp.assert_called_once()
+
+        args, _ = mock_rcp.call_args
+        self.assertEqual(args[0], source)
+        self.assertEqual(args[1], target)
+
     # -------------------------------
     # rm instruction
     # -------------------------------
@@ -232,3 +284,15 @@ class TestCommon(unittest.TestCase):
             rm(["-rf", "/foo"], self.manager)
             output: str = mock_out.getvalue()
             self.assertTrue("Usage: rm <file or path>" in output, msg=f"Output was: {output}")
+
+    @patch.object(RemarkableWorkspace, "process_remove_command")
+    def test_rm_positive_case(self, mock_remove: MagicMock) -> None:
+        file_to_remove = "file.txt"
+        rm([file_to_remove], self.manager)
+
+        mock_remove.assert_called_once()
+
+        args, _ = mock_remove.call_args
+        self.assertEqual(args[0], file_to_remove)
+
+

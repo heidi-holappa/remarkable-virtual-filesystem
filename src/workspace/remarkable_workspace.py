@@ -3,19 +3,24 @@
     reMarkable metadata content
 """
 
+import os
+import time
 import copy
 from fnmatch import fnmatchcase
 from typing import Dict, List, Tuple, Any, Optional
 
 from src.data.metadata_source import MetadataSource
+from src.dto.content import Content
+from src.dto.entry_type_enum import EntityType
 from src.exception.constraint_violation_exception import ConstraintViolationException
+from src.exception.invalid_content_exception import InvalidContentException
 from src.exception.invalid_metadata_exception import InvalidMetadataException
 from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirectoryException
 from src.exception.not_a_directory_exception import NotADirectoryException
 from src.exception.not_found_exception import NotFoundException
 from src.exception.invalid_path_exception import InvalidPathException
 
-from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, INVALID_PATH, PARENT_NOT_FOUND, NOT_A_DIRECTORY, \
+from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, PARENT_NOT_FOUND, NOT_A_DIRECTORY, \
     NO_SUCH_FILE_OR_DIRECTORY, LS_COLUMN_WIDTH
 from src.dto.metadata import Metadata
 from src.exception.remarkable_write_exception import RemarkableWriteException
@@ -358,6 +363,58 @@ class RemarkableWorkspace:
 
         except (NotFoundException, KeyError) as e:
             print(f"ERROR: {e}")
+
+    def process_rcp_command(self, source_file: str, target_collection: str) -> None:
+        """
+        Remote copy (rcp) command moves one file from host machine
+        to the provided collection on the target machine (reMarkable).
+        The source must be an absolute path to a file and the target
+        must be an absolute path to a collection.
+
+
+        :param args: source and target
+        :return: None
+        """
+
+        try:
+
+            if not os.path.exists(source_file):
+                raise NotFoundException(f"rcp: source file {source_file} not found")
+
+            target_uuid: Optional[str] = self._traverse_path(target_collection)
+
+            if target_uuid is None:
+                raise NotFoundException(f"rcp: target path {target_collection} not found")
+
+            filename: str = os.path.basename(source_file)
+            # splitext return extension with dot. We want to remove that here.
+            file_extension: str = os.path.splitext(filename)[1][1:]
+
+            content: Content = Content.from_dict(
+                {"fileType": file_extension}
+            )
+
+            metadata: Metadata = Metadata(
+                created_time=int(time.time()),
+                last_modified=int(time.time()),
+                new=False,
+                parent=target_uuid,
+                pinned=False,
+                source="",
+                type=EntityType.DOCUMENT_TYPE,
+                visible_name=filename
+            )
+
+            self._source.remote_copy(source_file=source_file,
+                                     metadata=metadata, content=content)
+
+            self._source.restart_xochitl()
+            self._data = self._source.load()
+
+        except (NotFoundException, InvalidMetadataException,
+                InvalidContentException) as e:
+            print(e)
+
 
     # ----------------------------------
     # private methods
