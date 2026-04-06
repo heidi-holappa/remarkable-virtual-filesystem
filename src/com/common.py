@@ -102,7 +102,8 @@ def rcp(args: List[str], workspace_manager: WorkspaceManager) -> None:
 
     if len(args) == 2:
         ws: RemarkableWorkspace = workspace_manager.get()
-        ws.process_rcp_command(args)
+        source_file, target_path = args
+        ws.process_rcp_command(source_file, target_path)
 
     else:
         print("rcp: usage: rcp <source file> <target collection>")

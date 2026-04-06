@@ -364,7 +364,7 @@ class RemarkableWorkspace:
         except (NotFoundException, KeyError) as e:
             print(f"ERROR: {e}")
 
-    def process_rcp_command(self, args: List[str]) -> None:
+    def process_rcp_command(self, source_file: str, target_collection: str) -> None:
         """
         Remote copy (rcp) command moves one file from host machine
         to the provided collection on the target machine (reMarkable).
@@ -375,10 +375,6 @@ class RemarkableWorkspace:
         :param args: source and target
         :return: None
         """
-
-        # First: Validate source and target
-
-        source_file, target_collection = args
 
         try:
 
@@ -415,7 +411,8 @@ class RemarkableWorkspace:
             self._source.restart_xochitl()
             self._data = self._source.load()
 
-        except (NotFoundException, InvalidContentException) as e:
+        except (NotFoundException, InvalidMetadataException,
+                InvalidContentException) as e:
             print(e)
 
 

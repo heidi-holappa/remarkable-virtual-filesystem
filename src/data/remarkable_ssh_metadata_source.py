@@ -43,14 +43,6 @@ class RemarkableSSHMetadataSource(MetadataSource):
         return data
 
 
-    def refresh(self) -> None:
-        """
-        Refresh will be implemented in ticket #25
-
-        :return: None
-        """
-        raise NotImplementedError
-
     def write(self, entry_uuid: str, metadata: Metadata) -> None:
         """Write metadata file to reMarkable
 
