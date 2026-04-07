@@ -2,7 +2,8 @@ import unittest
 from io import StringIO
 from unittest.mock import patch, MagicMock
 
-from src.com.common import cd, ls, mv, rm, rcp, clear
+from src.com.common import cd, ls, mv, rm, rcp, clear, refresh, handle_exit
+from src.exception.remarkable_operation_exception import RemarkableOperationException
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from test.stub_remarkable_metadata_source import StubRemarkableMetadataSource
 from src.workspace.workspace_manager import WorkspaceManager
@@ -295,4 +296,50 @@ class TestCommon(unittest.TestCase):
         args, _ = mock_remove.call_args
         self.assertEqual(args[0], file_to_remove)
 
+    # -------------------------------
+    # refresh instruction
+    # -------------------------------
+    @patch.object(RemarkableWorkspace, "restart_xochitl")
+    def test_rm_positive_case(self, mock_restart_xochitl: MagicMock) -> None:
+        refresh(self.manager)
+        mock_restart_xochitl.assert_called_once()
 
+    @patch.object(RemarkableWorkspace, "restart_xochitl")
+    def test_rm_logs_exception(self, mock_restart_xochitl: MagicMock) -> None:
+        mock_restart_xochitl.side_effect = RemarkableOperationException("failure")
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            refresh(self.manager)
+            output = fake_out.getvalue()
+            self.assertIn("refresh: unexpected error occurred", output)
+
+        mock_restart_xochitl.assert_called_once()
+
+    # -------------------------------
+    # refresh instruction
+    # -------------------------------
+    @patch.object(RemarkableWorkspace, "restart_xochitl")
+    def test_handle_exit_success(self, mock_restart_xochitl: MagicMock) -> None:
+        mock_restart_xochitl.return_value = None
+
+        with self.assertRaises(SystemExit) as context:
+            handle_exit(self.manager)
+
+        self.assertEqual(context.exception.code, 0)
+        mock_restart_xochitl.assert_called_once()
+
+    @patch.object(RemarkableWorkspace, "restart_xochitl")
+    def test_handle_exit_failure(self, mock_restart_xochitl: MagicMock) -> None:
+        # Arrange
+        mock_restart_xochitl.side_effect = RemarkableOperationException("failure")
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with self.assertRaises(SystemExit) as context:
+                handle_exit(self.manager)
+
+            self.assertEqual(context.exception.code, 1)
+
+            output = fake_out.getvalue()
+            self.assertIn("failure", output)
+
+        mock_restart_xochitl.assert_called_once()

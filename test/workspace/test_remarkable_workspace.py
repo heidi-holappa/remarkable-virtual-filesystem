@@ -11,6 +11,7 @@ from src.dto.content import Content
 from src.dto.file_type_enum import FileType
 from src.dto.entry_type_enum import EntityType
 from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirectoryException
+from src.exception.remarkable_operation_exception import RemarkableOperationException
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from src.exception.not_found_exception import NotFoundException
 from src.constant import COLLECTION_NOT_FOUND, INVALID_PATH, PARENT_NOT_FOUND, NO_SUCH_FILE_OR_DIRECTORY
@@ -518,6 +519,24 @@ class RemarkableWorkspaceTest(unittest.TestCase):
 
         # Error was printed
         mock_print.assert_called_once()
+
+    # -------------------------------------
+    # Process refresh command
+    # -------------------------------------
+    @patch.object(RemarkableSSHMetadataSource, "restart_xochitl")
+    def test_refresh_invokes_metadata_source(self, mock_restart) -> None:
+
+        self.ws.restart_xochitl()
+        mock_restart.assert_called_once()
+
+    @patch.object(RemarkableSSHMetadataSource, "restart_xochitl")
+    def test_refresh_raises_exception_when_refresh_fails(self, mock_restart) -> None:
+        mock_restart.side_effect = RemarkableOperationException("failure")
+
+        with self.assertRaises(RemarkableOperationException) as context:
+            self.ws.restart_xochitl()
+        
+        mock_restart.assert_called_once()
 
     # -------------------------------------
     # Get wildcard matches
