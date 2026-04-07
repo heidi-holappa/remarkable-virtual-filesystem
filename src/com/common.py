@@ -3,6 +3,7 @@
     by reMarkable bash-emulator
 """
 
+import sys
 import subprocess
 from typing import List
 
@@ -10,6 +11,7 @@ from src.constant import ROOT_COLLECTION
 from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirectoryException
 from src.exception.not_a_directory_exception import NotADirectoryException
 from src.exception.not_found_exception import NotFoundException
+from src.exception.remarkable_operation_exception import RemarkableOperationException
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from src.workspace.workspace_manager import WorkspaceManager
 
@@ -141,3 +143,30 @@ def clear() -> None:
     :return: None
     """
     subprocess.run("clear", check=False)
+
+def refresh(workspace_manager: WorkspaceManager) -> None:
+    """
+    Uses systemctl to restart xochitl
+
+    :return: None
+    """
+    ws = workspace_manager.get()
+    try:
+        ws.restart_xochitl()
+    except RemarkableOperationException as e:
+        print(f"refresh: unexpected error occurred: {e}")
+
+
+def handle_exit(workspace_manager: WorkspaceManager) -> None:
+    """
+    Exits the application
+
+    :return: None
+    """
+    ws = workspace_manager.get()
+    try:
+        ws.restart_xochitl()
+        sys.exit(0)
+    except RemarkableOperationException as e:
+        print(e)
+        sys.exit(1)

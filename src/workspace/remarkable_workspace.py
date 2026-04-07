@@ -23,6 +23,7 @@ from src.exception.invalid_path_exception import InvalidPathException
 from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, PARENT_NOT_FOUND, NOT_A_DIRECTORY, \
     NO_SUCH_FILE_OR_DIRECTORY, LS_COLUMN_WIDTH
 from src.dto.metadata import Metadata
+from src.exception.remarkable_operation_exception import RemarkableOperationException
 from src.exception.remarkable_write_exception import RemarkableWriteException
 
 
@@ -414,6 +415,23 @@ class RemarkableWorkspace:
         except (NotFoundException, InvalidMetadataException,
                 InvalidContentException) as e:
             print(e)
+
+    def restart_xochitl(self) -> None:
+        """
+        Invokes source method handling restart
+        of xochitl GUI application
+
+        Raises:
+            may pass towards RemarkableOperationException
+            raised by the source in case subprocess fails
+
+        :return: None
+        """
+
+        try:
+            self._source.restart_xochitl()
+        except RemarkableOperationException as e:
+            raise
 
 
     # ----------------------------------
