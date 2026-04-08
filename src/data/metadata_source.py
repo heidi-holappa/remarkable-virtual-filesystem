@@ -31,13 +31,13 @@ class MetadataSource:
         """
         raise NotImplementedError
 
-    def remove(self, entry_uuids: List[str]) -> None:
+    def remove(self, entity_uuids: List[str]) -> None:
         """
         A public method to remove all files and
         files and folders from the reMarkable device
         matching any of the provided UUIDs
 
-        :param entry_uuids: a list of UUIDs
+        :param entity_uuids: a list of UUIDs
         :return: None
         """
         raise NotImplementedError

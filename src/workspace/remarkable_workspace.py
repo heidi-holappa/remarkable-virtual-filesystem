@@ -3,27 +3,25 @@
     reMarkable metadata content
 """
 
+import copy
 import os
 import time
-import copy
 from fnmatch import fnmatchcase
 from typing import Dict, List, Tuple, Any, Optional
 
+from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, PARENT_NOT_FOUND, NOT_A_DIRECTORY, \
+    NO_SUCH_FILE_OR_DIRECTORY, LS_COLUMN_WIDTH
 from src.data.metadata_source import MetadataSource
 from src.dto.content import Content
 from src.dto.entry_type_enum import EntityType
+from src.dto.metadata import Metadata
 from src.exception.constraint_violation_exception import ConstraintViolationException
 from src.exception.invalid_content_exception import InvalidContentException
 from src.exception.invalid_metadata_exception import InvalidMetadataException
+from src.exception.invalid_path_exception import InvalidPathException
 from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirectoryException
 from src.exception.not_a_directory_exception import NotADirectoryException
 from src.exception.not_found_exception import NotFoundException
-from src.exception.invalid_path_exception import InvalidPathException
-
-from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, PARENT_NOT_FOUND, NOT_A_DIRECTORY, \
-    NO_SUCH_FILE_OR_DIRECTORY, LS_COLUMN_WIDTH
-from src.dto.metadata import Metadata
-from src.exception.remarkable_operation_exception import RemarkableOperationException
 from src.exception.remarkable_write_exception import RemarkableWriteException
 
 
@@ -149,7 +147,7 @@ class RemarkableWorkspace:
         :return: an optional UUID of the collection
         """
         has_document_type_with_given_file_name: bool = False
-                
+
         for k, v in self._data.items():
             if v.get('parent') != parent:
                 continue
@@ -251,8 +249,12 @@ class RemarkableWorkspace:
             padding: str = ' ' * (LS_COLUMN_WIDTH - len(size))
             list_result.append(f"{size}{padding}{name}")
 
+        self._output_ls_result(list_result)
+
+    @staticmethod
+    def _output_ls_result(list_result: List[str]) -> None:
         size_header = "size (kB)"
-        header_padding = " "*(LS_COLUMN_WIDTH - len(size_header))
+        header_padding = " " * (LS_COLUMN_WIDTH - len(size_header))
         name_header = "name"
         header = f"{size_header}{header_padding}{name_header}"
         print(header)
@@ -279,7 +281,7 @@ class RemarkableWorkspace:
         try:
             collection_pointer = self._traverse_path(path)
         except NotADirectoryException as e:
-            raise NotADirectoryException(f"{path}: {NOT_A_DIRECTORY}")
+            raise NotADirectoryException(f"{path}: {NOT_A_DIRECTORY}") from e
         if collection_pointer is None:
             raise NoSuchFileOrDirectoryException(f"{path}: {NO_SUCH_FILE_OR_DIRECTORY}")
 
@@ -323,8 +325,9 @@ class RemarkableWorkspace:
             if parent_uuid == target_uuid:
                 return
 
-            entities_to_move: List[str] =  self._collect_uuids_for_children_matching_name_or_pattern(
-                visible_name, parent_uuid)
+            entities_to_move: List[str] =  (
+                self._collect_uuids_for_children_matching_name_or_pattern(
+                visible_name, parent_uuid))
 
             if not entities_to_move:
                 raise NotFoundException(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}")
@@ -354,8 +357,9 @@ class RemarkableWorkspace:
         try:
             visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(target_pattern)
 
-            entities_to_remove: List[str] = self._collect_uuids_matching_name_or_pattern_and_all_descendants_of_matches(
-                visible_name, parent_uuid)
+            entities_to_remove: List[str] = (
+                self._collect_uuids_matching_name_or_pattern_and_all_descendants_of_matches(
+                visible_name, parent_uuid))
 
             self._remove_entities(entities_to_remove)
 
@@ -428,10 +432,7 @@ class RemarkableWorkspace:
         :return: None
         """
 
-        try:
-            self._source.restart_xochitl()
-        except RemarkableOperationException as e:
-            raise
+        self._source.restart_xochitl()
 
 
     # ----------------------------------
@@ -464,7 +465,8 @@ class RemarkableWorkspace:
 
         return visible_name, parent_uuid
 
-    def _collect_uuids_for_children_matching_name_or_pattern(self, visible_name: str, parent_uuid: str) -> List[str]:
+    def _collect_uuids_for_children_matching_name_or_pattern(
+            self, visible_name: str, parent_uuid: str) -> List[str]:
         """
         Collects the UUIDs of all children with the provided
         parent collection matching a visible name or a pattern.
@@ -491,7 +493,8 @@ class RemarkableWorkspace:
         return entities_to_write
 
 
-    def _collect_uuids_matching_name_or_pattern_and_all_descendants_of_matches(self, visible_name: str, parent_uuid: str) -> List[str]:
+    def _collect_uuids_matching_name_or_pattern_and_all_descendants_of_matches(
+            self, visible_name: str, parent_uuid: str) -> List[str]:
         """
         Collects the UUIDs of all children with the provided
         parent collection matching a visible name or a pattern.
@@ -659,9 +662,11 @@ class RemarkableWorkspace:
 
         try:
             if not self._entry_is_a_collection(parent_uuid):
-                raise NotFoundException(PARENT_NOT_FOUND.format(parent=parent_uuid, entity=wildcard))
-        except NotFoundException:
-            raise NotFoundException(PARENT_NOT_FOUND.format(parent=parent_uuid, entity=wildcard))
+                raise NotFoundException(PARENT_NOT_FOUND.format(
+                    parent=parent_uuid, entity=wildcard))
+        except NotFoundException as e:
+            raise NotFoundException(
+                PARENT_NOT_FOUND.format(parent=parent_uuid, entity=wildcard)) from e
 
 
         wildcard_matches: List[str] = []
@@ -754,11 +759,9 @@ class RemarkableWorkspace:
         :return: the UUID of the entry
         """
 
-        # TODO: make this a debug level log entry
         # print(f"filename: {filename}, parent: {parent_uuid}")
 
         for k, v in self._data.items():
-            # TODO: this could be debug level log entry too
             # if v.get('parent') == parent_uuid:
                 # print(v.get('visibleName'))
             if v.get('parent') == parent_uuid and v.get('visibleName') == filename:
@@ -769,7 +772,8 @@ class RemarkableWorkspace:
             path: Optional[str] = self.generate_absolute_collection_path(parent_uuid)
             if path:
                 path_prefix = f"{path}"
-        raise NotFoundException(f"cannot access {path_prefix}/{filename}: {NO_SUCH_FILE_OR_DIRECTORY}")
+        raise NotFoundException(f"cannot access {path_prefix}/{filename}: "
+                                f"{NO_SUCH_FILE_OR_DIRECTORY}")
 
     def _entry_is_a_collection(self, entity_uuid) -> bool:
         """

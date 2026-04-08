@@ -105,6 +105,9 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         })
 
         mock_proc = MagicMock()
+        # Make context manager return the same object
+        mock_proc.__enter__.return_value = mock_proc
+
         mock_proc.communicate.return_value = (tar_bytes, b"")
         mock_proc.returncode = 0
         mock_popen.return_value = mock_proc
@@ -124,6 +127,10 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
     @patch("subprocess.Popen")
     def test_fetch_metadata_nonzero_returncode_raises(self, mock_popen):
         mock_proc = MagicMock()
+
+        # Make context manager return the same object
+        mock_proc.__enter__.return_value = mock_proc
+
         mock_proc.communicate.return_value = (b"", b"error")
         mock_proc.returncode = 1
         mock_popen.return_value = mock_proc
@@ -136,6 +143,9 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
     @patch("subprocess.Popen")
     def test_fetch_metadata_no_tar_bytes_raises(self, mock_popen):
         mock_proc = MagicMock()
+        # Make context manager return the same object
+        mock_proc.__enter__.return_value = mock_proc
+
         mock_proc.communicate.return_value = (b"", b"")
         mock_proc.returncode = 0
         mock_popen.return_value = mock_proc
@@ -158,6 +168,9 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         tar_bytes = tar_buffer.getvalue()
 
         mock_proc = MagicMock()
+        # Make context manager return the same object
+        mock_proc.__enter__.return_value = mock_proc
+
         mock_proc.communicate.return_value = (tar_bytes, b"")
         mock_proc.returncode = 0
         mock_popen.return_value = mock_proc
@@ -175,6 +188,9 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
     @patch("subprocess.Popen")
     def test_get_file_sizes_success(self, mock_popen):
         mock_proc = MagicMock()
+        # Make context manager return the same object
+        mock_proc.__enter__.return_value = mock_proc
+
         mock_proc.communicate.return_value = (
             "uuid1\t100\nuuid2\t200\n",
             ""
@@ -190,6 +206,9 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
     @patch("subprocess.Popen")
     def test_get_file_sizes_nonzero_return_code_raises(self, mock_popen):
         mock_proc = MagicMock()
+        # Make context manager return the same object
+        mock_proc.__enter__.return_value = mock_proc
+
         mock_proc.communicate.return_value = ("", "error")
         mock_proc.returncode = 1
         mock_popen.return_value = mock_proc
@@ -336,6 +355,10 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         mock_tar_proc = MagicMock()
         mock_ssh_proc = MagicMock()
 
+        # Make context manager return the same object
+        mock_tar_proc.__enter__.return_value = mock_tar_proc
+        mock_ssh_proc.__enter__.return_value = mock_ssh_proc
+
         # tar stdout must exist (pipe to ssh)
         mock_tar_proc.stdout = MagicMock()
 
@@ -391,6 +414,10 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         # ---- Mock processes ----
         mock_tar_proc = MagicMock()
         mock_ssh_proc = MagicMock()
+
+        # Make context manager return the same object
+        mock_tar_proc.__enter__.return_value = mock_tar_proc
+        mock_ssh_proc.__enter__.return_value = mock_ssh_proc
 
         mock_tar_proc.stdout = MagicMock()
 

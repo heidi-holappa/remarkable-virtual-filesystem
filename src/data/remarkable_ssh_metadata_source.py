@@ -37,9 +37,9 @@ class RemarkableSSHMetadataSource(MetadataSource):
         """
         data = self._fetch_metadata()
         sizes = self._get_file_sizes()
-        for uuid, size in sizes.items():
-            if uuid in data:
-                data[uuid]["size"] = size
+        for entry_uuid, size in sizes.items():
+            if entry_uuid in data:
+                data[entry_uuid]["size"] = size
         return data
 
 
@@ -73,7 +73,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
                     text=True,
             ) as proc:
 
-                stdout, stderr = proc.communicate(metadata_content)
+                _ , stderr = proc.communicate(metadata_content)
 
                 if proc.returncode != 0:
                     raise RemarkableWriteException(
@@ -115,7 +115,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
                     text=True,
             ) as proc:
 
-                stdout, stderr = proc.communicate()
+                _, stderr = proc.communicate()
 
                 if proc.returncode != 0:
                     raise RemarkableWriteException(
@@ -162,21 +162,40 @@ class RemarkableSSHMetadataSource(MetadataSource):
                     json.dump(obj=content.to_dict(), fp=file, indent=4)
 
                 # ---- Transfer using tar over ssh ----
+                self._invoke_file_transfer(tmp_dir)
 
-                tar_cmd = ["tar", "cf", "-", "-C", tmp_dir, "."]
-                ssh_cmd = ["ssh", SSH_REMOTE_HOST, f"tar xf - -C {REMARKABLE_FILE_PATH}"]
+            except RemarkableWriteException as e:
+                raise e
 
-                tar_proc = subprocess.Popen(tar_cmd, stdout=subprocess.PIPE)
-                ssh_proc = subprocess.Popen(ssh_cmd, stdin=tar_proc.stdout)
+    @staticmethod
+    def _invoke_file_transfer(tmp_dir: str) -> None:
+        """
+        Handles the two subprocesses required for file transfer. The
+        implementation uses tar and ssh to keep the requirements
+        of this program as minimal as possible. The motivation is
+        that ssh is a base requirement for the program, and tar
+        is commonly available out-of-the-box in Linux distributions.
 
-                tar_proc.stdout.close()  # allow tar to receive SIGPIPE if ssh fails
+        raises:
+          - RuntimeError if ssh subprocess fails
+
+        :param tmp_dir: the temporary directory for local files
+        :return: None
+        """
+        tar_cmd = ["tar", "cf", "-", "-C", tmp_dir, "."]
+        ssh_cmd = ["ssh", SSH_REMOTE_HOST, f"tar xf - -C {REMARKABLE_FILE_PATH}"]
+
+        with subprocess.Popen(tar_cmd, stdout=subprocess.PIPE) as tar_proc:
+            with subprocess.Popen(ssh_cmd, stdin=tar_proc.stdout) as ssh_proc:
+                # Allow tar to receive SIGPIPE if ssh fails
+                if tar_proc.stdout:
+                    tar_proc.stdout.close()
+
                 ssh_proc.communicate()
 
                 if ssh_proc.returncode != 0:
-                    raise RuntimeError("SSH transfer failed")
-
-            except Exception as e:
-                raise RemarkableWriteException(f"rcp: failed to copy file: {e}")
+                    raise RemarkableWriteException(
+                        f"rcp: failed to copy file. subprocess returncode: {ssh_proc.returncode}")
 
     @staticmethod
     def restart_xochitl() -> None:
@@ -191,14 +210,19 @@ class RemarkableSSHMetadataSource(MetadataSource):
 
         cmd = ["ssh", SSH_REMOTE_HOST, "systemctl restart xochitl"]
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
-
-        if result.returncode != 0:
+        try:
+            subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
             raise RemarkableOperationException(
                 f"Failed to restart xochitl:\n"
-                f"STDOUT: {result.stdout}\n"
-                f"STDERR: {result.stderr}"
-            )
+                f"STDOUT: {e.stdout}\n"
+                f"STDERR: {e.stderr}"
+            ) from e
 
     # ------------------------------
     # Private methods
@@ -219,23 +243,22 @@ class RemarkableSSHMetadataSource(MetadataSource):
             "find . -name '*.metadata' -exec tar -cf - {} +"
         )
 
-        proc = subprocess.Popen(
-            SSH_CONNECT + [cmd],
+        with subprocess.Popen(SSH_CONNECT + [cmd],
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+            stderr=subprocess.PIPE,) as proc:
 
-        tar_bytes, stderr = proc.communicate()
 
-        if proc.returncode != 0:
-            raise RuntimeError(stderr.decode())
+            tar_bytes, stderr = proc.communicate()
 
-        if not tar_bytes:
-            raise RuntimeError(
-                f"No metadata files found.\n"
-                f"Command: {cmd}\n"
-                f"stderr: {stderr.decode()}"
-            )
+            if proc.returncode != 0:
+                raise RuntimeError(stderr.decode())
+
+            if not tar_bytes:
+                raise RuntimeError(
+                    f"No metadata files found.\n"
+                    f"Command: {cmd}\n"
+                    f"stderr: {stderr.decode()}"
+                )
 
         data: Dict[str, Dict[str, Any]] = {}
 
@@ -250,17 +273,17 @@ class RemarkableSSHMetadataSource(MetadataSource):
                 except json.JSONDecodeError:
                     continue
 
-                uuid = (
+                entry_uuid = (
                     member.name
                     .removeprefix("./")
                     .removesuffix(".metadata")
                 )
-                data[uuid] = metadata
+                data[entry_uuid] = metadata
 
         sizes = self._get_file_sizes()
-        for uuid, size in sizes.items():
-            if uuid in data:
-                data[uuid]["size"] = size
+        for e_uuid, size in sizes.items():
+            if e_uuid in data:
+                data[e_uuid]["size"] = size
 
         return data
 
@@ -289,22 +312,21 @@ class RemarkableSSHMetadataSource(MetadataSource):
                 "'"
         )
 
-        proc = subprocess.Popen(
+        with subprocess.Popen(
             SSH_CONNECT + [cmd],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
-        )
+            text=True) as proc:
 
-        stdout, stderr = proc.communicate()
+            stdout, stderr = proc.communicate()
 
-        if proc.returncode != 0:
-            raise RuntimeError(stderr)
+            if proc.returncode != 0:
+                raise RuntimeError(stderr)
 
         sizes: Dict[str, int] = {}
 
         for line in stdout.splitlines():
-            uuid, size = line.split("\t")
-            sizes[uuid] = int(size)
+            entry_uuid, size = line.split("\t")
+            sizes[entry_uuid] = int(size)
 
         return sizes
