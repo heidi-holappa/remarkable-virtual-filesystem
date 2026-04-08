@@ -27,24 +27,23 @@ LLM used:
 - Generation date: 2026-02-16
 """
 
-import unittest
-import subprocess
-import time
-from unittest.mock import patch, MagicMock
-from io import BytesIO
-import tarfile
 import json
+import subprocess
+import tarfile
+import time
+import unittest
+from io import BytesIO
 from typing import Dict, List, Tuple
+from unittest.mock import patch, MagicMock
 
+from src.constant import SSH_CONNECT, REMOTE_PREFIX
+from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
 from src.dto.content import Content
 from src.dto.entry_type_enum import EntityType
 from src.dto.file_type_enum import FileType
 from src.dto.metadata import Metadata
-from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
-from src.constant import SSH_CONNECT, REMOTE_PREFIX, REMOTE_UPDATE_XOCHITL, SSH_REMOTE_HOST, REMARKABLE_FILE_PATH
 from src.exception.remarkable_write_exception import RemarkableWriteException
 from test.test_data import UUID_FAIRYTALE, UUID_FAIRYTALE_2
-
 
 # System under test (SUT)
 SUT: str = "src.data.remarkable_ssh_metadata_source"
@@ -219,7 +218,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
         # Then the remote device is called with the correct instruction
         expected_filename = f"{entry_uuid}.metadata"
-        expected_cmd = REMOTE_PREFIX + f"cat > '{expected_filename}' && systemctl restart xochitl"
+        expected_cmd = REMOTE_PREFIX + f"cat > '{expected_filename}'"
 
         mock_popen.assert_called_once_with(
             SSH_CONNECT + [expected_cmd],
@@ -273,7 +272,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
             visible_name="61-90"
         )
 
-        self.source.write(entry_uuid, valid_metadata)
+        self.source.write_metadata(entry_uuid, valid_metadata)
 
         return entry_uuid, valid_metadata.to_dict()
 
@@ -296,7 +295,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         self.source.remove(uuids)
 
         # Then the remote device is called with the correct instruction
-        expected_cmd = REMOTE_PREFIX + f"rm -rf -- {UUID_FAIRYTALE}* {UUID_FAIRYTALE_2}*" + REMOTE_UPDATE_XOCHITL
+        expected_cmd = REMOTE_PREFIX + f"rm -rf -- {UUID_FAIRYTALE}* {UUID_FAIRYTALE_2}*"
 
         mock_popen.assert_called_once_with(
             SSH_CONNECT + [expected_cmd],
@@ -435,7 +434,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         _, ssh_kwargs = mock_popen.call_args_list[1]
         self.assertEqual(ssh_kwargs["stdin"], mock_tar_proc.stdout)
 
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import patch
 
     # --------------------------------------------------
     # restart xochitl

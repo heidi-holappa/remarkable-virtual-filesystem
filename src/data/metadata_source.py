@@ -6,6 +6,7 @@ from typing import Dict, List, Any
 from src.dto.content import Content
 from src.dto.metadata import Metadata
 
+
 class MetadataSource:
     """
         Base class for the source of metadata
@@ -31,7 +32,7 @@ class MetadataSource:
         raise NotImplementedError
 
 
-    def write(self, entry_uuid: str, metadata: Metadata) -> None:
+    def write_metadata(self, entry_uuid: str, metadata: Metadata) -> None:
         """
         A public method to write a metadata entry
         into reMarkable. If an entry with the same

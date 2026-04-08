@@ -4,25 +4,25 @@
     via SSH connection
 """
 
-import subprocess
+import json
 import os
 import shutil
-import uuid
+import subprocess
 import tarfile
-import json
-from typing import Dict, List, Any
-from io import BytesIO
 import tempfile
+import uuid
+from io import BytesIO
+from typing import Dict, List, Any
 
+from src.constant import (
+    REMOTE_PREFIX, SSH_CONNECT,
+    REMARKABLE_FILE_PATH, SSH_REMOTE_HOST)
+from src.data.metadata_source import MetadataSource
 from src.dto.content import Content
 from src.dto.metadata import Metadata
-
-from src.data.metadata_source import MetadataSource
-from src.constant import (
-    REMOTE_PREFIX, REMOTE_UPDATE_XOCHITL, SSH_CONNECT,
-    REMARKABLE_FILE_PATH, SSH_REMOTE_HOST)
 from src.exception.remarkable_operation_exception import RemarkableOperationException
 from src.exception.remarkable_write_exception import RemarkableWriteException
+
 
 class RemarkableSSHMetadataSource(MetadataSource):
     """
@@ -43,7 +43,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
         return data
 
 
-    def write(self, entry_uuid: str, metadata: Metadata) -> None:
+    def write_metadata(self, entry_uuid: str, metadata: Metadata) -> None:
         """Write metadata file to reMarkable
 
         Writes the provided metadata dictionary into reMarkable user file
@@ -62,7 +62,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
         metadata_filename = f"{entry_uuid}.metadata"
         metadata_content = json.dumps(metadata.to_dict(), indent=4)
 
-        cmd = REMOTE_PREFIX + f"cat > '{metadata_filename}'" + REMOTE_UPDATE_XOCHITL
+        cmd = REMOTE_PREFIX + f"cat > '{metadata_filename}'"
 
         try:
             with subprocess.Popen(
@@ -105,7 +105,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
         patterns = [f"{uuid}*" for uuid in entity_uuids]
         removable_entities = " ".join(patterns)
 
-        cmd = REMOTE_PREFIX + f"rm -rf -- {removable_entities}" + REMOTE_UPDATE_XOCHITL
+        cmd = REMOTE_PREFIX + f"rm -rf -- {removable_entities}"
         try:
             with subprocess.Popen(
                     SSH_CONNECT + [cmd],

@@ -616,7 +616,7 @@ class RemarkableWorkspace:
             metadata: Metadata = Metadata.from_dict(new_metadata_entry)
 
             # Call RemarkableSshMetadataSource to store the metadata entry
-            self._source.write(entity_uuid, metadata)
+            self._source.write_metadata(entity_uuid, metadata)
 
             # Update local data
             self._data[entity_uuid] = new_metadata_entry

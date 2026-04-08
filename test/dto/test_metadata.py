@@ -1,9 +1,8 @@
 """
     Module for metadata DTO tests
 """
-
-import unittest
 import time
+import unittest
 
 from src.dto.entry_type_enum import EntityType
 from src.dto.metadata import Metadata
