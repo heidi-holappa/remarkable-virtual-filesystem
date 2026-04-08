@@ -3,12 +3,11 @@
 """
 
 import time
-from src.constant import UUID_REGEX
-from typing import List, Dict, Set, Any, Self
 from dataclasses import dataclass
+from typing import List, Dict, Set, Any, Self
 
+from src.constant import UUID_REGEX
 from src.dto.entry_type_enum import EntityType
-
 from src.exception.invalid_metadata_exception import InvalidMetadataException
 
 

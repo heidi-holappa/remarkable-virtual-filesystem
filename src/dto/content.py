@@ -10,6 +10,7 @@
 
 from dataclasses import dataclass
 from typing import List, Dict, Any, Self, Set
+
 from src.dto.file_type_enum import FileType
 from src.exception.invalid_content_exception import InvalidContentException
 

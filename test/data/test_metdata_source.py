@@ -1,5 +1,5 @@
-import unittest
 import time
+import unittest
 
 from src.data.metadata_source import MetadataSource
 from src.dto.content import Content
@@ -7,6 +7,7 @@ from src.dto.entry_type_enum import EntityType
 from src.dto.file_type_enum import FileType
 from src.dto.metadata import Metadata
 from test.test_data import TEST_DATA, UUID_FAIRYTALE
+
 
 class TestMetadataSource(unittest.TestCase):
 
@@ -19,15 +20,9 @@ class TestMetadataSource(unittest.TestCase):
         with self.assertRaises(NotImplementedError) as ctx:
             self.source.load()
 
-
-    def test_refresh_raises_not_implemented_error(self) -> None:
-        with self.assertRaises(NotImplementedError) as ctx:
-            self.source.refresh()
-
-
     def test_write_raises_not_implemented_error(self) -> None:
         with self.assertRaises(NotImplementedError) as ctx:
-            self.source.write(
+            self.source.write_metadata(
                 UUID_FAIRYTALE,
                 Metadata.from_dict(TEST_DATA.get(UUID_FAIRYTALE)))
 
