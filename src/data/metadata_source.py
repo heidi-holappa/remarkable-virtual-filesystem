@@ -20,18 +20,6 @@ class MetadataSource:
         raise NotImplementedError
 
 
-    def refresh(self) -> None:
-        """
-        Restarts the reMarkable UI-application.
-        Any changes made to metadata on reMarkable
-        are only visible on the device after the
-        application is restarted.
-
-        :return: None
-        """
-        raise NotImplementedError
-
-
     def write_metadata(self, entry_uuid: str, metadata: Metadata) -> None:
         """
         A public method to write a metadata entry
