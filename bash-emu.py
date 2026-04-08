@@ -1,8 +1,10 @@
 import shlex
-from src.com.common import clear, ls, mv, rm, cd, rcp, refresh, handle_exit
 from typing import List
+
+from src.com.common import clear, ls, mv, rm, cd, rcp, refresh, handle_exit
 from src.com.help import help_instruction
 from src.workspace.workspace_manager import default_workspace_manager as workspace_manager
+
 
 def main_loop() -> None:
 
@@ -31,11 +33,11 @@ def main_loop() -> None:
             case "rcp":
                 rcp(args, workspace_manager)
             case "help":
-                help_instruction()
+                help_instruction(args)
             case "refresh":
-                refresh()
+                refresh(workspace_manager)
             case "exit" | "x":
-                handle_exit()
+                handle_exit(workspace_manager)
             case _:
                 print(f"Command '{command}' not found.\nTry: help")
 
