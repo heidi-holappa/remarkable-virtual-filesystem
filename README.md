@@ -43,7 +43,7 @@ Host machine:
 - `ssh`, `tar`
 - SSH config entry named remarkable
 
-> To use a different SSH config name, update SSH_CONNECT in src/constant.py.
+> To use a different SSH config name, update `SSH_CONNECT` in `src/constant.py`.
 
 reMarkable device:
 - SSH access configured
