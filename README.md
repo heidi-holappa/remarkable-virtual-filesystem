@@ -87,10 +87,10 @@ source venv/bin/activate
 Install dependencies:
 
 ```
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
-> Review `requirements.txt` before installing.
+> Review `requirements-dev.txt` before installing.
 
 
 ### Linting
