@@ -41,7 +41,9 @@ Host machine:
 - Linux based OS  
 - Python3 3.14+
 - `ssh`, `tar`
-- SSH config entry named remarkable
+- SSH config entry named remarkable. Tutorials:
+  - [remarkable.guide - SSH access](https://remarkable.guide/guide/access/ssh.html)
+  - [Zeljko Medic's IT blog - How to connecto to reMarkable Paper Pro vis SSH](https://www.informaticar.net/how-to-connect-to-remarkable-paper-pro-via-ssh/)
 
 > To use a different SSH config name, update `SSH_CONNECT` in `src/constant.py`.
 
