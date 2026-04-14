@@ -56,7 +56,7 @@ reMarkable device:
 
 ## How to use
 
-Read the documentation before starting.
+Read the documentation on [supported commands](https://github.com/heidi-holappa/remarkable-virtual-filesystem/wiki/Commands) before starting.
 
 Clone the repository (preferably from the `main` branch) or download a release.
 
@@ -64,6 +64,19 @@ Run:
 
 ```
 python3 remarkable-vfs.py
+```
+
+### Quick start
+
+# Quick Start
+
+```bash
+cd /documents
+ls
+mv file.pdf /archive
+rm old_notes/
+rcp /absolute/path/to/book.pdf /books
+refresh
 ```
 
 ## Development
