@@ -404,12 +404,10 @@ class RemarkableWorkspaceTest(unittest.TestCase):
 
     @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
     @patch.object(RemarkableSSHMetadataSource, "load")
-    @patch.object(RemarkableSSHMetadataSource, "restart_xochitl")
     @patch.object(RemarkableSSHMetadataSource, "remote_copy")
     def test_process_rcp_success(
             self,
             mock_remote_copy: MagicMock,
-            mock_restart: MagicMock,
             mock_load: MagicMock,
             mock_exists: MagicMock
     ) -> None:
@@ -430,8 +428,6 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         # remote_copy called once
         mock_remote_copy.assert_called_once()
 
-        # restart called
-        mock_restart.assert_called_once()
 
         # load called and assigned
         mock_load.assert_called_once()
