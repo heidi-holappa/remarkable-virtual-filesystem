@@ -68,8 +68,6 @@ python3 remarkable-vfs.py
 
 ### Quick start
 
-# Quick Start
-
 ```bash
 cd /documents
 ls
