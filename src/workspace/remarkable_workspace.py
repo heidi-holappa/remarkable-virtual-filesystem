@@ -413,7 +413,6 @@ class RemarkableWorkspace:
             self._source.remote_copy(source_file=source_file,
                                      metadata=metadata, content=content)
 
-            self._source.restart_xochitl()
             self._data = self._source.load()
 
         except (NotFoundException, InvalidMetadataException,
