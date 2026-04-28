@@ -25,6 +25,17 @@ class TestHelpInstruction(unittest.TestCase):
             self.assertTrue("mv *.epub /some/path" in output, msg=f"Output was: {output}")
             self.assertTrue("mv * /some/path" in output, msg=f"Output was: {output}")
 
+    def test_help_with_command__with_additional_info(self) -> None:
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            help_instruction(["mkdir"])
+            output: str = mock_out.getvalue()
+            self.assertTrue("make new directory" in output, msg=f"Output was: {output}")
+            self.assertTrue("directory name" in output, msg=f"Output was: {output}")
+            self.assertTrue("mkdir foo" in output, msg=f"Output was: {output}")
+            self.assertTrue("additional information:" in output, msg=f"Output was: {output}")
+            self.assertTrue("supported characters: a-zA-Z0-9._-" in output, msg=f"Output was: {output}")
+            self.assertTrue("provided path must be a child of current path" in output, msg=f"Output was: {output}")
+
 
     def test_help_command_not_found(self) -> None:
         with patch('sys.stdout', new=StringIO()) as mock_out:

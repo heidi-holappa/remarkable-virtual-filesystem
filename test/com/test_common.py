@@ -2,14 +2,13 @@ import unittest
 from io import StringIO
 from unittest.mock import patch, MagicMock
 
-from src.com.common import cd, ls, mv, rm, rcp, clear, refresh, handle_exit
+from src.com.common import cd, ls, mv, rm, mkdir, rcp, clear, refresh, handle_exit
 from src.exception.remarkable_operation_exception import RemarkableOperationException
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from test.stub_remarkable_metadata_source import StubRemarkableMetadataSource
 from src.workspace.workspace_manager import WorkspaceManager
 
 from test.test_data import UUID_A, UUID_D_1, UUID_ROOT, UUID_A0, UUID_B
-
 
 class TestCommon(unittest.TestCase):
 
@@ -221,6 +220,32 @@ class TestCommon(unittest.TestCase):
         self.assertEqual(args[1], target)
 
     # -------------------------------
+    # mkdir instruction
+    # -------------------------------
+    def test_mkdir_with_multiple_args(self) -> None:
+        """
+        When user attempts to use mv instruction without
+        arguments, they are instructed of the usage of
+        the command
+        """
+        self.ws.set_current_collection("")
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            mkdir(["-r", "foo.pdf", "bar/"], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue("mkdir: usage: mkdir <path>" in output, msg=f"Output was: {output}")
+
+    @patch.object(RemarkableWorkspace, "process_mkdir")
+    def test_mkdir_positive_case(self, mock_mkdir: MagicMock) -> None:
+        path = "foo"
+        mkdir([path], self.manager)
+
+        mock_mkdir.assert_called_once()
+
+        args, _ = mock_mkdir.call_args
+        self.assertEqual(args[0], path)
+
+
+    # -------------------------------
     # rcp instruction
     # -------------------------------
     def test_rcp_without_args(self) -> None:
@@ -296,16 +321,18 @@ class TestCommon(unittest.TestCase):
         args, _ = mock_remove.call_args
         self.assertEqual(args[0], file_to_remove)
 
+
+
     # -------------------------------
     # refresh instruction
     # -------------------------------
     @patch.object(RemarkableWorkspace, "restart_xochitl")
-    def test_rm_positive_case(self, mock_restart_xochitl: MagicMock) -> None:
+    def test_refresh_positive_case(self, mock_restart_xochitl: MagicMock) -> None:
         refresh(self.manager)
         mock_restart_xochitl.assert_called_once()
 
     @patch.object(RemarkableWorkspace, "restart_xochitl")
-    def test_rm_logs_exception(self, mock_restart_xochitl: MagicMock) -> None:
+    def test_refresh_logs_exception(self, mock_restart_xochitl: MagicMock) -> None:
         mock_restart_xochitl.side_effect = RemarkableOperationException("failure")
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
@@ -316,7 +343,7 @@ class TestCommon(unittest.TestCase):
         mock_restart_xochitl.assert_called_once()
 
     # -------------------------------
-    # refresh instruction
+    # exit instruction
     # -------------------------------
     @patch.object(RemarkableWorkspace, "restart_xochitl")
     def test_handle_exit_success(self, mock_restart_xochitl: MagicMock) -> None:

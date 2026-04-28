@@ -28,6 +28,12 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
       "args": ["source or pattern"],
       "usage": ["rm file.pdf", "rm path/","rm *.pdf", "rm *"],
   },
+  "mkdir": {
+      "description": "make new directory",
+      "args": ["directory name"],
+      "usage": ["mkdir foo"],
+      "info": ["supported characters: a-zA-Z0-9._-", "provided path must be a child of current path"]
+  },
   "rcp": {
       "description": "remote copy one PDF or EPUB file from host-machine to reMarkable",
       "args": ["source (absolute)", "target-path (absolute)"],
@@ -94,8 +100,12 @@ def print_command_details(command: str) -> None:
         print("  usage:")
         for usage in command_help.get("usage"):
             print(f"    {usage}")
+    if command_help.get("info"):
+        print("")
+        print("  additional information:")
+        for info in command_help.get("info"):
+            print(f"    {info}")
     print("")
-
 
 
 def list_commands() -> None:

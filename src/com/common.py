@@ -134,6 +134,22 @@ def ls(args: List[str], workspace_manager: WorkspaceManager) -> None:
     except NotFoundException as e:
         print(e)
 
+def mkdir(args: List[str], workspace_manager: WorkspaceManager) -> None:
+    """
+    Tries to create a new directory
+
+    :param args: arguments provided for the mkdir command
+    :param workspace_manager: manager for reMarkable workspace
+    """
+    if len(args) != 1:
+        print("mkdir: usage: mkdir <path>")
+        return
+
+
+    path = args[0]
+    ws = workspace_manager.get()
+    ws.process_mkdir(path)
+
 def clear() -> None:
     """
     Clears bash terminal

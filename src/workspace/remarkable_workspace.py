@@ -5,6 +5,8 @@
 
 import copy
 import os
+import uuid
+import re
 import time
 from fnmatch import fnmatchcase
 from typing import Dict, List, Tuple, Any, Optional
@@ -419,6 +421,44 @@ class RemarkableWorkspace:
                 InvalidContentException) as e:
             print(e)
 
+    def process_mkdir(self, path: str) -> None:
+        """
+        Tries to create a new subdirectory to the current
+        parent.
+
+        Handles possible raised errors:
+          - InvalidPathException if path is not valid
+          - RemarkableWriteException if an error occurs while
+            communicating with the remarkable device
+
+        :param path: path to create
+        """
+
+        try:
+            self._validate_path(path)
+
+            metadata: Metadata = Metadata(
+                created_time=int(time.time()),
+                last_modified=int(time.time()),
+                new=False,
+                parent=self._current_collection,
+                pinned=False,
+                source="",
+                type=EntityType.COLLECTION_TYPE,
+                visible_name=path
+            )
+
+            # Generate a random UUID for the new entry
+            path_uuid: str = str(uuid.uuid4())
+            self._source.write_metadata(path_uuid, metadata)
+
+            self._data[path_uuid] = metadata.to_dict()
+
+        except InvalidPathException as e:
+            print(f"mkdir: {path}: {e}: hint: try help mkdir")
+        except RemarkableWriteException as e:
+            print(f"mkdir: {path}: error writing to remarkable: {e}")
+
     def restart_xochitl(self) -> None:
         """
         Invokes source method handling restart
@@ -437,6 +477,54 @@ class RemarkableWorkspace:
     # ----------------------------------
     # private methods
     # ----------------------------------
+
+    def _validate_path(self, path: str) -> bool:
+        """
+        Validates a provided path. Currently, a valid
+        path name meets the following conditions:
+
+        * path name can not be None or an empty string
+        * parent must not have child path with same name
+        * path name can contain: alphanumeric characters
+          (a-zA-Z0-9), slash (-), underscore (_) and dots (.)
+
+        raises:
+          - InvalidPathException: if
+
+        :param path: path to validate
+        """
+
+        if not path:
+            raise InvalidPathException("path cannot be an empty string")
+
+        if self._parent_has_child_path_with_given_name(self._current_collection, path):
+            raise InvalidPathException("path with same name already exists")
+
+        if '/' in path:
+            raise InvalidPathException("relative or absolute paths are not yet supported")
+
+        pattern = r'^[a-zA-Z0-9._-]+$'
+        if not bool(re.fullmatch(pattern, path)):
+            raise InvalidPathException("path contains invalid characters")
+
+
+    def _parent_has_child_path_with_given_name(self, parent_uuid, child_visible_name) -> bool:
+        """
+        Verifies, whether the provided parent UUID has a child collection
+        with the given visibleName.
+
+        :param parent_uuid: UUID of the parent collection
+        :param child_visible_name: visibleName of the child
+        :rtype: bool indication of whether child exists
+        """
+
+        for item in self._data.values():
+            if (item.get("type") == "CollectionType" and
+                    item.get("parent") == parent_uuid and
+                    item.get("visibleName") == child_visible_name):
+                return True
+
+        return False
 
 
     def _resolve_source_parent_and_visible_name(self, source: str) -> Tuple[str, str]:
