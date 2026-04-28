@@ -32,7 +32,8 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
       "description": "make new directory",
       "args": ["directory name"],
       "usage": ["mkdir foo"],
-      "info": ["supported characters: a-zA-Z0-9._-", "provided path must be a child of current path"]
+      "info": ["supported characters: a-zA-Z0-9._-",
+               "provided path must be a child of current path"]
   },
   "rcp": {
       "description": "remote copy one PDF or EPUB file from host-machine to reMarkable",
