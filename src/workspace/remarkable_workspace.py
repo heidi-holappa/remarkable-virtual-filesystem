@@ -479,7 +479,7 @@ class RemarkableWorkspace:
     # private methods
     # ----------------------------------
 
-    def _validate_path(self, path: str) -> bool:
+    def _validate_path(self, path: str) -> None:
         """
         Validates a provided path. Currently, a valid
         path name meets the following conditions:
