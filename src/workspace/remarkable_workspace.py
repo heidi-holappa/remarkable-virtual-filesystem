@@ -724,7 +724,7 @@ class RemarkableWorkspace:
         Attempts to remove the provided entity from the reMarkable
         tablet.
 
-        :param entity_uuid: UUID of the entity to remove
+        :param entity_uuids: UUID of the entity to remove
         :return: None
         """
 
