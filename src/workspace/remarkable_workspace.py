@@ -173,7 +173,7 @@ class RemarkableWorkspace:
             return "/"
         return self.generate_absolute_collection_path(self._current_collection)
 
-    def generate_absolute_collection_path(self, uuid: str) -> str:
+    def generate_absolute_collection_path(self, item_uuid: str) -> str:
         """
         A helper method to find the path for each entity.
 
@@ -182,21 +182,21 @@ class RemarkableWorkspace:
         :return: a string representation of the path
         """
 
-        if uuid == ROOT_COLLECTION:
+        if item_uuid == ROOT_COLLECTION:
             return "/"
 
-        if not self._data.get(uuid):
+        if not self._data.get(item_uuid):
             return './<NA>'
 
         # print(f"data for {uuid}: {remarkable_metadata.get(uuid)}")
-        if self._data[uuid].get('parent') == '':
-            return "/" + self._data[uuid]['visibleName']
+        if self._data[item_uuid].get('parent') == '':
+            return "/" + self._data[item_uuid]['visibleName']
 
-        if self._data[uuid].get('parent') == 'trash':
-            return '/trash/' + self._data[uuid].get('visibleName')
+        if self._data[item_uuid].get('parent') == 'trash':
+            return '/trash/' + self._data[item_uuid].get('visibleName')
 
-        return (self.generate_absolute_collection_path(self._data[uuid]['parent']) +
-                "/" + self._data[uuid].get('visibleName'))
+        return (self.generate_absolute_collection_path(self._data[item_uuid]['parent']) +
+                "/" + self._data[item_uuid].get('visibleName'))
 
     def process_ls(self, args: Optional[List[str]]) -> None:
         """
@@ -231,7 +231,7 @@ class RemarkableWorkspace:
             list_result.append(f"{' '*LS_COLUMN_WIDTH}../")
         list_result.append(f"{' '*LS_COLUMN_WIDTH}./")
 
-        for uuid, v in remarkable_metadata.items():
+        for item_uuid, v in remarkable_metadata.items():
             if v.get('parent') != collection_to_list_uuid:
                 continue
             if v.get('type') == 'CollectionType':
@@ -239,7 +239,7 @@ class RemarkableWorkspace:
             elif v.get('type') == 'DocumentType':
                 documents.append((f"{v.get('visibleName')}", f"{v.get('size')}"))
             else:
-                print(f"ls: entry is neither a file or a directory: {uuid}")
+                print(f"ls: entry is neither a file or a directory: {item_uuid}")
 
         for t in sorted(collections, key=lambda x: x[0].lower()):
             name, size = t
@@ -365,8 +365,8 @@ class RemarkableWorkspace:
 
             self._remove_entities(entities_to_remove)
 
-            for uuid in entities_to_remove:
-                self._data.pop(uuid)
+            for item_uuid in entities_to_remove:
+                self._data.pop(item_uuid)
 
         except (NotFoundException, KeyError) as e:
             print(f"ERROR: {e}")
