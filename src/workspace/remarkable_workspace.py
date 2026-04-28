@@ -177,8 +177,7 @@ class RemarkableWorkspace:
         """
         A helper method to find the path for each entity.
 
-        :param uuid: entity's uuid
-        :param remarkable_metadata: a reference to the dictionary of metadata
+        :param item_uuid: entity's uuid
         :return: a string representation of the path
         """
 
