@@ -379,7 +379,8 @@ class RemarkableWorkspace:
         must be an absolute path to a collection.
 
 
-        :param args: source and target
+        :param source_file: source from which to copy
+        :param target_collection: target collection
         :return: None
         """
 
