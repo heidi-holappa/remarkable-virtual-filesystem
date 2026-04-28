@@ -195,7 +195,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
 
                 if ssh_proc.returncode != 0:
                     raise RemarkableWriteException(
-                        f"rcp: failed to copy file. subprocess returncode: {ssh_proc.returncode}")
+                        f"rcp: failed to copy file. subprocess return code: {ssh_proc.returncode}")
 
     @staticmethod
     def restart_xochitl() -> None:

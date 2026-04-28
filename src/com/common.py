@@ -91,7 +91,7 @@ def rcp(args: List[str], workspace_manager: WorkspaceManager) -> None:
     (reMarkable). Both source path and target collection must be
     provided with absolute paths, noting that the target path must
     be the absolute path in context of this application (i.e., the
-    file structure shown in Xoctihl GUI application), meaning that
+    file structure shown in Xochitl GUI application), meaning that
     root path is '/', path to directory 'foo' whose parent is root
     is '/foo' or '/foo/' and so on.
 
