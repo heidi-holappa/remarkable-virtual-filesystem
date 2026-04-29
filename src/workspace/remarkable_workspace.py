@@ -5,6 +5,8 @@
 
 import copy
 import os
+import uuid
+import re
 import time
 from fnmatch import fnmatchcase
 from typing import Dict, List, Tuple, Any, Optional
@@ -171,30 +173,29 @@ class RemarkableWorkspace:
             return "/"
         return self.generate_absolute_collection_path(self._current_collection)
 
-    def generate_absolute_collection_path(self, uuid: str) -> str:
+    def generate_absolute_collection_path(self, item_uuid: str) -> str:
         """
         A helper method to find the path for each entity.
 
-        :param uuid: entity's uuid
-        :param remarkable_metadata: a reference to the dictionary of metadata
+        :param item_uuid: entity's uuid
         :return: a string representation of the path
         """
 
-        if uuid == ROOT_COLLECTION:
+        if item_uuid == ROOT_COLLECTION:
             return "/"
 
-        if not self._data.get(uuid):
+        if not self._data.get(item_uuid):
             return './<NA>'
 
         # print(f"data for {uuid}: {remarkable_metadata.get(uuid)}")
-        if self._data[uuid].get('parent') == '':
-            return "/" + self._data[uuid]['visibleName']
+        if self._data[item_uuid].get('parent') == '':
+            return "/" + self._data[item_uuid]['visibleName']
 
-        if self._data[uuid].get('parent') == 'trash':
-            return '/trash/' + self._data[uuid].get('visibleName')
+        if self._data[item_uuid].get('parent') == 'trash':
+            return '/trash/' + self._data[item_uuid].get('visibleName')
 
-        return (self.generate_absolute_collection_path(self._data[uuid]['parent']) +
-                "/" + self._data[uuid].get('visibleName'))
+        return (self.generate_absolute_collection_path(self._data[item_uuid]['parent']) +
+                "/" + self._data[item_uuid].get('visibleName'))
 
     def process_ls(self, args: Optional[List[str]]) -> None:
         """
@@ -229,7 +230,7 @@ class RemarkableWorkspace:
             list_result.append(f"{' '*LS_COLUMN_WIDTH}../")
         list_result.append(f"{' '*LS_COLUMN_WIDTH}./")
 
-        for uuid, v in remarkable_metadata.items():
+        for item_uuid, v in remarkable_metadata.items():
             if v.get('parent') != collection_to_list_uuid:
                 continue
             if v.get('type') == 'CollectionType':
@@ -237,7 +238,7 @@ class RemarkableWorkspace:
             elif v.get('type') == 'DocumentType':
                 documents.append((f"{v.get('visibleName')}", f"{v.get('size')}"))
             else:
-                print(f"ls: entry is neither a file or a directory: {uuid}")
+                print(f"ls: entry is neither a file or a directory: {item_uuid}")
 
         for t in sorted(collections, key=lambda x: x[0].lower()):
             name, size = t
@@ -363,8 +364,8 @@ class RemarkableWorkspace:
 
             self._remove_entities(entities_to_remove)
 
-            for uuid in entities_to_remove:
-                self._data.pop(uuid)
+            for item_uuid in entities_to_remove:
+                self._data.pop(item_uuid)
 
         except (NotFoundException, KeyError) as e:
             print(f"ERROR: {e}")
@@ -377,7 +378,8 @@ class RemarkableWorkspace:
         must be an absolute path to a collection.
 
 
-        :param args: source and target
+        :param source_file: source from which to copy
+        :param target_collection: target collection
         :return: None
         """
 
@@ -419,6 +421,44 @@ class RemarkableWorkspace:
                 InvalidContentException) as e:
             print(e)
 
+    def process_mkdir(self, path: str) -> None:
+        """
+        Tries to create a new subdirectory to the current
+        parent.
+
+        Handles possible raised errors:
+          - InvalidPathException if path is not valid
+          - RemarkableWriteException if an error occurs while
+            communicating with the remarkable device
+
+        :param path: path to create
+        """
+
+        try:
+            self._validate_path(path)
+
+            metadata: Metadata = Metadata(
+                created_time=int(time.time()),
+                last_modified=int(time.time()),
+                new=False,
+                parent=self._current_collection,
+                pinned=False,
+                source="",
+                type=EntityType.COLLECTION_TYPE,
+                visible_name=path
+            )
+
+            # Generate a random UUID for the new entry
+            path_uuid: str = str(uuid.uuid4())
+            self._source.write_metadata(path_uuid, metadata)
+
+            self._data[path_uuid] = metadata.to_dict()
+
+        except InvalidPathException as e:
+            print(f"mkdir: {path}: {e}: hint: try help mkdir")
+        except RemarkableWriteException as e:
+            print(f"mkdir: {path}: error writing to remarkable: {e}")
+
     def restart_xochitl(self) -> None:
         """
         Invokes source method handling restart
@@ -437,6 +477,54 @@ class RemarkableWorkspace:
     # ----------------------------------
     # private methods
     # ----------------------------------
+
+    def _validate_path(self, path: str) -> None:
+        """
+        Validates a provided path. Currently, a valid
+        path name meets the following conditions:
+
+        * path name can not be None or an empty string
+        * parent must not have child path with same name
+        * path name can contain: alphanumeric characters
+          (a-zA-Z0-9), slash (-), underscore (_) and dots (.)
+
+        raises:
+          - InvalidPathException: if
+
+        :param path: path to validate
+        """
+
+        if not path:
+            raise InvalidPathException("path cannot be an empty string")
+
+        if self._parent_has_child_path_with_given_name(self._current_collection, path):
+            raise InvalidPathException("path with same name already exists")
+
+        if '/' in path:
+            raise InvalidPathException("relative or absolute paths are not yet supported")
+
+        pattern = r'^[a-zA-Z0-9._-]+$'
+        if not bool(re.fullmatch(pattern, path)):
+            raise InvalidPathException("path contains invalid characters")
+
+
+    def _parent_has_child_path_with_given_name(self, parent_uuid, child_visible_name) -> bool:
+        """
+        Verifies, whether the provided parent UUID has a child collection
+        with the given visibleName.
+
+        :param parent_uuid: UUID of the parent collection
+        :param child_visible_name: visibleName of the child
+        :rtype: bool indication of whether child exists
+        """
+
+        for item in self._data.values():
+            if (item.get("type") == "CollectionType" and
+                    item.get("parent") == parent_uuid and
+                    item.get("visibleName") == child_visible_name):
+                return True
+
+        return False
 
 
     def _resolve_source_parent_and_visible_name(self, source: str) -> Tuple[str, str]:
@@ -635,7 +723,7 @@ class RemarkableWorkspace:
         Attempts to remove the provided entity from the reMarkable
         tablet.
 
-        :param entity_uuid: UUID of the entity to remove
+        :param entity_uuids: UUID of the entity to remove
         :return: None
         """
 

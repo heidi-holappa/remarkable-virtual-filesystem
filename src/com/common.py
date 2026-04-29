@@ -91,7 +91,7 @@ def rcp(args: List[str], workspace_manager: WorkspaceManager) -> None:
     (reMarkable). Both source path and target collection must be
     provided with absolute paths, noting that the target path must
     be the absolute path in context of this application (i.e., the
-    file structure shown in Xoctihl GUI application), meaning that
+    file structure shown in Xochitl GUI application), meaning that
     root path is '/', path to directory 'foo' whose parent is root
     is '/foo' or '/foo/' and so on.
 
@@ -133,6 +133,22 @@ def ls(args: List[str], workspace_manager: WorkspaceManager) -> None:
         ws.process_ls(args)
     except NotFoundException as e:
         print(e)
+
+def mkdir(args: List[str], workspace_manager: WorkspaceManager) -> None:
+    """
+    Tries to create a new directory
+
+    :param args: arguments provided for the mkdir command
+    :param workspace_manager: manager for reMarkable workspace
+    """
+    if len(args) != 1:
+        print("mkdir: usage: mkdir <path>")
+        return
+
+
+    path = args[0]
+    ws = workspace_manager.get()
+    ws.process_mkdir(path)
 
 def clear() -> None:
     """

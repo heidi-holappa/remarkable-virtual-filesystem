@@ -102,7 +102,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
         if not entity_uuids:
             return
 
-        patterns = [f"{uuid}*" for uuid in entity_uuids]
+        patterns = [f"{item_uuid}*" for item_uuid in entity_uuids]
         removable_entities = " ".join(patterns)
 
         cmd = REMOTE_PREFIX + f"rm -rf -- {removable_entities}"
@@ -195,7 +195,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
 
                 if ssh_proc.returncode != 0:
                     raise RemarkableWriteException(
-                        f"rcp: failed to copy file. subprocess returncode: {ssh_proc.returncode}")
+                        f"rcp: failed to copy file. subprocess return code: {ssh_proc.returncode}")
 
     @staticmethod
     def restart_xochitl() -> None:
@@ -289,7 +289,8 @@ class RemarkableSSHMetadataSource(MetadataSource):
 
 
 
-    def _get_file_sizes(self) -> Dict[str, int]:
+    @staticmethod
+    def _get_file_sizes() -> Dict[str, int]:
         """
         Fetches the combined size of all files and paths
         related to given entity for all entities in the

@@ -338,6 +338,75 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.assertEqual(UUID_A, self.ws.get_data()[UUID_B0]['parent'])
         self.assertEqual(UUID_A, self.ws.get_data()[UUID_A_UNDER_B]['parent'])
 
+    #--------------------------------------
+    # Process mkdir (make directory)
+    # --------------------------------------
+    @patch.object(RemarkableSSHMetadataSource, "write_metadata")
+    def test_make_directory_with_valid_directory_name(self,mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_B)
+        actual_path_to_make = "foo"
+        self.ws.process_mkdir(actual_path_to_make)
+
+        args, kwargs = mock_write.call_args
+        actual_path_uuid = args[0]
+
+        self.assertEqual(mock_write.call_count, 1)
+        self.assertIsNotNone(self.ws.get_data().get(actual_path_uuid),
+                             msg=f"UUID {actual_path_uuid} not found in data")
+        actual_visible_name = self.ws.get_data().get(actual_path_uuid).get('visibleName')
+        self.assertEqual(actual_path_to_make, actual_visible_name,
+                         msg=f"visibleName {actual_visible_name} does not match path {actual_path_to_make}")
+
+    @patch.object(RemarkableSSHMetadataSource, "write_metadata")
+    def test_make_directory_with_valid_directory_name_but_diretory_exists(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        actual_path_to_make = "A_0"
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.process_mkdir(actual_path_to_make)
+            self.assertEqual(mock_write.call_count, 0)
+            output: str = mock_out.getvalue()
+            self.assertTrue("mkdir: A_0: path with same name already exists: hint: try help mkdir" in output,
+                            msg=f"Output was: {output}")
+
+    @patch.object(RemarkableSSHMetadataSource, "write_metadata")
+    def test_make_directory_with_invalid_directory_name(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        actual_path_to_make = "A#0"
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.process_mkdir(actual_path_to_make)
+            self.assertEqual(mock_write.call_count, 0)
+            output: str = mock_out.getvalue()
+            self.assertTrue("mkdir: A#0: path contains invalid characters: hint: try help mkdir" in output,
+                            msg=f"Output was: {output}")
+
+    @patch.object(RemarkableSSHMetadataSource, "write_metadata")
+    def test_make_directory_with_directory_name_with_path_fails(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        actual_path_to_make = "/A/A_0"
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.process_mkdir(actual_path_to_make)
+            self.assertEqual(0, mock_write.call_count)
+            output: str = mock_out.getvalue()
+            self.assertTrue("mkdir: /A/A_0: relative or absolute paths are not yet supported: hint: try help mkdir" in output,
+                            msg=f"Output was: {output}")
+
+    @patch.object(RemarkableSSHMetadataSource, "write_metadata")
+    def test_make_directory_with_directory_name_empty_str(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        actual_path_to_make = ""
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.process_mkdir(actual_path_to_make)
+            self.assertEqual(0, mock_write.call_count)
+            output: str = mock_out.getvalue()
+            self.assertTrue(
+                "mkdir: : path cannot be an empty string: hint: try help mkdir" in output,
+                msg=f"Output was: {output}")
+
     # -------------------------------------
     # Process remove instruction
     # -------------------------------------
