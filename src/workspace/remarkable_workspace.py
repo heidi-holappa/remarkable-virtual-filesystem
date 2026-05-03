@@ -25,6 +25,7 @@ from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirect
 from src.exception.not_a_directory_exception import NotADirectoryException
 from src.exception.not_found_exception import NotFoundException
 from src.exception.remarkable_write_exception import RemarkableWriteException
+from src.exception.invalid_argument_exception import InvalidArgumentException
 
 
 class RemarkableWorkspace:
@@ -370,7 +371,72 @@ class RemarkableWorkspace:
         except (NotFoundException, KeyError) as e:
             print(f"ERROR: {e}")
 
-    def process_rcp_command(self, source_file: str, target_collection: str) -> None:
+
+    def process_rcp_with_flags(self, args: List[str]) -> None:
+        """
+        Handles rcp command with flags. Flags are meant for
+        copying multiple files with one command. This method
+        validates the arguments, resolves a list of
+        files to be copied and then for each file invokes
+        `process_rcp_command` separately
+
+        :param args: list of arguments
+        :return: None
+        """
+
+        try:
+            # flags MUST precede source_path and target_path
+            flags: List[str] = args[:-2]
+
+            if not self._has_only_valid_flags(flags):
+                raise InvalidArgumentException(f"invalid flags: {','.join(flags)}: hint: help rcp")
+
+            # The source and target MUST be the last two arguments
+            source_path, target_collection = args[-2:]
+
+            target_uuid: Optional[str] = self._traverse_path(target_collection)
+            self._validate_source_and_target_uuid(source_path, target_collection, target_uuid)
+
+            files_to_copy = self._find_all_pdf_and_epub_files_in_path(source_path)
+
+            if not files_to_copy:
+                print(f"rcp: no pdf or epub files found in directory: {source_path}")
+                return
+
+            for source_file in files_to_copy:
+                self._copy_file_from_host_to_target(source_file, target_uuid)
+
+            self._data = self._source.load()
+
+        except (InvalidArgumentException, NotFoundException) as e:
+            print(f"rcp: {e}")
+
+    def process_rcp_command_without_flags(self, source_file: str, target_collection: str) -> None:
+        """
+        Copies a single file defined by the user as the
+        source file to the target collection in reMarkable
+        device.
+
+        :param source_file: absolute path of a PDF or EPUB file
+        :param target_collection: absolute path of the target collection
+        :return: NOne
+        """
+
+        try:
+
+            target_uuid: Optional[str] = self._traverse_path(target_collection)
+            self._validate_source_and_target_uuid(source_file, target_collection, target_uuid)
+
+            self._copy_file_from_host_to_target(source_file, target_uuid)
+
+            self._data = self._source.load()
+
+        except NotFoundException as e:
+            print(f"rcp: {e}")
+
+
+
+    def _copy_file_from_host_to_target(self, source_file: str, target_uuid: str) -> None:
         """
         Remote copy (rcp) command moves one file from host machine
         to the provided collection on the target machine (reMarkable).
@@ -379,20 +445,11 @@ class RemarkableWorkspace:
 
 
         :param source_file: source from which to copy
-        :param target_collection: target collection
+        :param target_uuid: target collection UUID
         :return: None
         """
 
         try:
-
-            if not os.path.exists(source_file):
-                raise NotFoundException(f"rcp: source file {source_file} not found")
-
-            target_uuid: Optional[str] = self._traverse_path(target_collection)
-
-            if target_uuid is None:
-                raise NotFoundException(f"rcp: target path {target_collection} not found")
-
             filename: str = os.path.basename(source_file)
             # splitext return extension with dot. We want to remove that here.
             file_extension: str = os.path.splitext(filename)[1][1:]
@@ -415,11 +472,38 @@ class RemarkableWorkspace:
             self._source.remote_copy(source_file=source_file,
                                      metadata=metadata, content=content)
 
-            self._data = self._source.load()
 
         except (NotFoundException, InvalidMetadataException,
                 InvalidContentException) as e:
             print(e)
+
+    @staticmethod
+    def _has_only_valid_flags(flags: List[str]) -> bool:
+        # in milestone v0.2 the only supported flag is -a
+        valid_flags = ['-a']
+        for flag in flags:
+            if flag not in valid_flags:
+                return False
+        return True
+
+    @staticmethod
+    def _validate_source_and_target_uuid(source: str,
+                                         target_collection: str, target_uuid: str) -> None:
+        if not os.path.exists(source):
+            raise NotFoundException(f"rcp: source file {source} not found")
+        if target_uuid is None:
+            raise NotFoundException(f"rcp: target path {target_collection} not found")
+
+    @staticmethod
+    def _find_all_pdf_and_epub_files_in_path(path: str) -> List[str]:
+        result = []
+
+        for dirpath, _, filenames in os.walk(path):
+            for file in filenames:
+                if file.lower().endswith((".pdf", ".epub")):
+                    result.append(os.path.abspath(os.path.join(dirpath, file)))
+
+        return result
 
     def process_mkdir(self, path: str) -> None:
         """

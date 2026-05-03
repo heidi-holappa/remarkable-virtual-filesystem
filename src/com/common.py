@@ -86,16 +86,20 @@ def rm(args: List[str], workspace_manager: WorkspaceManager) -> None:
 
 def rcp(args: List[str], workspace_manager: WorkspaceManager) -> None:
     """
-    Remote copy (rcp) copies one PDF or EPUB file from host machine
-    (user's computer running the python script) to the target machine
-    (reMarkable). Both source path and target collection must be
-    provided with absolute paths, noting that the target path must
-    be the absolute path in context of this application (i.e., the
-    file structure shown in Xochitl GUI application), meaning that
-    root path is '/', path to directory 'foo' whose parent is root
-    is '/foo' or '/foo/' and so on.
+    Remote copy (rcp) copies either one PDF or EPUB file from host
+    machine (user's computer running the python script) or all files
+    in provided host directory to the target machine (reMarkable).
 
-    Usage: rcp <source file> <target collection>
+    Both source path and target collection must be provided with
+    absolute paths, noting that the target path must be the absolute
+    path in context of this application (i.e., the file structure
+    shown in Xochitl GUI application), meaning that root path is '/',
+    path to directory 'foo' whose parent is root is '/foo' or '/foo/'
+    and so on.
+
+    Usages:
+      - rcp <source file> <target collection>
+      - rcp -a <source_path> <target collection>
 
     :param args: source file and target collection
     :param workspace_manager: manager for reMarkable workspace
@@ -105,8 +109,10 @@ def rcp(args: List[str], workspace_manager: WorkspaceManager) -> None:
     if len(args) == 2:
         ws: RemarkableWorkspace = workspace_manager.get()
         source_file, target_path = args
-        ws.process_rcp_command(source_file, target_path)
-
+        ws.process_rcp_command_without_flags(source_file, target_path)
+    elif len(args) > 2:
+        ws: RemarkableWorkspace = workspace_manager.get()
+        ws.process_rcp_with_flags(args)
     else:
         print("rcp: usage: rcp <source file> <target collection>")
 
