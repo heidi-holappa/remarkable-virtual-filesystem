@@ -198,6 +198,9 @@ class RemarkableWorkspace:
         return (self.generate_absolute_collection_path(self._data[item_uuid]['parent']) +
                 "/" + self._data[item_uuid].get('visibleName'))
 
+    # -------------------------
+    # ls
+    # -------------------------
     def process_ls(self, args: Optional[List[str]]) -> None:
         """
         Processes ls command and lists files either in current
@@ -253,17 +256,9 @@ class RemarkableWorkspace:
 
         self._output_ls_result(list_result)
 
-    @staticmethod
-    def _output_ls_result(list_result: List[str]) -> None:
-        size_header = "size (kB)"
-        header_padding = " " * (LS_COLUMN_WIDTH - len(size_header))
-        name_header = "name"
-        header = f"{size_header}{header_padding}{name_header}"
-        print(header)
-        for entry in list_result:
-            print(entry)
-
-
+    # -------------------------
+    # cd
+    # -------------------------
     def change_collection(self, path: str) -> None:
         """
         Attempts to change current collection to the provided
@@ -289,6 +284,9 @@ class RemarkableWorkspace:
 
         self._current_collection = collection_pointer
 
+    # -------------------------
+    # mv
+    # -------------------------
     def process_move_command(self, source: str, path: str) -> None:
         """
         A single move instruction moves one or several entities
@@ -342,6 +340,9 @@ class RemarkableWorkspace:
                 NotFoundException) as e:
             print(f"mv: {e} ")
 
+    # -------------------------
+    # rm
+    # -------------------------
     def process_remove_command(self, target_pattern: str) -> None:
         """
         A remove command removes one or several entities
@@ -372,6 +373,9 @@ class RemarkableWorkspace:
             print(f"ERROR: {e}")
 
 
+    # -------------------------
+    # rcp
+    # -------------------------
     def process_rcp_with_flags(self, args: List[str]) -> None:
         """
         Handles rcp command with flags. Flags are meant for
@@ -403,8 +407,11 @@ class RemarkableWorkspace:
                 print(f"rcp: no pdf or epub files found in directory: {source_path}")
                 return
 
-            for source_file in files_to_copy:
+            print(f"found {len(files_to_copy)} files to copy. copying files one-by-one."
+                  f"\nDO NOT disconnect reMarkable while operation is ongoing.")
+            for idx, source_file in enumerate(files_to_copy):
                 self._copy_file_from_host_to_target(source_file, target_uuid)
+                print(f"{idx + 1}/{len(files_to_copy)}: {source_file} copied to {target_collection}")
 
             self._data = self._source.load()
 
@@ -434,7 +441,75 @@ class RemarkableWorkspace:
         except NotFoundException as e:
             print(f"rcp: {e}")
 
+    # -------------------------
+    # mkdir
+    # -------------------------
+    def process_mkdir(self, path: str) -> None:
+        """
+        Tries to create a new subdirectory to the current
+        parent.
 
+        Handles possible raised errors:
+          - InvalidPathException if path is not valid
+          - RemarkableWriteException if an error occurs while
+            communicating with the remarkable device
+
+        :param path: path to create
+        """
+
+        try:
+            self._validate_path(path)
+
+            metadata: Metadata = Metadata(
+                created_time=int(time.time()),
+                last_modified=int(time.time()),
+                new=False,
+                parent=self._current_collection,
+                pinned=False,
+                source="",
+                type=EntityType.COLLECTION_TYPE,
+                visible_name=path
+            )
+
+            # Generate a random UUID for the new entry
+            path_uuid: str = str(uuid.uuid4())
+            self._source.write_metadata(path_uuid, metadata)
+
+            self._data[path_uuid] = metadata.to_dict()
+
+        except InvalidPathException as e:
+            print(f"mkdir: {path}: {e}: hint: try help mkdir")
+        except RemarkableWriteException as e:
+            print(f"mkdir: {path}: error writing to remarkable: {e}")
+
+    def restart_xochitl(self) -> None:
+        """
+        Invokes source method handling restart
+        of xochitl GUI application
+
+        Raises:
+            may pass towards RemarkableOperationException
+            raised by the source in case subprocess fails
+
+        :return: None
+        """
+
+        self._source.restart_xochitl()
+
+
+    # ----------------------------------
+    # private methods
+    # ----------------------------------
+
+    @staticmethod
+    def _output_ls_result(list_result: List[str]) -> None:
+        size_header = "size (kB)"
+        header_padding = " " * (LS_COLUMN_WIDTH - len(size_header))
+        name_header = "name"
+        header = f"{size_header}{header_padding}{name_header}"
+        print(header)
+        for entry in list_result:
+            print(entry)
 
     def _copy_file_from_host_to_target(self, source_file: str, target_uuid: str) -> None:
         """
@@ -504,63 +579,6 @@ class RemarkableWorkspace:
                     result.append(os.path.abspath(os.path.join(dirpath, file)))
 
         return result
-
-    def process_mkdir(self, path: str) -> None:
-        """
-        Tries to create a new subdirectory to the current
-        parent.
-
-        Handles possible raised errors:
-          - InvalidPathException if path is not valid
-          - RemarkableWriteException if an error occurs while
-            communicating with the remarkable device
-
-        :param path: path to create
-        """
-
-        try:
-            self._validate_path(path)
-
-            metadata: Metadata = Metadata(
-                created_time=int(time.time()),
-                last_modified=int(time.time()),
-                new=False,
-                parent=self._current_collection,
-                pinned=False,
-                source="",
-                type=EntityType.COLLECTION_TYPE,
-                visible_name=path
-            )
-
-            # Generate a random UUID for the new entry
-            path_uuid: str = str(uuid.uuid4())
-            self._source.write_metadata(path_uuid, metadata)
-
-            self._data[path_uuid] = metadata.to_dict()
-
-        except InvalidPathException as e:
-            print(f"mkdir: {path}: {e}: hint: try help mkdir")
-        except RemarkableWriteException as e:
-            print(f"mkdir: {path}: error writing to remarkable: {e}")
-
-    def restart_xochitl(self) -> None:
-        """
-        Invokes source method handling restart
-        of xochitl GUI application
-
-        Raises:
-            may pass towards RemarkableOperationException
-            raised by the source in case subprocess fails
-
-        :return: None
-        """
-
-        self._source.restart_xochitl()
-
-
-    # ----------------------------------
-    # private methods
-    # ----------------------------------
 
     def _validate_path(self, path: str) -> None:
         """
