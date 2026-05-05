@@ -577,6 +577,7 @@ class RemarkableWorkspace:
             for file in filenames:
                 if file.lower().endswith((".pdf", ".epub")):
                     result.append(os.path.abspath(os.path.join(dirpath, file)))
+            break
 
         return result
 
