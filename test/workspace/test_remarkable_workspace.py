@@ -1,3 +1,4 @@
+import os
 import copy
 import unittest
 from io import StringIO
@@ -469,12 +470,10 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     # Process remote copy command
     # -------------------------------------
 
-    from unittest.mock import patch, MagicMock
-
     @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
     @patch.object(RemarkableSSHMetadataSource, "load")
     @patch.object(RemarkableSSHMetadataSource, "remote_copy")
-    def test_process_rcp_success(
+    def test_process_rcp_success_without_flags(
             self,
             mock_remote_copy: MagicMock,
             mock_load: MagicMock,
@@ -490,7 +489,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.ws.process_rcp_command(source_file, target_path)
+        self.ws.process_rcp_command_without_flags(source_file, target_path)
 
         # ---- Assertions ----
 
@@ -517,12 +516,68 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         # Verify content
         self.assertEqual(content.file_type, "pdf")
 
+    @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
+    @patch("src.data.remarkable_ssh_metadata_source.os.walk")
+    @patch.object(RemarkableSSHMetadataSource, "load")
+    @patch.object(RemarkableSSHMetadataSource, "remote_copy")
+    def test_process_rcp_success_with_valid_flags(
+            self,
+            mock_remote_copy: MagicMock,
+            mock_load: MagicMock,
+            mock_walk: MagicMock,
+            mock_exists: MagicMock,
+    ) -> None:
+        # ---- Setup mocks ----
+        mock_exists.return_value = True
+        mock_walk.return_value = [("path/to/", [], ["file1.pdf", "file2.epub"])]
+        mock_load.return_value = ["new_data"]
+
+        self.ws._traverse_path = MagicMock(return_value=UUID_ROOT)
+
+        source_file = "/path/to/"
+        target_path = "/"
+
+        # ---- Execute ----
+        self.ws.process_rcp_with_flags(["-a", source_file, target_path])
+
+        # ---- Assertions ----
+
+        # remote_copy called twice
+        assert mock_remote_copy.call_count == 2
+
+        # load called and assigned
+        mock_load.assert_called_once()
+        self.assertEqual(self.ws._data, ["new_data"])
+
+        # ---- Inspect calls ----
+        calls = mock_remote_copy.call_args_list
+
+        expected = [
+            ("file1.pdf", "pdf"),
+            ("file2.epub", "epub"),
+        ]
+
+        for call, (filename, ext) in zip(calls, expected):
+            kwargs = call.kwargs
+
+            # source file
+            self.assertIn(filename, kwargs["source_file"])
+
+            # metadata
+            metadata = kwargs["metadata"]
+            self.assertEqual(metadata.parent, UUID_ROOT)
+            self.assertEqual(metadata.visible_name, filename)
+
+            # content
+            content = kwargs["content"]
+            self.assertEqual(content.file_type, ext)
+
     @patch("builtins.print")
     @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
     @patch.object(RemarkableSSHMetadataSource, "load")
     @patch.object(RemarkableSSHMetadataSource, "restart_xochitl")
     @patch.object(RemarkableSSHMetadataSource, "remote_copy")
-    def test_process_rcp_source_not_found(
+    def test_process_rcp_without_flags_source_not_found(
             self,
             mock_remote_copy: MagicMock,
             mock_restart: MagicMock,
@@ -537,7 +592,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.ws.process_rcp_command(source_file, target_path)
+        self.ws.process_rcp_command_without_flags(source_file, target_path)
 
         # ---- Assertions ----
 
@@ -554,7 +609,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     @patch.object(RemarkableSSHMetadataSource, "load")
     @patch.object(RemarkableSSHMetadataSource, "restart_xochitl")
     @patch.object(RemarkableSSHMetadataSource, "remote_copy")
-    def test_process_rcp_source_not_found(
+    def test_process_rcp_with_valid_flags_source_not_found(
             self,
             mock_remote_copy: MagicMock,
             mock_restart: MagicMock,
@@ -569,7 +624,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.ws.process_rcp_command(source_file, target_path)
+        self.ws.process_rcp_with_flags(["-a", source_file, target_path])
 
         # ---- Assertions ----
 

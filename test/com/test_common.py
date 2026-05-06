@@ -260,7 +260,7 @@ class TestCommon(unittest.TestCase):
             output: str = mock_out.getvalue()
             self.assertTrue("rcp: usage:" in output, msg=f"Output was: {output}")
 
-    def test_rcp_with_too_many_args(self) -> None:
+    def test_rcp_with_invalid_argument(self) -> None:
         """
         When user attempts to use rcp instruction with
         too many arguments, they are instructed of the
@@ -270,10 +270,10 @@ class TestCommon(unittest.TestCase):
         with patch('sys.stdout', new=StringIO()) as mock_out:
             rcp(["-r", "/path/to/foo.pdf", "bar/"], self.manager)
             output: str = mock_out.getvalue()
-            self.assertTrue("rcp: usage:" in output, msg=f"Output was: {output}")
+            self.assertTrue("rcp: invalid flags: -r" in output, msg=f"Output was: {output}")
 
-    @patch.object(RemarkableWorkspace, "process_rcp_command")
-    def test_rcp_positive_case(self, mock_rcp: MagicMock) -> None:
+    @patch.object(RemarkableWorkspace, "process_rcp_command_without_flags")
+    def test_rcp_without_flags_positive_case(self, mock_rcp: MagicMock) -> None:
         source = "path/to/file.txt"
         target = "./foo"
         rcp([source, target], self.manager)
@@ -283,6 +283,21 @@ class TestCommon(unittest.TestCase):
         args, _ = mock_rcp.call_args
         self.assertEqual(args[0], source)
         self.assertEqual(args[1], target)
+
+    @patch.object(RemarkableWorkspace, "process_rcp_with_flags")
+    def test_rcp_with_flags_positive_case(self, mock_rcp: MagicMock) -> None:
+        source = "path/to/"
+        target = "./foo"
+        flag = "-a"
+        rcp([flag, source, target], self.manager)
+
+        mock_rcp.assert_called_once()
+
+        args_tuple, _ = mock_rcp.call_args
+        list_of_args = args_tuple[0]
+        self.assertEqual(list_of_args[0], flag)
+        self.assertEqual(list_of_args[1], source)
+        self.assertEqual(list_of_args[2], target)
 
     # -------------------------------
     # rm instruction

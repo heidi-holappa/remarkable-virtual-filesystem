@@ -25,6 +25,7 @@ from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirect
 from src.exception.not_a_directory_exception import NotADirectoryException
 from src.exception.not_found_exception import NotFoundException
 from src.exception.remarkable_write_exception import RemarkableWriteException
+from src.exception.invalid_argument_exception import InvalidArgumentException
 
 
 class RemarkableWorkspace:
@@ -197,6 +198,9 @@ class RemarkableWorkspace:
         return (self.generate_absolute_collection_path(self._data[item_uuid]['parent']) +
                 "/" + self._data[item_uuid].get('visibleName'))
 
+    # -------------------------
+    # ls
+    # -------------------------
     def process_ls(self, args: Optional[List[str]]) -> None:
         """
         Processes ls command and lists files either in current
@@ -252,17 +256,9 @@ class RemarkableWorkspace:
 
         self._output_ls_result(list_result)
 
-    @staticmethod
-    def _output_ls_result(list_result: List[str]) -> None:
-        size_header = "size (kB)"
-        header_padding = " " * (LS_COLUMN_WIDTH - len(size_header))
-        name_header = "name"
-        header = f"{size_header}{header_padding}{name_header}"
-        print(header)
-        for entry in list_result:
-            print(entry)
-
-
+    # -------------------------
+    # cd
+    # -------------------------
     def change_collection(self, path: str) -> None:
         """
         Attempts to change current collection to the provided
@@ -288,6 +284,9 @@ class RemarkableWorkspace:
 
         self._current_collection = collection_pointer
 
+    # -------------------------
+    # mv
+    # -------------------------
     def process_move_command(self, source: str, path: str) -> None:
         """
         A single move instruction moves one or several entities
@@ -341,6 +340,9 @@ class RemarkableWorkspace:
                 NotFoundException) as e:
             print(f"mv: {e} ")
 
+    # -------------------------
+    # rm
+    # -------------------------
     def process_remove_command(self, target_pattern: str) -> None:
         """
         A remove command removes one or several entities
@@ -370,57 +372,79 @@ class RemarkableWorkspace:
         except (NotFoundException, KeyError) as e:
             print(f"ERROR: {e}")
 
-    def process_rcp_command(self, source_file: str, target_collection: str) -> None:
+
+    # -------------------------
+    # rcp
+    # -------------------------
+    def process_rcp_with_flags(self, args: List[str]) -> None:
         """
-        Remote copy (rcp) command moves one file from host machine
-        to the provided collection on the target machine (reMarkable).
-        The source must be an absolute path to a file and the target
-        must be an absolute path to a collection.
+        Handles rcp command with flags. Flags are meant for
+        copying multiple files with one command. This method
+        validates the arguments, resolves a list of
+        files to be copied and then for each file invokes
+        `process_rcp_command` separately
 
-
-        :param source_file: source from which to copy
-        :param target_collection: target collection
+        :param args: list of arguments
         :return: None
         """
 
         try:
+            # flags MUST precede source_path and target_path
+            flags: List[str] = args[:-2]
 
-            if not os.path.exists(source_file):
-                raise NotFoundException(f"rcp: source file {source_file} not found")
+            if not self._has_only_valid_flags(flags):
+                raise InvalidArgumentException(f"invalid flags: {','.join(flags)}: hint: help rcp")
+
+            # The source and target MUST be the last two arguments
+            source_path, target_collection = args[-2:]
 
             target_uuid: Optional[str] = self._traverse_path(target_collection)
+            self._validate_source_and_target_uuid(source_path, target_collection, target_uuid)
 
-            if target_uuid is None:
-                raise NotFoundException(f"rcp: target path {target_collection} not found")
+            files_to_copy = self._find_all_pdf_and_epub_files_in_path(source_path)
 
-            filename: str = os.path.basename(source_file)
-            # splitext return extension with dot. We want to remove that here.
-            file_extension: str = os.path.splitext(filename)[1][1:]
+            if not files_to_copy:
+                print(f"rcp: no pdf or epub files found in directory: {source_path}")
+                return
 
-            content: Content = Content.from_dict(
-                {"fileType": file_extension}
-            )
-
-            metadata: Metadata = Metadata(
-                created_time=int(time.time()),
-                last_modified=int(time.time()),
-                new=False,
-                parent=target_uuid,
-                pinned=False,
-                source="",
-                type=EntityType.DOCUMENT_TYPE,
-                visible_name=filename
-            )
-
-            self._source.remote_copy(source_file=source_file,
-                                     metadata=metadata, content=content)
+            print(f"found {len(files_to_copy)} files to copy. copying files one-by-one."
+                  f"\nDO NOT disconnect reMarkable while operation is ongoing.")
+            for idx, source_file in enumerate(files_to_copy):
+                self._copy_file_from_host_to_target(source_file, target_uuid)
+                print(f"{idx + 1}/{len(files_to_copy)}: "
+                      f"{source_file} copied to {target_collection}")
 
             self._data = self._source.load()
 
-        except (NotFoundException, InvalidMetadataException,
-                InvalidContentException) as e:
-            print(e)
+        except (InvalidArgumentException, NotFoundException) as e:
+            print(f"rcp: {e}")
 
+    def process_rcp_command_without_flags(self, source_file: str, target_collection: str) -> None:
+        """
+        Copies a single file defined by the user as the
+        source file to the target collection in reMarkable
+        device.
+
+        :param source_file: absolute path of a PDF or EPUB file
+        :param target_collection: absolute path of the target collection
+        :return: NOne
+        """
+
+        try:
+
+            target_uuid: Optional[str] = self._traverse_path(target_collection)
+            self._validate_source_and_target_uuid(source_file, target_collection, target_uuid)
+
+            self._copy_file_from_host_to_target(source_file, target_uuid)
+
+            self._data = self._source.load()
+
+        except NotFoundException as e:
+            print(f"rcp: {e}")
+
+    # -------------------------
+    # mkdir
+    # -------------------------
     def process_mkdir(self, path: str) -> None:
         """
         Tries to create a new subdirectory to the current
@@ -477,6 +501,86 @@ class RemarkableWorkspace:
     # ----------------------------------
     # private methods
     # ----------------------------------
+
+    @staticmethod
+    def _output_ls_result(list_result: List[str]) -> None:
+        size_header = "size (kB)"
+        header_padding = " " * (LS_COLUMN_WIDTH - len(size_header))
+        name_header = "name"
+        header = f"{size_header}{header_padding}{name_header}"
+        print(header)
+        for entry in list_result:
+            print(entry)
+
+    def _copy_file_from_host_to_target(self, source_file: str, target_uuid: str) -> None:
+        """
+        Remote copy (rcp) command moves one file from host machine
+        to the provided collection on the target machine (reMarkable).
+        The source must be an absolute path to a file and the target
+        must be an absolute path to a collection.
+
+
+        :param source_file: source from which to copy
+        :param target_uuid: target collection UUID
+        :return: None
+        """
+
+        try:
+            filename: str = os.path.basename(source_file)
+            # splitext return extension with dot. We want to remove that here.
+            file_extension: str = os.path.splitext(filename)[1][1:]
+
+            content: Content = Content.from_dict(
+                {"fileType": file_extension}
+            )
+
+            metadata: Metadata = Metadata(
+                created_time=int(time.time()),
+                last_modified=int(time.time()),
+                new=False,
+                parent=target_uuid,
+                pinned=False,
+                source="",
+                type=EntityType.DOCUMENT_TYPE,
+                visible_name=filename
+            )
+
+            self._source.remote_copy(source_file=source_file,
+                                     metadata=metadata, content=content)
+
+
+        except (NotFoundException, InvalidMetadataException,
+                InvalidContentException) as e:
+            print(e)
+
+    @staticmethod
+    def _has_only_valid_flags(flags: List[str]) -> bool:
+        # in milestone v0.2 the only supported flag is -a
+        valid_flags = ['-a']
+        for flag in flags:
+            if flag not in valid_flags:
+                return False
+        return True
+
+    @staticmethod
+    def _validate_source_and_target_uuid(source: str,
+                                         target_collection: str, target_uuid: str) -> None:
+        if not os.path.exists(source):
+            raise NotFoundException(f"rcp: source file {source} not found")
+        if target_uuid is None:
+            raise NotFoundException(f"rcp: target path {target_collection} not found")
+
+    @staticmethod
+    def _find_all_pdf_and_epub_files_in_path(path: str) -> List[str]:
+        result = []
+
+        for dirpath, _, filenames in os.walk(path):
+            for file in filenames:
+                if file.lower().endswith((".pdf", ".epub")):
+                    result.append(os.path.abspath(os.path.join(dirpath, file)))
+            break
+
+        return result
 
     def _validate_path(self, path: str) -> None:
         """
