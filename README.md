@@ -2,7 +2,7 @@
 
 A virtual filesystem for reMarkable.
 
-![CI](https://github.com/heidi-holappa/remarkable-virtual-filesystem/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/heidi-holappa/remarkable-virtual-filesystem/actions/workflows/ci.yml/badge.svg)](https://github.com/heidi-holappa/remarkable-virtual-filesystem/actions)
 
 ## Introduction
 
