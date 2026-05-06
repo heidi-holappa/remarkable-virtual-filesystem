@@ -23,7 +23,6 @@ class Content:
     def __post_init__(self) -> None:
         """
         Validates the initialized content instance
-        :return: None
         """
 
         validation_errors: List[str] = []

@@ -27,7 +27,8 @@ class MetadataSource:
         UUID exists in the device, it will be
         overwritten.
 
-        :return: None
+        :param entry_uuid: the UUID of the metadata entry
+        :param metadata: a metadata entry
         """
         raise NotImplementedError
 
@@ -38,7 +39,6 @@ class MetadataSource:
         matching any of the provided UUIDs
 
         :param entity_uuids: a list of UUIDs
-        :return: None
         """
         raise NotImplementedError
 
@@ -51,7 +51,6 @@ class MetadataSource:
         :param source_file: absolute path to source file to be copied
         :param metadata: a metadata entry for the file
         :param content: a content entry for the file
-        :return: None
         """
 
         raise NotImplementedError

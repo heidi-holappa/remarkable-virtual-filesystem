@@ -26,7 +26,6 @@ def cd(args: List[str], workspace_manager: WorkspaceManager) -> None:
 
     :param args: the path to which directory should be changed to
     :param workspace_manager: manager for reMarkable workspace
-    :return: None
     """
 
     ws: RemarkableWorkspace = workspace_manager.get()
@@ -53,7 +52,6 @@ def mv(args: List[str], workspace_manager: WorkspaceManager) -> None:
 
     :param args: arguments given for the instruction
     :param workspace_manager: manager for reMarkable workspace
-    :return: None
     """
 
     if len(args) == 2:
@@ -74,7 +72,6 @@ def rm(args: List[str], workspace_manager: WorkspaceManager) -> None:
 
     :param args: possible arguments
     :param workspace_manager: manager for reMarkable workspace
-    :return: None
     """
 
     if len(args) == 1:
@@ -103,7 +100,6 @@ def rcp(args: List[str], workspace_manager: WorkspaceManager) -> None:
 
     :param args: source file and target collection
     :param workspace_manager: manager for reMarkable workspace
-    :return:
     """
 
     if len(args) == 2:
@@ -127,7 +123,6 @@ def ls(args: List[str], workspace_manager: WorkspaceManager) -> None:
 
     :param args: arguments for the ls command
     :param workspace_manager: manager for reMarkable workspace
-    :return: None
     """
 
     if len(args) > 1:
@@ -161,8 +156,6 @@ def clear() -> None:
     Clears bash terminal
 
     Usage: clear
-
-    :return: None
     """
     subprocess.run("clear", check=False)
 
@@ -170,7 +163,7 @@ def refresh(workspace_manager: WorkspaceManager) -> None:
     """
     Uses systemctl to restart xochitl
 
-    :return: None
+    :param workspace_manager: manager for reMarkable workspace
     """
     ws = workspace_manager.get()
     try:
@@ -183,7 +176,7 @@ def handle_exit(workspace_manager: WorkspaceManager) -> None:
     """
     Exits the application
 
-    :return: None
+    :param workspace_manager: manager for reMarkable workspace
     """
     ws = workspace_manager.get()
     try:
