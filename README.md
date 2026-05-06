@@ -4,6 +4,8 @@ A virtual filesystem for reMarkable.
 
 [![CI](https://github.com/heidi-holappa/remarkable-virtual-filesystem/actions/workflows/ci.yml/badge.svg)](https://github.com/heidi-holappa/remarkable-virtual-filesystem/actions)
 
+[![codecov](https://codecov.io/gh/heidi-holappa/remarkable-virtual-filesystem/branch/main/graph/badge.svg)](https://codecov.io/gh/heidi-holappa/remarkable-virtual-filesystem)
+
 ## Introduction
 
 ### Motivation
