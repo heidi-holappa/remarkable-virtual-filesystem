@@ -411,7 +411,8 @@ class RemarkableWorkspace:
                   f"\nDO NOT disconnect reMarkable while operation is ongoing.")
             for idx, source_file in enumerate(files_to_copy):
                 self._copy_file_from_host_to_target(source_file, target_uuid)
-                print(f"{idx + 1}/{len(files_to_copy)}: {source_file} copied to {target_collection}")
+                print(f"{idx + 1}/{len(files_to_copy)}: "
+                      f"{source_file} copied to {target_collection}")
 
             self._data = self._source.load()
 
