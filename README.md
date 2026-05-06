@@ -1,6 +1,8 @@
 # reMarkable Virtual Filesystem
 
-A virtual filesystem for reMarkable. 
+A virtual filesystem for reMarkable.
+
+![CI](https://github.com/heidi-holappa/remarkable-virtual-filesystem/actions/workflows/ci.yml/badge.svg)
 
 ## Introduction
 
