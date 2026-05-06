@@ -56,7 +56,6 @@ class RemarkableSSHMetadataSource(MetadataSource):
 
         :param entry_uuid: the UUID for which a metadata-file is to be written
         :param metadata: a Metadata DTO containing the metadata to be written
-        :return: None
         """
 
         metadata_filename = f"{entry_uuid}.metadata"
@@ -96,7 +95,6 @@ class RemarkableSSHMetadataSource(MetadataSource):
           - **RemarkableWriteException**: indicates an exception occurred during write operation
 
         :param entity_uuids: UUID of the entity to remove
-        :return: None
         """
 
         if not entity_uuids:
@@ -137,7 +135,6 @@ class RemarkableSSHMetadataSource(MetadataSource):
         :param source_file: absolute path to source file to be copied
         :param metadata: a metadata entry for the file
         :param content: a content entry for the file
-        :return: None
         """
 
         entry_uuid: str = str(uuid.uuid4())
@@ -180,7 +177,6 @@ class RemarkableSSHMetadataSource(MetadataSource):
           - RuntimeError if ssh subprocess fails
 
         :param tmp_dir: the temporary directory for local files
-        :return: None
         """
         tar_cmd = ["tar", "cf", "-", "-C", tmp_dir, "."]
         ssh_cmd = ["ssh", SSH_REMOTE_HOST, f"tar xf - -C {REMARKABLE_FILE_PATH}"]

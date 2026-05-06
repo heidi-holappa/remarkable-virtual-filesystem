@@ -35,7 +35,6 @@ class TestCommon(unittest.TestCase):
 
         Note: Change directory is tested more comprehensively in
         RemarkableWorkspace test suite
-        :return: None
         """
         self.ws.set_current_collection("")
         cd(["A"], self.manager)

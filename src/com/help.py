@@ -62,6 +62,8 @@ def help_instruction(args: List[str]):
     """
         Help message provides instructions on how to
         use the reMarkable bash-emulator
+
+        :param args: a list of args provided by the user
     """
 
     if len(args) > 1:
@@ -85,7 +87,6 @@ def print_command_details(command: str) -> None:
     A helper to print out instructions for a given command
 
     :param command: a command to print out
-    :return: None
     """
 
     print("")
@@ -112,8 +113,6 @@ def print_command_details(command: str) -> None:
 def list_commands() -> None:
     """
     Lists commands from dictionary
-
-    :return: None
     """
     print("supported commands:")
     for com in SUPPORTED_INSTRUCTIONS:

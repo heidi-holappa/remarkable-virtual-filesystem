@@ -56,6 +56,7 @@ class RemarkableWorkspace:
         Raises:
           - NotFoundException if data is not found
 
+        :param entry_uuid: UUID of the entry
         :return: a dictionary of metadata
         """
 
@@ -102,10 +103,10 @@ class RemarkableWorkspace:
         must be either a UUID of a CollectionType or an
         empty string for root.
 
+        :param collection: UUID of the collection or an empty string for root
+
         raises:
           - NotFoundException: if collection is not found
-
-        :return: None
         """
         is_root = collection == ''
         is_valid_collection = (self._data.get(collection)
@@ -209,7 +210,6 @@ class RemarkableWorkspace:
         and it does not match any collection, raises NotFoundException.
 
         :param args: optional arguments for ls
-        :return: None
         """
 
         collection_to_list_uuid: str
@@ -271,7 +271,6 @@ class RemarkableWorkspace:
           - NoSuchFileOrDirectoryException: no matching file or directory was found
 
         :param path: a string representation of a path
-        :return: an optional uuid of the target collection or None if collection could not be found
         """
 
 
@@ -304,7 +303,6 @@ class RemarkableWorkspace:
 
         :param source: name of the file to be moved
         :param path: the directory of the target parent
-        :return: None
         """
 
         try:
@@ -354,7 +352,6 @@ class RemarkableWorkspace:
           - KeyError: if UUID is not found for data to be removed
 
         :param target_pattern: pattern for sources to be removed
-        :return: None
         """
 
         try:
@@ -385,7 +382,6 @@ class RemarkableWorkspace:
         `process_rcp_command` separately
 
         :param args: list of arguments
-        :return: None
         """
 
         try:
@@ -427,7 +423,6 @@ class RemarkableWorkspace:
 
         :param source_file: absolute path of a PDF or EPUB file
         :param target_collection: absolute path of the target collection
-        :return: NOne
         """
 
         try:
@@ -491,8 +486,6 @@ class RemarkableWorkspace:
         Raises:
             may pass towards RemarkableOperationException
             raised by the source in case subprocess fails
-
-        :return: None
         """
 
         self._source.restart_xochitl()
@@ -522,7 +515,6 @@ class RemarkableWorkspace:
 
         :param source_file: source from which to copy
         :param target_uuid: target collection UUID
-        :return: None
         """
 
         try:
@@ -788,7 +780,6 @@ class RemarkableWorkspace:
 
         :param entity_uuid: entity which parent is updated
         :param target_uuid: the new parent of the entity
-        :return: None
         """
 
         try:
@@ -828,7 +819,6 @@ class RemarkableWorkspace:
         tablet.
 
         :param entity_uuids: UUID of the entity to remove
-        :return: None
         """
 
         try:

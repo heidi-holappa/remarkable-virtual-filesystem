@@ -1,0 +1,8 @@
+[MASTER]
+fail-under=9.5
+load-plugins=pylint.extensions.docparams
+
+[DOCSTRING]
+# Require documenting all parameters and return values
+accept-no-param-doc=no
+accept-no-return-doc=no
