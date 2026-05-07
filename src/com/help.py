@@ -37,8 +37,8 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
   },
   "rcp": {
       "description": "remote copy one PDF or EPUB file from host-machine to reMarkable",
-      "args": ["source (absolute)", "target-path (absolute)"],
-      "usage": ["rcp /path/to/host/machine/file.pdf /path/on/remarkable"],
+      "args": ["-a", "source (absolute)", "target-path (absolute)"],
+      "usage": ["rcp /path/to/host/machine/file.pdf /path/on/remarkable", "rcp -a /path/on/host/ /path/on/remarkable"],
   },
   "refresh": {
       "description": "restarts xochitl GUI application",
