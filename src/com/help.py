@@ -7,17 +7,26 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
 
   "clear": {
       "description": "clears screen",
-      "usage": ["clear"],
+      "usage": [
+          "clear"
+      ],
       "args": []
   },
   "ls": {
       "description": "clears screen",
-      "args": ["path"],
-      "usage": ["ls", "ls /some/path"],
+      "args": [
+          "path\tan absolute or relative path from which to list files"
+      ],
+      "usage": [
+          "ls",
+          "ls /some/path"
+      ],
   },
   "mv": {
       "description": "move entities to another collection",
-      "args": ["source or pattern", "target-path"],
+      "args": [
+          "source\ta specific entity to move or a pattern with '*' wildcard",
+          "target\tabsolute or relative path to which to move entities"],
       "usage": [
           "mv file.pdf /some/path",
           "mv *.epub /some/path",
@@ -25,20 +34,37 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
   },
   "rm": {
       "description": "remove entities",
-      "args": ["source or pattern"],
-      "usage": ["rm file.pdf", "rm path/","rm *.pdf", "rm *"],
+      "args": [
+          "source\ta specific entity to remove or a pattern with '*' wildcard"
+      ],
+      "usage": [
+          "rm file.pdf",
+          "rm path/","rm *.pdf",
+          "rm *"
+      ],
   },
   "mkdir": {
       "description": "make new directory",
-      "args": ["directory name"],
-      "usage": ["mkdir foo"],
+      "args": [
+          "directory\tname of the directory to create",
+      ],
+      "usage": [
+          "mkdir foo"
+      ],
       "info": ["supported characters: a-zA-Z0-9._-",
                "provided path must be a child of current path"]
   },
   "rcp": {
       "description": "remote copy one PDF or EPUB file from host-machine to reMarkable",
-      "args": ["-a", "source (absolute)", "target-path (absolute)"],
-      "usage": ["rcp /path/to/host/machine/file.pdf /path/on/remarkable", "rcp -a /path/on/host/ /path/on/remarkable"],
+      "args": [
+          "-a\tflag to copy all files in source path. When using this flag, the source must be a path",
+          "source\tabsolute path for source (file) to copy or a path, if flag -a is used",
+          "target\tabsolute path to target directory"
+      ],
+      "usage": [
+          "rcp /path/to/host/machine/file.pdf /path/on/remarkable",
+          "rcp -a /path/on/host/ /path/on/remarkable"
+      ],
   },
   "refresh": {
       "description": "restarts xochitl GUI application",
@@ -47,13 +73,21 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
   },
   "help": {
       "description": "show help texts",
-      "args": ["command"],
-      "usage": ["help", "help command"],
+      "args": [
+          "command\tcommand for which help text should be shown"
+      ],
+      "usage": [
+          "help",
+          "help mkdir"
+      ],
   },
   "exit": {
       "description": "exits program and restarts xochitl",
       "args": [],
-      "usage": ["exit", "x"],
+      "usage": [
+          "exit",
+          "x"
+      ],
   },
 }
 
