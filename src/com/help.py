@@ -15,7 +15,7 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
   "ls": {
       "description": "clears screen",
       "args": [
-          "path\tan absolute or relative path from which to list files"
+          "path  an absolute or relative path from which to list files"
       ],
       "usage": [
           "ls",
@@ -25,8 +25,8 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
   "mv": {
       "description": "move entities to another collection",
       "args": [
-          "source\ta specific entity to move or a pattern with '*' wildcard",
-          "target\tabsolute or relative path to which to move entities"],
+          "source  a specific entity to move or a pattern with '*' wildcard",
+          "target  absolute or relative path to which to move entities"],
       "usage": [
           "mv file.pdf /some/path",
           "mv *.epub /some/path",
@@ -35,7 +35,7 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
   "rm": {
       "description": "remove entities",
       "args": [
-          "source\ta specific entity to remove or a pattern with '*' wildcard"
+          "source  a specific entity to remove or a pattern with '*' wildcard"
       ],
       "usage": [
           "rm file.pdf",
@@ -46,7 +46,7 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
   "mkdir": {
       "description": "make new directory",
       "args": [
-          "directory\tname of the directory to create",
+          "directory  name of the directory to create",
       ],
       "usage": [
           "mkdir foo"
@@ -57,9 +57,9 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
   "rcp": {
       "description": "remote copy one PDF or EPUB file from host-machine to reMarkable",
       "args": [
-          "-a\tflag to copy all files in source path. When using this flag, the source must be a path",
-          "source\tabsolute path for source (file) to copy or a path, if flag -a is used",
-          "target\tabsolute path to target directory"
+          "-a      flag to copy all files in source path. When using this flag, the source must be a path",
+          "source  absolute path for source (file) to copy or a path, if flag -a is used",
+          "target  absolute path to target directory"
       ],
       "usage": [
           "rcp /path/to/host/machine/file.pdf /path/on/remarkable",
@@ -74,7 +74,7 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
   "help": {
       "description": "show help texts",
       "args": [
-          "command\tcommand for which help text should be shown"
+          "command  command for which help text should be shown"
       ],
       "usage": [
           "help",
