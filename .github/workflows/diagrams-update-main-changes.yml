@@ -1,0 +1,58 @@
+name: Sync main to diagrams
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch all branches
+        run: git fetch origin
+
+      - name: Switch to diagrams branch
+        run: git checkout diagrams
+
+      - name: Merge main into diagrams
+        id: merge
+        run: |
+          set +e
+          git merge origin/main --no-ff --no-edit
+          echo "status=$?" >> $GITHUB_OUTPUT
+          set -e
+
+      - name: Push merge if successful
+        if: steps.merge.outputs.status == '0'
+        run: git push origin diagrams
+
+      - name: Create PR if merge failed
+        if: steps.merge.outputs.status != '0'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: main
+          base: diagrams
+          title: "Manual merge required: main → diagrams"
+          body: |
+            Automatic merge from main into diagrams failed due to conflicts.
+            Please resolve manually.
+          draft: false
