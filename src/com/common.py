@@ -15,7 +15,7 @@ from src.exception.remarkable_operation_exception import RemarkableOperationExce
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from src.workspace.workspace_manager import WorkspaceManager
 
-def cd(args: List[str], workspace_manager: WorkspaceManager) -> None:
+def cd(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> None:
     """
     Handles command to change directory
 
@@ -24,25 +24,26 @@ def cd(args: List[str], workspace_manager: WorkspaceManager) -> None:
       - cd ../foo
       - cd /foo/bar
 
-    :param args: the path to which directory should be changed to
+    :param utility_arguments: the path to which directory should be changed to
     :param workspace_manager: manager for reMarkable workspace
     """
 
     ws: RemarkableWorkspace = workspace_manager.get()
 
-    if len(args) == 0:
+    if len(utility_arguments) == 0:
         ws.set_current_collection(ROOT_COLLECTION)
-    elif len(args) > 1:
+    elif len(utility_arguments) > 1:
         print("Usage: cd OR cd <path>")
         return
     else:
         try:
-            ws.change_collection(args[0])
+            operand: str = utility_arguments[0]
+            ws.change_collection(operand)
         except (NoSuchFileOrDirectoryException,
                 NotADirectoryException) as e:
             print(f"cd: {str(e)}")
 
-def mv(args: List[str], workspace_manager: WorkspaceManager) -> None:
+def mv(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> None:
     """
     A light implementation of move command
 
@@ -50,18 +51,20 @@ def mv(args: List[str], workspace_manager: WorkspaceManager) -> None:
       - mv a.pdf /foo
       - mv *.pdf ./bar
 
-    :param args: arguments given for the instruction
+    :param utility_arguments: arguments given for the instruction
     :param workspace_manager: manager for reMarkable workspace
     """
 
-    if len(args) == 2:
+    if len(utility_arguments) == 2:
         ws: RemarkableWorkspace = workspace_manager.get()
-        ws.process_move_command(*args)
+        operand_source, operand_target = utility_arguments
+        ws.process_move_command(
+            operand_source=operand_source, operand_target=operand_target)
     else:
         print("Usage (mvp): mv <filename without path> <path>")
 
 
-def rm(args: List[str], workspace_manager: WorkspaceManager) -> None:
+def rm(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> None:
     """
     A light implementation of remove command.
 
@@ -70,18 +73,19 @@ def rm(args: List[str], workspace_manager: WorkspaceManager) -> None:
       - rm /foo/bar
       - rm *.pdf
 
-    :param args: possible arguments
+    :param utility_arguments: possible arguments
     :param workspace_manager: manager for reMarkable workspace
     """
 
-    if len(args) == 1:
+    if len(utility_arguments) == 1:
         ws: RemarkableWorkspace = workspace_manager.get()
-        ws.process_remove_command(args[0])
+        operand = utility_arguments[0]
+        ws.process_remove_command(target_pattern=operand)
     else:
         print("Usage: rm <file or path>")
 
 
-def rcp(args: List[str], workspace_manager: WorkspaceManager) -> None:
+def rcp(cmd_line: List[str], workspace_manager: WorkspaceManager) -> None:
     """
     Remote copy (rcp) copies either one PDF or EPUB file from host
     machine (user's computer running the python script) or all files
@@ -98,22 +102,24 @@ def rcp(args: List[str], workspace_manager: WorkspaceManager) -> None:
       - rcp <source file> <target collection>
       - rcp -a <source_path> <target collection>
 
-    :param args: source file and target collection
+    :param cmd_line: source file and target collection
     :param workspace_manager: manager for reMarkable workspace
     """
 
-    if len(args) == 2:
+    if len(cmd_line) == 2:
         ws: RemarkableWorkspace = workspace_manager.get()
-        source_file, target_path = args
-        ws.process_rcp_command_without_flags(source_file, target_path)
-    elif len(args) > 2:
+        operand_source, operand_target = cmd_line
+        ws.process_rcp_command_without_flags(
+            source_file=operand_source,
+            target_collection=operand_target)
+    elif len(cmd_line) > 2:
         ws: RemarkableWorkspace = workspace_manager.get()
-        ws.process_rcp_with_flags(args)
+        ws.process_rcp_with_flags(cmd_line)
     else:
         print("rcp: usage: rcp <source file> <target collection>")
 
 
-def ls(args: List[str], workspace_manager: WorkspaceManager) -> None:
+def ls(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> None:
     """
     A light implementation of the list command.
 
@@ -121,35 +127,35 @@ def ls(args: List[str], workspace_manager: WorkspaceManager) -> None:
       - ls
       - ls <path>
 
-    :param args: arguments for the ls command
+    :param utility_arguments: arguments for the ls command
     :param workspace_manager: manager for reMarkable workspace
     """
 
-    if len(args) > 1:
+    if len(utility_arguments) > 1:
         print("ls: usage: ls or ls <path or file>")
         return
 
     try:
         ws = workspace_manager.get()
-        ws.process_ls(args)
+        ws.process_ls(utility_arguments)
     except NotFoundException as e:
         print(e)
 
-def mkdir(args: List[str], workspace_manager: WorkspaceManager) -> None:
+def mkdir(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> None:
     """
     Tries to create a new directory
 
-    :param args: arguments provided for the mkdir command
+    :param utility_arguments: arguments provided for the mkdir command
     :param workspace_manager: manager for reMarkable workspace
     """
-    if len(args) != 1:
+    if len(utility_arguments) != 1:
         print("mkdir: usage: mkdir <path>")
         return
 
 
-    path = args[0]
+    operand_path = utility_arguments[0]
     ws = workspace_manager.get()
-    ws.process_mkdir(path)
+    ws.process_mkdir(operand_path)
 
 def clear() -> None:
     """
