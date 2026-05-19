@@ -12,32 +12,32 @@ def main_loop() -> None:
 
     while True:
         path = ws.get_current_path()
-        user_input: List[str] = shlex.split(input(f"remarkable~{path}$ "))
+        cmd_line: List[str] = shlex.split(input(f"remarkable~{path}$ "))
 
-        if not user_input:
+        if not cmd_line:
             continue
 
-        command, *args = user_input
+        command, *utility_arguments = cmd_line
 
         match command:
             case "cd":
-                cd(args, workspace_manager)
+                cd(utility_arguments, workspace_manager)
             case "clear":
                 clear()
             case "rm":
-                rm(args, workspace_manager)
+                rm(utility_arguments, workspace_manager)
             case "ls":
-                ls(args, workspace_manager)
+                ls(utility_arguments, workspace_manager)
             case "mv":
-                mv(args, workspace_manager)
+                mv(utility_arguments, workspace_manager)
             case "rcp":
-                rcp(args, workspace_manager)
+                rcp(utility_arguments, workspace_manager)
             case "help":
-                help_instruction(args)
+                help_instruction(utility_arguments)
             case "refresh":
                 refresh(workspace_manager)
             case "mkdir":
-                mkdir(args, workspace_manager)
+                mkdir(utility_arguments, workspace_manager)
             case "exit" | "x":
                 handle_exit(workspace_manager)
             case _:
