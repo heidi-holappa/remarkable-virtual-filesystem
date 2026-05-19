@@ -214,9 +214,9 @@ class TestCommon(unittest.TestCase):
 
         mock_move.assert_called_once()
 
-        args, _ = mock_move.call_args
-        self.assertEqual(args[0], source)
-        self.assertEqual(args[1], target)
+        _, kwargs = mock_move.call_args
+        self.assertEqual(kwargs['operand_source'], source)
+        self.assertEqual(kwargs['operand_target'], target)
 
     # -------------------------------
     # mkdir instruction
@@ -279,9 +279,9 @@ class TestCommon(unittest.TestCase):
 
         mock_rcp.assert_called_once()
 
-        args, _ = mock_rcp.call_args
-        self.assertEqual(args[0], source)
-        self.assertEqual(args[1], target)
+        _ , kwargs = mock_rcp.call_args
+        self.assertEqual(kwargs['source_file'], source)
+        self.assertEqual(kwargs['target_collection'], target)
 
     @patch.object(RemarkableWorkspace, "process_rcp_with_flags")
     def test_rcp_with_flags_positive_case(self, mock_rcp: MagicMock) -> None:
@@ -332,8 +332,8 @@ class TestCommon(unittest.TestCase):
 
         mock_remove.assert_called_once()
 
-        args, _ = mock_remove.call_args
-        self.assertEqual(args[0], file_to_remove)
+        _, kwargs = mock_remove.call_args
+        self.assertEqual(kwargs['target_pattern'], file_to_remove)
 
 
 

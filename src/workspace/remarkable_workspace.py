@@ -202,26 +202,26 @@ class RemarkableWorkspace:
     # -------------------------
     # ls
     # -------------------------
-    def process_ls(self, args: Optional[List[str]]) -> None:
+    def process_ls(self, utility_args: Optional[List[str]]) -> None:
         """
         Processes ls command and lists files either in current
         collection or matching the provided argument. The argument
         is expected to be a path (collection). If argument is provided,
         and it does not match any collection, raises NotFoundException.
 
-        :param args: optional arguments for ls
+        :param utility_args: optional utility arguments for ls
         """
 
         collection_to_list_uuid: str
 
-        if args:
-            path: str = args.pop()
-            collection_to_list_uuid = self._traverse_path(path)
+        if utility_args:
+            operand_path: str = utility_args[0]
+            collection_to_list_uuid: str | None = (
+                self._traverse_path(operand_path))
             if collection_to_list_uuid is None:
                 raise NotFoundException("ls: no such path")
         else:
             collection_to_list_uuid = self.get_current_collection()
-
 
         remarkable_metadata = self.get_data()
 
@@ -259,7 +259,7 @@ class RemarkableWorkspace:
     # -------------------------
     # cd
     # -------------------------
-    def change_collection(self, path: str) -> None:
+    def change_collection(self, operand_path: str) -> None:
         """
         Attempts to change current collection to the provided
         collection. If traversal of given path fails to locate
@@ -270,23 +270,23 @@ class RemarkableWorkspace:
           new one is thrown to include the full path in error message
           - NoSuchFileOrDirectoryException: no matching file or directory was found
 
-        :param path: a string representation of a path
+        :param operand_path: a string representation of a path operand
         """
 
 
         try:
-            collection_pointer = self._traverse_path(path)
+            collection_pointer = self._traverse_path(operand_path)
         except NotADirectoryException as e:
-            raise NotADirectoryException(f"{path}: {NOT_A_DIRECTORY}") from e
+            raise NotADirectoryException(f"{operand_path}: {NOT_A_DIRECTORY}") from e
         if collection_pointer is None:
-            raise NoSuchFileOrDirectoryException(f"{path}: {NO_SUCH_FILE_OR_DIRECTORY}")
+            raise NoSuchFileOrDirectoryException(f"{operand_path}: {NO_SUCH_FILE_OR_DIRECTORY}")
 
         self._current_collection = collection_pointer
 
     # -------------------------
     # mv
     # -------------------------
-    def process_move_command(self, source: str, path: str) -> None:
+    def process_move_command(self, operand_source: str, operand_target: str) -> None:
         """
         A single move instruction moves one or several entities
         with a common parent to the provided target path. This
@@ -301,22 +301,22 @@ class RemarkableWorkspace:
           - InvalidMetadataException if metadata validation fails
           - NotFoundException if the file to move is not found
 
-        :param source: name of the file to be moved
-        :param path: the directory of the target parent
+        :param operand_source: name of the file to be moved
+        :param operand_target: the directory of the target parent
         """
 
         try:
             # Root path can not be moved
-            if source == "":
+            if operand_source == "":
                 raise ConstraintViolationException("root path cannot be moved")
 
             # Attempt to resolve the target UUID
             # from the provided target path
-            target_uuid: Optional[str] = self._traverse_path(path)
+            target_uuid: Optional[str] = self._traverse_path(operand_target)
             if target_uuid is None:
-                raise InvalidPathException(f'{path}: {NO_SUCH_FILE_OR_DIRECTORY}')
+                raise InvalidPathException(f'{operand_target}: {NO_SUCH_FILE_OR_DIRECTORY}')
 
-            visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(source)
+            visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(operand_source)
 
             # attempt to move entities to the same parent
             # should result in a no-op
@@ -328,7 +328,8 @@ class RemarkableWorkspace:
                 visible_name, parent_uuid))
 
             if not entities_to_move:
-                raise NotFoundException(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}")
+                raise NotFoundException(
+                    f"cannot move {operand_source}: {NO_SUCH_FILE_OR_DIRECTORY}")
 
             for entity in entities_to_move:
                 self._move_entity(entity, target_uuid)
@@ -373,7 +374,7 @@ class RemarkableWorkspace:
     # -------------------------
     # rcp
     # -------------------------
-    def process_rcp_with_flags(self, args: List[str]) -> None:
+    def process_rcp_with_flags(self, utility_args: List[str]) -> None:
         """
         Handles rcp command with flags. Flags are meant for
         copying multiple files with one command. This method
@@ -381,18 +382,18 @@ class RemarkableWorkspace:
         files to be copied and then for each file invokes
         `process_rcp_command` separately
 
-        :param args: list of arguments
+        :param utility_args: list of utility arguments
         """
 
         try:
             # flags MUST precede source_path and target_path
-            flags: List[str] = args[:-2]
+            flags: List[str] = utility_args[:-2]
 
             if not self._has_only_valid_flags(flags):
                 raise InvalidArgumentException(f"invalid flags: {','.join(flags)}: hint: help rcp")
 
             # The source and target MUST be the last two arguments
-            source_path, target_collection = args[-2:]
+            source_path, target_collection = utility_args[-2:]
 
             target_uuid: Optional[str] = self._traverse_path(target_collection)
             self._validate_source_and_target_uuid(source_path, target_collection, target_uuid)
@@ -440,7 +441,7 @@ class RemarkableWorkspace:
     # -------------------------
     # mkdir
     # -------------------------
-    def process_mkdir(self, path: str) -> None:
+    def process_mkdir(self, operand_path: str) -> None:
         """
         Tries to create a new subdirectory to the current
         parent.
@@ -450,11 +451,11 @@ class RemarkableWorkspace:
           - RemarkableWriteException if an error occurs while
             communicating with the remarkable device
 
-        :param path: path to create
+        :param operand_path: path to create
         """
 
         try:
-            self._validate_path(path)
+            self._validate_path(operand_path)
 
             metadata: Metadata = Metadata(
                 created_time=int(time.time()),
@@ -464,7 +465,7 @@ class RemarkableWorkspace:
                 pinned=False,
                 source="",
                 type=EntityType.COLLECTION_TYPE,
-                visible_name=path
+                visible_name=operand_path
             )
 
             # Generate a random UUID for the new entry
@@ -474,9 +475,9 @@ class RemarkableWorkspace:
             self._data[path_uuid] = metadata.to_dict()
 
         except InvalidPathException as e:
-            print(f"mkdir: {path}: {e}: hint: try help mkdir")
+            print(f"mkdir: {operand_path}: {e}: hint: try help mkdir")
         except RemarkableWriteException as e:
-            print(f"mkdir: {path}: error writing to remarkable: {e}")
+            print(f"mkdir: {operand_path}: error writing to remarkable: {e}")
 
     def restart_xochitl(self) -> None:
         """
