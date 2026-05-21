@@ -11,8 +11,10 @@ import time
 from fnmatch import fnmatchcase
 from typing import Dict, List, Tuple, Any, Optional
 
-from src.constant import ROOT_COLLECTION, COLLECTION_NOT_FOUND, PARENT_NOT_FOUND, NOT_A_DIRECTORY, \
-    NO_SUCH_FILE_OR_DIRECTORY, LS_COLUMN_WIDTH
+from src.constant import (
+    ROOT_COLLECTION, COLLECTION_NOT_FOUND, PARENT_NOT_FOUND,
+    NOT_A_DIRECTORY, NO_SUCH_FILE_OR_DIRECTORY, LS_COLUMN_WIDTH,
+    VALID_VISIBLE_NAME_REGEX)
 from src.data.metadata_source import MetadataSource
 from src.dto.content import Content
 from src.dto.entry_type_enum import EntityType
@@ -479,6 +481,46 @@ class RemarkableWorkspace:
         except RemarkableWriteException as e:
             print(f"mkdir: {operand_path}: error writing to remarkable: {e}")
 
+    # --------------------------------
+    #  rename
+    # --------------------------------
+
+    def process_rename(self, target: str, new_visible_name: str) -> None:
+        """
+        Tries to rename a document or a collection with
+        the provided new_visible_name. User is informed,
+        if the new_visible_name violates naming constraints
+        or if target does not exist.
+
+        :param target: target entry to rename
+        :param new_visible_name: new name for the source
+        """
+        try:
+            self._validate_visible_name(new_visible_name)
+
+            visible_name, parent_uuid =  self._resolve_source_parent_and_visible_name(target)
+
+            entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
+                visible_name, parent_uuid)
+
+            new_metadata_entry: Dict[str, Any] = copy.deepcopy(self._data.get(entity_uuid))
+            new_metadata_entry['visibleName'] = new_visible_name
+
+            # Create a Metadata DTO for given UUID
+            metadata: Metadata = Metadata.from_dict(new_metadata_entry)
+
+            # Call RemarkableSshMetadataSource to store the metadata entry
+            self._source.write_metadata(entity_uuid, metadata)
+
+            # Update local data
+            self._data[entity_uuid] = new_metadata_entry
+
+        except InvalidArgumentException as e:
+            print(f"rename: {target} {new_visible_name}: {e}: hint: help rename")
+        except NotFoundException as e:
+            print(f"rename: {target} {new_visible_name}: {e}: hint: help rename")
+
+
     def restart_xochitl(self) -> None:
         """
         Invokes source method handling restart
@@ -575,6 +617,33 @@ class RemarkableWorkspace:
 
         return result
 
+    def _validate_visible_name(self, visible_name) -> None:
+        """
+        Validates that the provided visible name
+        fills the following constraints:
+
+        * visible name can contain alphanumeric characters
+          (a-zA-Z0-9), slash (-), underscore (_) and dots (.)
+        * visible name can not be None or an empty string
+        * parent must not have child entry with same name
+
+        :param visible_name: visible name of an entry
+
+        raises:
+          * invalid argument exception: if visible name
+            fails validation
+        """
+
+        if not visible_name:
+            raise InvalidArgumentException("visible name cannot be an empty string")
+        if self._exists_visible_name_in_collection(self._current_collection, visible_name):
+            raise InvalidArgumentException("parent has a child with the same name")
+        if not bool(VALID_VISIBLE_NAME_REGEX.fullmatch(visible_name)):
+            raise InvalidArgumentException("visible name contains invalid characters")
+
+
+
+
     def _validate_path(self, path: str) -> None:
         """
         Validates a provided path. Currently, a valid
@@ -586,7 +655,7 @@ class RemarkableWorkspace:
           (a-zA-Z0-9), slash (-), underscore (_) and dots (.)
 
         raises:
-          - InvalidPathException: if
+          - InvalidPathException: if validation fails
 
         :param path: path to validate
         """
@@ -600,8 +669,7 @@ class RemarkableWorkspace:
         if '/' in path:
             raise InvalidPathException("relative or absolute paths are not yet supported")
 
-        pattern = r'^[a-zA-Z0-9._-]+$'
-        if not bool(re.fullmatch(pattern, path)):
+        if not bool(VALID_VISIBLE_NAME_REGEX.fullmatch(path)):
             raise InvalidPathException("path contains invalid characters")
 
 
@@ -790,7 +858,7 @@ class RemarkableWorkspace:
                     "collection can not be moved into itself or its descendant")
 
             if self._entry_is_a_collection(entity_uuid) and \
-                self._exists_entry_with_same_visible_name_in_target_path(entity_uuid, target_uuid):
+                self._exists_visible_name_in_collection(entity_uuid, target_uuid):
                 raise ConstraintViolationException(
                     f"destination must not contain a child with the same name: "
                     f"{self.get_visible_name_for_uuid(entity_uuid)}")
@@ -873,7 +941,7 @@ class RemarkableWorkspace:
 
         return fnmatchcase(visible_name, pattern)
 
-    def _exists_entry_with_same_visible_name_in_target_path(
+    def _exists_visible_name_in_collection(
             self, entry_uuid: str, target_collection_uuid: str) -> bool:
         """
         Verifies whether an entry (either a Document or a Collection) with

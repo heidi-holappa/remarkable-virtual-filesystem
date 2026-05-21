@@ -707,18 +707,18 @@ class RemarkableWorkspaceTest(unittest.TestCase):
 
     def test_returns_true_when_entry_exists(self) -> None:
         self.assertTrue(
-            self.ws._exists_entry_with_same_visible_name_in_target_path(UUID_FAIRYTALE, UUID_A)
+            self.ws._exists_visible_name_in_collection(UUID_FAIRYTALE, UUID_A)
         )
 
     def test_returns_false_when_entry_does_not_exist(self) -> None:
         self.assertFalse(
-            self.ws._exists_entry_with_same_visible_name_in_target_path(UUID_FAIRYTALE, UUID_B)
+            self.ws._exists_visible_name_in_collection(UUID_FAIRYTALE, UUID_B)
         )
 
     def test_raise_not_found_exception_if_entry_does_not_exist(self) -> None:
         with self.assertRaises(NotFoundException) as ctx:
             self.assertFalse(
-                self.ws._exists_entry_with_same_visible_name_in_target_path("123-123", UUID_A)
+                self.ws._exists_visible_name_in_collection("123-123", UUID_A)
             )
 
         self.assertTrue("Metadata not found for 123-123" in str(ctx.exception))

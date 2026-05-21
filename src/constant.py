@@ -29,3 +29,5 @@ UUID_REGEX = re.compile(
         r"[0-9a-f]{4}-"
         r"[0-9a-f]{12}$"
     )
+VALID_VISIBLE_NAME_REGEX = re.compile(
+        r"^[a-zA-Z0-9._-]+$")

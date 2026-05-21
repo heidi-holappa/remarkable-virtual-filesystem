@@ -1,7 +1,7 @@
 import shlex
 from typing import List
 
-from src.com.common import clear, ls, mv, rm, cd, rcp, mkdir, refresh, handle_exit
+from src.com.common import clear, ls, mv, rm, cd, rcp, mkdir, rename, refresh, handle_exit
 from src.com.help import help_instruction
 from src.workspace.workspace_manager import default_workspace_manager as workspace_manager
 
@@ -38,6 +38,8 @@ def main_loop() -> None:
                 refresh(workspace_manager)
             case "mkdir":
                 mkdir(utility_arguments, workspace_manager)
+            case "rename":
+                rename(utility_arguments, workspace_manager)
             case "exit" | "x":
                 handle_exit(workspace_manager)
             case _:
