@@ -166,6 +166,7 @@ def rename(utility_arguments: List[str], workspace_manager: WorkspaceManager) ->
     """
     if len(utility_arguments) != 2:
         print("rename: usage: rename <file or path> <new name>")
+        return
     operand_target, new_visible_name = utility_arguments
     ws = workspace_manager.get()
     ws.process_rename(operand_target, new_visible_name)

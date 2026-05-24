@@ -6,7 +6,6 @@
 import copy
 import os
 import uuid
-import re
 import time
 from fnmatch import fnmatchcase
 from typing import Dict, List, Tuple, Any, Optional
@@ -496,12 +495,13 @@ class RemarkableWorkspace:
         :param new_visible_name: new name for the source
         """
         try:
-            self._validate_visible_name(new_visible_name)
 
             visible_name, parent_uuid =  self._resolve_source_parent_and_visible_name(target)
 
             entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
                 visible_name, parent_uuid)
+
+            self._validate_visible_name(parent_uuid, entity_uuid, new_visible_name)
 
             new_metadata_entry: Dict[str, Any] = copy.deepcopy(self._data.get(entity_uuid))
             new_metadata_entry['visibleName'] = new_visible_name
@@ -617,7 +617,9 @@ class RemarkableWorkspace:
 
         return result
 
-    def _validate_visible_name(self, visible_name) -> None:
+    def _validate_visible_name(self, parent_uuid: str,
+                               entry_uuid: str,
+                               new_visible_name :str) -> None:
         """
         Validates that the provided visible name
         fills the following constraints:
@@ -627,18 +629,20 @@ class RemarkableWorkspace:
         * visible name can not be None or an empty string
         * parent must not have child entry with same name
 
-        :param visible_name: visible name of an entry
+        :param parent_uuid: parent of the entry to be renamed
+        :param entity_uuid: uuid of entry to rename
+        :param new_visible_name: visible name of an entry
 
         raises:
           * invalid argument exception: if visible name
             fails validation
         """
 
-        if not visible_name:
+        if not new_visible_name:
             raise InvalidArgumentException("visible name cannot be an empty string")
-        if self._exists_visible_name_in_collection(self._current_collection, visible_name):
+        if self._has_visible_name_equal_to_entry_uuid_in_collection(entry_uuid, new_visible_name, parent_uuid):
             raise InvalidArgumentException("parent has a child with the same name")
-        if not bool(VALID_VISIBLE_NAME_REGEX.fullmatch(visible_name)):
+        if not bool(VALID_VISIBLE_NAME_REGEX.fullmatch(new_visible_name)):
             raise InvalidArgumentException("visible name contains invalid characters")
 
 
@@ -857,8 +861,7 @@ class RemarkableWorkspace:
                 raise ConstraintViolationException(
                     "collection can not be moved into itself or its descendant")
 
-            if self._entry_is_a_collection(entity_uuid) and \
-                self._exists_visible_name_in_collection(entity_uuid, target_uuid):
+            if self._exists_visible_name_in_collection(entity_uuid, target_uuid):
                 raise ConstraintViolationException(
                     f"destination must not contain a child with the same name: "
                     f"{self.get_visible_name_for_uuid(entity_uuid)}")
@@ -956,14 +959,35 @@ class RemarkableWorkspace:
         :return: True, if entry with identical visibleName exists
         """
 
-        data: dict[str, Dict[str, Any]] = self.get_data()
-
         entry_visible_name: str = (self.get_data_for_uuid(entry_uuid)
                                    .get('visibleName'))
 
-        for v in data.values():
+        return self._has_visible_name_equal_to_entry_uuid_in_collection(
+            entry_uuid, entry_visible_name, target_collection_uuid)
+
+    def _has_visible_name_equal_to_entry_uuid_in_collection(
+            self, entry_uuid: str, visible_name: str, target_collection_uuid: str) -> bool:
+        """
+        Verifies whether an entry (either a Document or a Collection) with
+        identical visibleName matching the visibleName of entry_uuid already
+        exists in the target path.
+
+        Raises:
+          - NotFoundException if metadata for entry_uuid is not found
+
+        :param entry_uuid: an entry of metadata
+        :param visible_name: visible name to search for
+        :param target_collection_uuid: a target collection
+        :return: True, if entry with identical visibleName exists
+        """
+
+        data: dict[str, Dict[str, Any]] = self.get_data()
+
+        for k, v in data.items():
+            if k == entry_uuid:
+                continue
             if (v.get('parent') == target_collection_uuid and
-                    v.get('visibleName') == entry_visible_name):
+                    v.get('visibleName') == visible_name):
                 return True
 
         return False
