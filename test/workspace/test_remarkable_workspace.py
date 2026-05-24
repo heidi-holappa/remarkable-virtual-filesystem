@@ -358,6 +358,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.ws.process_rename(target, new_visible_name)
         actual_visible_name = self.ws.get_visible_name_for_uuid(UUID_FAIRYTALE)
         self.assertEqual(new_visible_name, actual_visible_name)
+        self.assertEqual(1, mock_write.call_count)
 
 
     @patch.object(RemarkableSSHMetadataSource, "write_metadata")
