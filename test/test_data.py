@@ -15,6 +15,7 @@ UUID_A1 = "f22a1fbd-e3fc-4013-a180-79704bf60933"
 # DocumentTypes in collection A
 UUID_FAIRYTALE = "38e9f881-9cba-400d-b238-75c3bd6d64a8"
 UUID_FAIRYTALE_2 = "ea2a9177-efb4-4772-8303-17a513fc2a23"
+UUID_FAIRYTALE_COPY = "30174240-1456-48c3-b272-0e5bae22145c"
 UUID_INVALID_LAST_MODIFIED = "5592fdc0-020c-4a69-b4d3-a3106ca328ca"
 
 # CollectionType B and its descendants
@@ -101,6 +102,17 @@ TEST_DATA: Dict[str, Dict[str, str]] = {
         "pinned": False,
         "source": "",
         "size": 4
+    },
+    UUID_FAIRYTALE_COPY: {
+        "type": "DocumentType",
+        "parent": UUID_B,
+        "visibleName": "Fairytale.pdf",
+        "createdTime": 0,
+        "lastModified": 123456789,
+        "new": False,
+        "pinned": False,
+        "source": "",
+        "size": 1024,
     },
     UUID_B0: {
         "type": "CollectionType",
