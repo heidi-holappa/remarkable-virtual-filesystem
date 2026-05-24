@@ -640,7 +640,8 @@ class RemarkableWorkspace:
 
         if not new_visible_name:
             raise InvalidArgumentException("visible name cannot be an empty string")
-        if self._has_visible_name_equal_to_entry_uuid_in_collection(entry_uuid, new_visible_name, parent_uuid):
+        if self._has_visible_name_equal_to_entry_uuid_in_collection(
+                entry_uuid, new_visible_name, parent_uuid):
             raise InvalidArgumentException("parent has a child with the same name")
         if not bool(VALID_VISIBLE_NAME_REGEX.fullmatch(new_visible_name)):
             raise InvalidArgumentException("visible name contains invalid characters")
