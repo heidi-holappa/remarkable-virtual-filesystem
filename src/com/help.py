@@ -54,6 +54,19 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
       "info": ["supported characters: a-zA-Z0-9._-",
                "provided path must be a child of current path"]
   },
+  "rename": {
+      "description": "rename document or collection",
+      "args": [
+          "target  name of the document or collection to rename",
+          "name    new visible name for the entry"
+      ],
+      "usage": [
+          "rename foo.pdf bar.pdf",
+          "rename foo/ bar"
+      ],
+      "info": ["supported characters: a-zA-Z0-9._-",
+               "parent path must not have child with new name"]
+  },
   "rcp": {
       "description": "remote copy one PDF or EPUB file from host-machine to reMarkable",
       "args": [

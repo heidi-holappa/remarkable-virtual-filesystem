@@ -2,7 +2,7 @@ import unittest
 from io import StringIO
 from unittest.mock import patch, MagicMock
 
-from src.com.common import cd, ls, mv, rm, mkdir, rcp, clear, refresh, handle_exit
+from src.com.common import cd, ls, mv, rename, rm, mkdir, rcp, clear, refresh, handle_exit
 from src.exception.remarkable_operation_exception import RemarkableOperationException
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from test.stub_remarkable_metadata_source import StubRemarkableMetadataSource
@@ -194,10 +194,10 @@ class TestCommon(unittest.TestCase):
             output: str = mock_out.getvalue()
             self.assertTrue("Usage (mvp):" in output, msg=f"Output was: {output}")
 
-    def test_mv_with_multiple_args(self) -> None:
+    def test_mv_with_too_many_args(self) -> None:
         """
-        When user attempts to use mv instruction without
-        arguments, they are instructed of the usage of
+        When user attempts to use mv instruction with too
+        many arguments, they are instructed of the usage of
         the command
         """
         self.ws.set_current_collection("")
@@ -217,6 +217,46 @@ class TestCommon(unittest.TestCase):
         _, kwargs = mock_move.call_args
         self.assertEqual(kwargs['operand_source'], source)
         self.assertEqual(kwargs['operand_target'], target)
+
+    # -------------------------------
+    # rename
+    # -------------------------------
+
+    def test_rename_without_args(self) -> None:
+        """
+        When user attempts to use mv instruction without
+        arguments, they are instructed of the usage of
+        the command
+        """
+        self.ws.set_current_collection("")
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            rename([], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue("rename: usage:" in output, msg=f"Output was: {output}")
+
+    def test_rename_with_too_many_args(self) -> None:
+        """
+        When user attempts to use mv instruction with too
+        many arguments, they are instructed of the usage of
+        the command
+        """
+        self.ws.set_current_collection("")
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            rename(["-r", "foo.pdf", "bar.pdf"], self.manager)
+            output: str = mock_out.getvalue()
+            self.assertTrue("rename: usage:" in output, msg=f"Output was: {output}")
+
+    @patch.object(RemarkableWorkspace, "process_rename")
+    def test_rename_positive_case(self, mock_rename: MagicMock) -> None:
+        target = "foo.pdf"
+        new_visible_name = "bar.pdf"
+        rename([target, new_visible_name], self.manager)
+
+        mock_rename.assert_called_once()
+
+        args, _ = mock_rename.call_args
+        self.assertEqual(args[0], target)
+        self.assertEqual(args[1], new_visible_name)
 
     # -------------------------------
     # mkdir instruction

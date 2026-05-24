@@ -157,6 +157,21 @@ def mkdir(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> 
     ws = workspace_manager.get()
     ws.process_mkdir(operand_path)
 
+def rename(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> None:
+    """
+    Tries to rename a file
+
+    :param utility_arguments: arguments provided for the rename command
+    :param workspace_manager: manager for reMarkable workspace
+    """
+    if len(utility_arguments) != 2:
+        print("rename: usage: rename <file or path> <new name>")
+        return
+    operand_target, new_visible_name = utility_arguments
+    ws = workspace_manager.get()
+    ws.process_rename(operand_target, new_visible_name)
+
+
 def clear() -> None:
     """
     Clears bash terminal
