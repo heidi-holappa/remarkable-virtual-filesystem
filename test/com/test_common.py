@@ -311,7 +311,7 @@ class TestCommon(unittest.TestCase):
             output: str = mock_out.getvalue()
             self.assertTrue("rcp: invalid flags: -r" in output, msg=f"Output was: {output}")
 
-    @patch.object(RemarkableWorkspace, "process_rcp_command_without_flags")
+    @patch.object(RemarkableWorkspace, "process_rcp_command_without_options")
     def test_rcp_without_flags_positive_case(self, mock_rcp: MagicMock) -> None:
         source = "path/to/file.txt"
         target = "./foo"
@@ -323,7 +323,7 @@ class TestCommon(unittest.TestCase):
         self.assertEqual(kwargs['source_file'], source)
         self.assertEqual(kwargs['target_collection'], target)
 
-    @patch.object(RemarkableWorkspace, "process_rcp_with_flags")
+    @patch.object(RemarkableWorkspace, "process_rcp_with_options")
     def test_rcp_with_flags_positive_case(self, mock_rcp: MagicMock) -> None:
         source = "path/to/"
         target = "./foo"

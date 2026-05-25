@@ -375,9 +375,9 @@ class RemarkableWorkspace:
     # -------------------------
     # rcp
     # -------------------------
-    def process_rcp_with_flags(self, utility_args: List[str]) -> None:
+    def process_rcp_with_options(self, utility_args: List[str]) -> None:
         """
-        Handles rcp command with flags. Flags are meant for
+        Handles rcp command with options. Flags are meant for
         copying multiple files with one command. This method
         validates the arguments, resolves a list of
         files to be copied and then for each file invokes
@@ -417,7 +417,7 @@ class RemarkableWorkspace:
         except (InvalidArgumentException, NotFoundException) as e:
             print(f"rcp: {e}")
 
-    def process_rcp_command_without_flags(self, source_file: str, target_collection: str) -> None:
+    def process_rcp_command_without_options(self, source_file: str, target_collection: str) -> None:
         """
         Copies a single file defined by the user as the
         source file to the target collection in reMarkable

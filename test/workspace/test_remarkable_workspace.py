@@ -567,7 +567,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.ws.process_rcp_command_without_flags(source_file, target_path)
+        self.ws.process_rcp_command_without_options(source_file, target_path)
 
         # ---- Assertions ----
 
@@ -616,7 +616,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.ws.process_rcp_with_flags(["-a", source_file, target_path])
+        self.ws.process_rcp_with_options(["-a", source_file, target_path])
 
         # ---- Assertions ----
 
@@ -670,7 +670,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.ws.process_rcp_command_without_flags(source_file, target_path)
+        self.ws.process_rcp_command_without_options(source_file, target_path)
 
         # ---- Assertions ----
 
@@ -702,7 +702,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.ws.process_rcp_with_flags(["-a", source_file, target_path])
+        self.ws.process_rcp_with_options(["-a", source_file, target_path])
 
         # ---- Assertions ----
 
