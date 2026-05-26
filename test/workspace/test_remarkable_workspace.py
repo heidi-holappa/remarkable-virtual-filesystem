@@ -551,7 +551,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
     @patch.object(RemarkableSSHMetadataSource, "load")
     @patch.object(RemarkableSSHMetadataSource, "remote_copy")
-    def test_process_rcp_success_without_flags(
+    def test_process_rcp_success_without_options(
             self,
             mock_remote_copy: MagicMock,
             mock_load: MagicMock,
@@ -598,7 +598,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     @patch("src.data.remarkable_ssh_metadata_source.os.walk")
     @patch.object(RemarkableSSHMetadataSource, "load")
     @patch.object(RemarkableSSHMetadataSource, "remote_copy")
-    def test_process_rcp_success_with_valid_flags(
+    def test_process_rcp_success_with_valid_option_all(
             self,
             mock_remote_copy: MagicMock,
             mock_load: MagicMock,

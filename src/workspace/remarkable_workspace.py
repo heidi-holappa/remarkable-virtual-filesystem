@@ -387,11 +387,11 @@ class RemarkableWorkspace:
         """
 
         try:
-            # flags MUST precede source_path and target_path
-            flags: List[str] = utility_args[:-2]
+            # options MUST precede source_path and target_path
+            options: List[str] = utility_args[:-2]
 
-            if not self._has_only_valid_flags(flags):
-                raise InvalidArgumentException(f"invalid flags: {','.join(flags)}: hint: help rcp")
+            if not self._has_only_valid_options(options):
+                raise InvalidArgumentException(f"invalid options: {','.join(options)}: hint: help rcp")
 
             # The source and target MUST be the last two arguments
             source_path, target_collection = utility_args[-2:]
@@ -589,11 +589,14 @@ class RemarkableWorkspace:
             print(e)
 
     @staticmethod
-    def _has_only_valid_flags(flags: List[str]) -> bool:
-        # in milestone v0.2 the only supported flag is -a
-        valid_flags = ['-a']
-        for flag in flags:
-            if flag not in valid_flags:
+    def _has_only_valid_options(options: List[str]) -> bool:
+        """
+        Starting from milestone v0.3 rcp supports
+        flags (a)ll and (r)ecursive
+        """
+        valid_options = ['-a', '-r']
+        for op in options:
+            if op not in valid_options:
                 return False
         return True
 
