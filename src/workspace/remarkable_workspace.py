@@ -390,7 +390,7 @@ class RemarkableWorkspace:
             # options MUST precede source_path and target_path
             options: List[str] = utility_args[:-2]
 
-            if not self._has_only_valid_options(options):
+            if len(options) > 1 or not self._has_only_valid_options(options):
                 raise InvalidArgumentException(f"invalid options: {','.join(options)}: hint: help rcp")
 
             # The source and target MUST be the last two arguments
@@ -399,7 +399,9 @@ class RemarkableWorkspace:
             target_uuid: Optional[str] = self._traverse_path(target_collection)
             self._validate_source_and_target_uuid(source_path, target_collection, target_uuid)
 
-            files_to_copy = self._find_all_pdf_and_epub_files_in_path(source_path)
+            recurse = options[0] == "-r"
+
+            files_to_copy = self._find_all_pdf_and_epub_files_in_path(source_path, recurse)
 
             if not files_to_copy:
                 print(f"rcp: no pdf or epub files found in directory: {source_path}")
@@ -600,6 +602,35 @@ class RemarkableWorkspace:
                 return False
         return True
 
+
+    def _generate_target_path_uuid_and_source_file_pairs(
+            self, source_path: str, files: List[str]) -> List[Tuple[str, str]]:
+        """
+        Iterates through files and if needed, creates missing child
+        collections to reMarkable in case of recursive remote copy.
+
+        :param source_path: the absolute path from which files are copied
+        :param files: absolute path to each file
+        :return: list of tuples with parent uuid and path to file
+        """
+
+        result: List[Tuple[str, str]] = []
+
+        """
+        Pseudocode:
+        for abs_path in files:
+            rel_path = abs_path.lsplit(source_path).lstrip('/')
+            file: str = rel_path[-1:]
+            dirs: List[str] = rel_path[:-1]
+            parent = self._current_dir
+            for dir in dirs:
+                dir_uuid = get_or_create_dir(parent, dir)
+                parent = dir
+            result.append((parent, file))
+        """
+
+        return result
+
     @staticmethod
     def _validate_source_and_target_uuid(source: str,
                                          target_collection: str, target_uuid: str) -> None:
@@ -609,14 +640,15 @@ class RemarkableWorkspace:
             raise NotFoundException(f"rcp: target path {target_collection} not found")
 
     @staticmethod
-    def _find_all_pdf_and_epub_files_in_path(path: str) -> List[str]:
+    def _find_all_pdf_and_epub_files_in_path(path: str, recurse: bool) -> List[str]:
         result = []
 
         for dirpath, _, filenames in os.walk(path):
             for file in filenames:
                 if file.lower().endswith((".pdf", ".epub")):
                     result.append(os.path.abspath(os.path.join(dirpath, file)))
-            break
+            if not recurse:
+                break
 
         return result
 
