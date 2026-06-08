@@ -1,4 +1,5 @@
 import copy
+import os
 import unittest
 from io import StringIO
 from typing import List, Set
@@ -607,16 +608,16 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     ) -> None:
         # ---- Setup mocks ----
         mock_exists.return_value = True
-        mock_walk.return_value = [("path/to/", [], ["file1.pdf", "file2.epub"])]
+        source_path = os.getcwd()
+        mock_walk.return_value = [(source_path, [], ["file1.pdf", "file2.epub"])]
         mock_load.return_value = ["new_data"]
 
         self.ws._traverse_path = MagicMock(return_value=UUID_ROOT)
 
-        source_file = "/path/to/"
         target_path = "/"
 
         # ---- Execute ----
-        self.ws.process_rcp_with_options(["-a", source_file, target_path])
+        self.ws.process_rcp_with_options(["-a", source_path, target_path])
 
         # ---- Assertions ----
 
