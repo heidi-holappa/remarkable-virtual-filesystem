@@ -70,7 +70,8 @@ class RemarkableWorkspace:
 
     def get_visible_name_for_uuid(self, entity_uuid: str) -> str:
         """
-        Returns the visibleName of the given entity.
+        Returns the visibleName of the given entity. For root
+        returns an empty string
 
         Raises:
           - NotFoundException if the entity is not found
@@ -78,6 +79,9 @@ class RemarkableWorkspace:
         :param entity_uuid: UUID for a Document or Collection type
         :return: visible name of the entity
         """
+
+        if entity_uuid == '':
+            return ''
 
         data: Optional[Dict[str, Any]] = self._data.get(entity_uuid)
 
@@ -391,7 +395,8 @@ class RemarkableWorkspace:
             options: List[str] = utility_args[:-2]
 
             if len(options) > 1 or not self._has_only_valid_options(options):
-                raise InvalidArgumentException(f"invalid options: {','.join(options)}: hint: help rcp")
+                raise InvalidArgumentException(
+                    f"invalid options: {','.join(options)}: hint: help rcp")
 
             # The source and target MUST be the last two arguments
             source_path, target_collection = utility_args[-2:]
@@ -408,8 +413,9 @@ class RemarkableWorkspace:
                 print(f"rcp: no pdf or epub files found in directory: {source_path}")
                 return
 
-            files_and_parents: List[Tuple[str, str]] = self._generate_target_path_uuid_and_source_file_pairs(
-                source_path, files_to_copy, target_uuid)
+            files_and_parents: List[Tuple[str, str]] = (
+                self._generate_target_path_uuid_and_source_file_pairs(
+                source_path, files_to_copy, target_uuid))
 
             print(f"found {len(files_to_copy)} files to copy. copying files one-by-one."
                   f"\nDO NOT disconnect reMarkable while operation is ongoing.")
@@ -462,8 +468,6 @@ class RemarkableWorkspace:
         :param operand_path: path to create
         :param parent: optional UUID of parent collection.
                         Defaults to current parent collection
-        :return: UUID of the new created collection, if
-                    no exception is raised
         """
 
         if not parent:
@@ -643,7 +647,8 @@ class RemarkableWorkspace:
 
     @staticmethod
     def _validate_source_and_target_uuid(source: str,
-                                         target_collection: str, target_uuid: Optional[str]) -> None:
+                                         target_collection: str,
+                                         target_uuid: Optional[str]) -> None:
         if not os.path.exists(source):
             raise NotFoundException(f"rcp: source file {source} not found")
         if target_uuid is None:
@@ -691,7 +696,7 @@ class RemarkableWorkspace:
         result: List[Tuple[str, str]] = []
 
         for abs_path in files:
-            rel_path = abs_path.removeprefix(source_path)
+            rel_path = abs_path.removeprefix(source_path).removeprefix('/')
             dirs_and_filename: List[str] = rel_path.split('/')
             filename: str = dirs_and_filename[-1:][0]
             dirs: List[str] = dirs_and_filename[:-1]
