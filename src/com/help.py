@@ -70,8 +70,12 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
   "rcp": {
       "description": "remote copy one PDF or EPUB file from host-machine to reMarkable",
       "args": [
-          "-a      flag to copy all files in source path. When using "
+          "-a      flag to copy all files from source path. When using "
           "        this flag, the source must be a path",
+          "-r      flag to copy all files recursively from source path. "
+          "        In addition creates the path structure for child paths"
+          "        that contain pdf or epub files into the target path."
+          "        When using this flag, the source must be a path",
           "source  absolute path for source (file) to copy or a path,"
           "        if flag -a is used",
           "target  absolute path to target directory"
