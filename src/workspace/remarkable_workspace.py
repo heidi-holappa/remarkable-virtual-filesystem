@@ -70,7 +70,8 @@ class RemarkableWorkspace:
 
     def get_visible_name_for_uuid(self, entity_uuid: str) -> str:
         """
-        Returns the visibleName of the given entity.
+        Returns the visibleName of the given entity. For root
+        returns an empty string
 
         Raises:
           - NotFoundException if the entity is not found
@@ -78,6 +79,9 @@ class RemarkableWorkspace:
         :param entity_uuid: UUID for a Document or Collection type
         :return: visible name of the entity
         """
+
+        if entity_uuid == '':
+            return ''
 
         data: Optional[Dict[str, Any]] = self._data.get(entity_uuid)
 
@@ -375,9 +379,9 @@ class RemarkableWorkspace:
     # -------------------------
     # rcp
     # -------------------------
-    def process_rcp_with_flags(self, utility_args: List[str]) -> None:
+    def process_rcp_with_options(self, utility_args: List[str]) -> None:
         """
-        Handles rcp command with flags. Flags are meant for
+        Handles rcp command with options. Flags are meant for
         copying multiple files with one command. This method
         validates the arguments, resolves a list of
         files to be copied and then for each file invokes
@@ -387,11 +391,12 @@ class RemarkableWorkspace:
         """
 
         try:
-            # flags MUST precede source_path and target_path
-            flags: List[str] = utility_args[:-2]
+            # options MUST precede source_path and target_path
+            options: List[str] = utility_args[:-2]
 
-            if not self._has_only_valid_flags(flags):
-                raise InvalidArgumentException(f"invalid flags: {','.join(flags)}: hint: help rcp")
+            if len(options) > 1 or not self._has_only_valid_options(options):
+                raise InvalidArgumentException(
+                    f"invalid options: {','.join(options)}: hint: help rcp")
 
             # The source and target MUST be the last two arguments
             source_path, target_collection = utility_args[-2:]
@@ -399,16 +404,24 @@ class RemarkableWorkspace:
             target_uuid: Optional[str] = self._traverse_path(target_collection)
             self._validate_source_and_target_uuid(source_path, target_collection, target_uuid)
 
-            files_to_copy = self._find_all_pdf_and_epub_files_in_path(source_path)
+            recurse = options[0] == "-r"
+
+            files_to_copy: List[str] = self._find_all_pdf_and_epub_files_in_path(
+                source_path, recurse)
 
             if not files_to_copy:
                 print(f"rcp: no pdf or epub files found in directory: {source_path}")
                 return
 
+            files_and_parents: List[Tuple[str, str]] = (
+                self._generate_target_path_uuid_and_source_file_pairs(
+                source_path, files_to_copy, target_uuid))
+
             print(f"found {len(files_to_copy)} files to copy. copying files one-by-one."
                   f"\nDO NOT disconnect reMarkable while operation is ongoing.")
-            for idx, source_file in enumerate(files_to_copy):
-                self._copy_file_from_host_to_target(source_file, target_uuid)
+            for idx, file_parent_pair in enumerate(files_and_parents):
+                source_file, parent_uuid = file_parent_pair
+                self._copy_file_from_host_to_target(source_file, parent_uuid)
                 print(f"{idx + 1}/{len(files_to_copy)}: "
                       f"{source_file} copied to {target_collection}")
 
@@ -417,7 +430,7 @@ class RemarkableWorkspace:
         except (InvalidArgumentException, NotFoundException) as e:
             print(f"rcp: {e}")
 
-    def process_rcp_command_without_flags(self, source_file: str, target_collection: str) -> None:
+    def process_rcp_command_without_options(self, source_file: str, target_collection: str) -> None:
         """
         Copies a single file defined by the user as the
         source file to the target collection in reMarkable
@@ -442,7 +455,7 @@ class RemarkableWorkspace:
     # -------------------------
     # mkdir
     # -------------------------
-    def process_mkdir(self, operand_path: str) -> None:
+    def process_mkdir(self, operand_path: str, parent: Optional[str] = None) -> None:
         """
         Tries to create a new subdirectory to the current
         parent.
@@ -453,27 +466,18 @@ class RemarkableWorkspace:
             communicating with the remarkable device
 
         :param operand_path: path to create
+        :param parent: optional UUID of parent collection.
+                        Defaults to current parent collection
         """
+
+        if not parent:
+            parent = self._current_collection
 
         try:
             self._validate_path(operand_path)
 
-            metadata: Metadata = Metadata(
-                created_time=int(time.time()),
-                last_modified=int(time.time()),
-                new=False,
-                parent=self._current_collection,
-                pinned=False,
-                source="",
-                type=EntityType.COLLECTION_TYPE,
-                visible_name=operand_path
-            )
-
-            # Generate a random UUID for the new entry
-            path_uuid: str = str(uuid.uuid4())
-            self._source.write_metadata(path_uuid, metadata)
-
-            self._data[path_uuid] = metadata.to_dict()
+            self._create_collection_metadata_and_invoke_write(
+                parent, operand_path)
 
         except InvalidPathException as e:
             print(f"mkdir: {operand_path}: {e}: hint: try help mkdir")
@@ -538,6 +542,46 @@ class RemarkableWorkspace:
     # private methods
     # ----------------------------------
 
+
+    def _create_collection_metadata_and_invoke_write(self, parent: str, path_name: str) -> str:
+        """
+        Creates metadata for a new collection and attempts to invoke
+        a write operation for reMarkable reader. reMarkable is lax
+        regarding rules for naming. For instance, nothing prevents
+        two entries with the same parent to have the same visible name.
+        This method does no validation and instead just perpares a
+        Metadata entry and attempts to write it. Callee must take
+        any possible validation into consideration.
+
+        Raises: RemarkableWriteException in case write operation
+                fails. Callee must handle the possible exception
+
+        :param parent: UUID of the parent collection
+        :param path_name: visible name of the new path
+
+        :return: UUID of the new created collection.
+
+        """
+
+        metadata: Metadata = Metadata(
+            created_time=int(time.time()),
+            last_modified=int(time.time()),
+            new=False,
+            parent=parent,
+            pinned=False,
+            source="",
+            type=EntityType.COLLECTION_TYPE,
+            visible_name=path_name
+        )
+
+        # Generate a random UUID for the new entry
+        path_uuid: str = str(uuid.uuid4())
+        self._source.write_metadata(path_uuid, metadata)
+
+        self._data[path_uuid] = metadata.to_dict()
+
+        return path_uuid
+
     @staticmethod
     def _output_ls_result(list_result: List[str]) -> None:
         size_header = "size (kB)"
@@ -580,6 +624,8 @@ class RemarkableWorkspace:
                 visible_name=filename
             )
 
+            print(f"SOURCE_FILE: {source_file}")
+
             self._source.remote_copy(source_file=source_file,
                                      metadata=metadata, content=content)
 
@@ -589,33 +635,104 @@ class RemarkableWorkspace:
             print(e)
 
     @staticmethod
-    def _has_only_valid_flags(flags: List[str]) -> bool:
-        # in milestone v0.2 the only supported flag is -a
-        valid_flags = ['-a']
-        for flag in flags:
-            if flag not in valid_flags:
+    def _has_only_valid_options(options: List[str]) -> bool:
+        """
+        Starting from milestone v0.3 rcp supports
+        flags (a)ll and (r)ecursive
+        """
+        valid_options = ['-a', '-r']
+        for op in options:
+            if op not in valid_options:
                 return False
         return True
 
+
     @staticmethod
     def _validate_source_and_target_uuid(source: str,
-                                         target_collection: str, target_uuid: str) -> None:
+                                         target_collection: str,
+                                         target_uuid: Optional[str]) -> None:
         if not os.path.exists(source):
             raise NotFoundException(f"rcp: source file {source} not found")
         if target_uuid is None:
             raise NotFoundException(f"rcp: target path {target_collection} not found")
 
     @staticmethod
-    def _find_all_pdf_and_epub_files_in_path(path: str) -> List[str]:
+    def _find_all_pdf_and_epub_files_in_path(path: str, recurse: bool) -> List[str]:
+        """
+        Walks through the path in host and collects all source
+        documents. With recurse flag also walks child paths
+
+        :param path: host path to walk
+        :param recurse: is the walk recursive
+        :return: a list of absolute paths
+        """
         result = []
 
         for dirpath, _, filenames in os.walk(path):
             for file in filenames:
                 if file.lower().endswith((".pdf", ".epub")):
                     result.append(os.path.abspath(os.path.join(dirpath, file)))
-            break
+            if not recurse:
+                break
 
         return result
+
+
+    def _generate_target_path_uuid_and_source_file_pairs(
+            self, source_path: str,
+            files: List[str],
+            target_collection: str) -> List[Tuple[str, str]]:
+        """
+        Iterates through files and if needed, creates missing child
+        collections to reMarkable in case of recursive remote copy.
+
+        Raises: called function _get_or_create_collection may raise
+        RemarkableWriteException which must be handled by the callee.
+
+        :param source_path: the absolute path from which files are copied
+        :param files: absolute path to each file
+        :param target_collection: the target path to copy files into
+        :return: list of tuples with parent uuid and path to file
+        """
+
+        result: List[Tuple[str, str]] = []
+
+        for abs_path in files:
+            rel_path = abs_path.removeprefix(source_path).removeprefix('/')
+            dirs_and_filename: List[str] = rel_path.split('/')
+            filename: str = dirs_and_filename[-1:][0]
+            dirs: List[str] = dirs_and_filename[:-1]
+            parent = target_collection
+            for directory in dirs:
+                if not directory:
+                    continue
+                dir_uuid = self._get_or_create_collection(parent, directory)
+                parent = dir_uuid
+            result.append((abs_path, parent))
+        return result
+
+    def _get_or_create_collection(self, parent: str, child_visible_name: str) -> str:
+        """
+        Either gets a collection with a given visible name and parent,
+        or creates the collection.
+
+        Raises: invoked function may raise MetadataWriteException. Callee
+                must handle this.
+
+        :param parent: UUID of the parent
+        :param child_visible_name: visible name of the collection
+        :return: UUID of the collection
+        """
+
+        if self._parent_has_child_path_with_given_name(parent, child_visible_name):
+            for entry_uuid, entry in self._data.items():
+                if entry['visibleName'] == child_visible_name and entry['parent'] == parent:
+                    return entry_uuid
+
+        entry_uuid: str =  self._create_collection_metadata_and_invoke_write(
+            parent, child_visible_name)
+
+        return entry_uuid
 
     def _validate_visible_name(self, parent_uuid: str,
                                entry_uuid: str,

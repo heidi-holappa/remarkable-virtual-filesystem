@@ -1,4 +1,5 @@
 import copy
+import os
 import unittest
 from io import StringIO
 from typing import List, Set
@@ -162,6 +163,18 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             self.assertTrue(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}" in output,
                             msg=f"Output was: {output}")
 
+
+    @patch.object(RemarkableSSHMetadataSource, "write_metadata")
+    def test_valid_wildcard_but_no_matches(self, mock_write: MagicMock) -> None:
+        mock_write.return_value = None
+        self.ws.set_current_collection(UUID_A)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            source = "/A/no-such-prefix*"
+            self.ws.process_move_command(source, "/B")
+            output: str = mock_out.getvalue()
+            self.assertTrue(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}" in output,
+                            msg=f"Output was: {output}")
+
     # Constraint: Source must be a valid file or collection (case: moving CollectionType)
     @patch.object(RemarkableSSHMetadataSource, "write_metadata")
     def test_invalid_source_path_results_in_error_shown_to_user(self, mock_write: MagicMock) -> None:
@@ -171,6 +184,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             self.ws.process_move_command("/C", "/B")
             output: str = mock_out.getvalue()
             self.assertTrue(f"mv: cannot access /C: {NO_SUCH_FILE_OR_DIRECTORY} " in output, msg=f"Output was: {output}")
+
 
     # Constraint: destination must resolve to valid collection
     @patch.object(RemarkableSSHMetadataSource, "write_metadata")
@@ -544,6 +558,18 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.assertEqual(sorted(expected_removals), sorted(passed_list),
                          msg=f"Assertion failed. Passed list: {passed_list}")
 
+    @patch.object(RemarkableSSHMetadataSource, "remove")
+    def test_remove_target_not_found(self, mock_remove: MagicMock) -> None:
+        mock_remove.return_value = None
+        self.ws.set_current_collection(UUID_A)
+
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.process_remove_command(target_pattern="no-such-target.pdf")
+            output: str = mock_out.getvalue()
+            self.assertTrue(
+                "ERROR: cannot access /A/no-such-target.pdf" in output,
+                msg=f"Output was: {output}")
+
     # -------------------------------------
     # Process remote copy command
     # -------------------------------------
@@ -551,7 +577,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
     @patch.object(RemarkableSSHMetadataSource, "load")
     @patch.object(RemarkableSSHMetadataSource, "remote_copy")
-    def test_process_rcp_success_without_flags(
+    def test_process_rcp_success_without_options(
             self,
             mock_remote_copy: MagicMock,
             mock_load: MagicMock,
@@ -567,7 +593,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.ws.process_rcp_command_without_flags(source_file, target_path)
+        self.ws.process_rcp_command_without_options(source_file, target_path)
 
         # ---- Assertions ----
 
@@ -598,7 +624,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     @patch("src.data.remarkable_ssh_metadata_source.os.walk")
     @patch.object(RemarkableSSHMetadataSource, "load")
     @patch.object(RemarkableSSHMetadataSource, "remote_copy")
-    def test_process_rcp_success_with_valid_flags(
+    def test_process_rcp_success_with_valid_option_all(
             self,
             mock_remote_copy: MagicMock,
             mock_load: MagicMock,
@@ -607,16 +633,16 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     ) -> None:
         # ---- Setup mocks ----
         mock_exists.return_value = True
-        mock_walk.return_value = [("path/to/", [], ["file1.pdf", "file2.epub"])]
+        source_path = os.getcwd()
+        mock_walk.return_value = [(source_path, [], ["file1.pdf", "file2.epub"])]
         mock_load.return_value = ["new_data"]
 
         self.ws._traverse_path = MagicMock(return_value=UUID_ROOT)
 
-        source_file = "/path/to/"
         target_path = "/"
 
         # ---- Execute ----
-        self.ws.process_rcp_with_flags(["-a", source_file, target_path])
+        self.ws.process_rcp_with_options(["-a", source_path, target_path])
 
         # ---- Assertions ----
 
@@ -650,6 +676,99 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             content = kwargs["content"]
             self.assertEqual(content.file_type, ext)
 
+    @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
+    @patch("src.data.remarkable_ssh_metadata_source.os.walk")
+    @patch.object(RemarkableSSHMetadataSource, "load")
+    @patch.object(RemarkableSSHMetadataSource, "remote_copy")
+    @patch.object(RemarkableSSHMetadataSource, "write_metadata")
+    def test_process_rcp_success_with_valid_option_recurse(
+            self,
+            mock_write_metadata: MagicMock,
+            mock_remote_copy: MagicMock,
+            mock_load: MagicMock,
+            mock_walk: MagicMock,
+            mock_exists: MagicMock
+    ) -> None:
+        # ---- Setup mocks ----
+        mock_write_metadata.return_value = None
+        mock_exists.return_value = True
+        source_path = os.getcwd()
+        mock_walk.return_value = [(source_path, [], ["file1.pdf", "path1/file2.epub"])]
+        mock_load.return_value = ["new_data"]
+
+        self.ws._traverse_path = MagicMock(return_value=UUID_ROOT)
+
+        target_path = "/"
+
+        # ---- Execute ----
+        self.ws.process_rcp_with_options(["-r", source_path, target_path])
+
+        # ---- Assertions ----
+
+        # remote_copy called twice
+        assert mock_remote_copy.call_count == 2
+
+
+        # load called and assigned
+        mock_load.assert_called_once()
+        self.assertEqual(self.ws._data, ["new_data"])
+
+        # ---- Inspect calls ----
+        calls = mock_remote_copy.call_args_list
+
+        # The boolean checks whether the parent is the root
+        # ideally we would capture the uuid of each parent
+        # but that is for future test expansions to add
+        expected = [
+            ("file1.pdf", "pdf", True),
+            ("path1/file2.epub", "epub", False),
+        ]
+
+        for call, (filename, ext, has_root_as_parent) in zip(calls, expected):
+            kwargs = call.kwargs
+
+            # source file
+            self.assertIn(filename, kwargs["source_file"])
+
+            # metadata
+            metadata = kwargs["metadata"]
+            self.assertEqual(has_root_as_parent, metadata.parent == UUID_ROOT)
+
+            # content
+            content = kwargs["content"]
+            self.assertEqual(content.file_type, ext)
+
+    @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
+    @patch("src.data.remarkable_ssh_metadata_source.os.walk")
+    @patch.object(RemarkableSSHMetadataSource, "load")
+    @patch.object(RemarkableSSHMetadataSource, "write_metadata")
+    def test_rcp_recursive_but_no_matches(
+            self,
+            mock_write_metadata: MagicMock,
+            mock_load: MagicMock,
+            mock_walk: MagicMock,
+            mock_exists: MagicMock
+    ) -> None:
+        # ---- Setup mocks ----
+        mock_write_metadata.return_value = None
+        mock_exists.return_value = True
+        source_path = os.getcwd()
+        mock_walk.return_value = [(source_path, [], [])]
+        mock_load.return_value = ["new_data"]
+
+        self.ws._traverse_path = MagicMock(return_value=UUID_ROOT)
+
+        target_path = "/"
+
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            # ---- Execute ----
+            self.ws.process_rcp_with_options(["-r", source_path, target_path])
+            output: str = mock_out.getvalue()
+            self.assertTrue(
+                "rcp: no pdf or epub files found in directory" in output,
+                msg=f"Output was: {output}")
+
+
     @patch("builtins.print")
     @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
     @patch.object(RemarkableSSHMetadataSource, "load")
@@ -670,7 +789,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.ws.process_rcp_command_without_flags(source_file, target_path)
+        self.ws.process_rcp_command_without_options(source_file, target_path)
 
         # ---- Assertions ----
 
@@ -702,7 +821,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.ws.process_rcp_with_flags(["-a", source_file, target_path])
+        self.ws.process_rcp_with_options(["-a", source_file, target_path])
 
         # ---- Assertions ----
 
@@ -861,3 +980,28 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         )
         expected_uuids: List[str] = [UUID_B, UUID_FAIRYTALE_COPY, UUID_B0, UUID_A_UNDER_B, UUID_A0_UNDER_B]
         self.assertEqual(sorted(expected_uuids), sorted(actual_uuids))
+
+    # -------------------------------------
+    # Get visible name for UUID
+    # -------------------------------------
+
+    def test_visible_name_for_root_is_empty_string(self) -> None:
+        actual_root_visible_name = self.ws.get_visible_name_for_uuid('')
+        self.assertTrue(actual_root_visible_name == '')
+
+    def test_not_found_exception_is_thrown_for_non_existing_uuid(self) -> None:
+        with self.assertRaises(NotFoundException) as context:
+            self.ws.get_visible_name_for_uuid('some-uuid')
+        self.assertTrue("Metadata not found for some-uuid" in str(context.exception),
+                        msg=context.exception)
+
+    # -------------------------------------
+    # Get parent
+    # -------------------------------------
+
+    def test_returns_parent_of_current_collection_by_default(self) -> None:
+        self.ws._current_collection = UUID_A0
+        self.assertTrue(self.ws.get_parent() == UUID_A,
+                        msg=f'get parent returned {self.ws.get_parent()}, '
+                            f'which is NOT UUID of the parent of current collection (UUID_A): {UUID_A}')
+
