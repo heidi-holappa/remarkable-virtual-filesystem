@@ -109,12 +109,12 @@ def rcp(cmd_line: List[str], workspace_manager: WorkspaceManager) -> None:
     if len(cmd_line) == 2:
         ws: RemarkableWorkspace = workspace_manager.get()
         operand_source, operand_target = cmd_line
-        ws.process_rcp_command_without_flags(
+        ws.process_rcp_command_without_options(
             source_file=operand_source,
             target_collection=operand_target)
     elif len(cmd_line) > 2:
         ws: RemarkableWorkspace = workspace_manager.get()
-        ws.process_rcp_with_flags(cmd_line)
+        ws.process_rcp_with_options(cmd_line)
     else:
         print("rcp: usage: rcp <source file> <target collection>")
 

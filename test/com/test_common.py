@@ -307,12 +307,12 @@ class TestCommon(unittest.TestCase):
         """
         self.ws.set_current_collection("")
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            rcp(["-r", "/path/to/foo.pdf", "bar/"], self.manager)
+            rcp(["-x", "/path/to/foo.pdf", "bar/"], self.manager)
             output: str = mock_out.getvalue()
-            self.assertTrue("rcp: invalid flags: -r" in output, msg=f"Output was: {output}")
+            self.assertTrue("rcp: invalid options: -x" in output, msg=f"Output was: {output}")
 
-    @patch.object(RemarkableWorkspace, "process_rcp_command_without_flags")
-    def test_rcp_without_flags_positive_case(self, mock_rcp: MagicMock) -> None:
+    @patch.object(RemarkableWorkspace, "process_rcp_command_without_options")
+    def test_rcp_without_options_positive_case(self, mock_rcp: MagicMock) -> None:
         source = "path/to/file.txt"
         target = "./foo"
         rcp([source, target], self.manager)
@@ -323,8 +323,8 @@ class TestCommon(unittest.TestCase):
         self.assertEqual(kwargs['source_file'], source)
         self.assertEqual(kwargs['target_collection'], target)
 
-    @patch.object(RemarkableWorkspace, "process_rcp_with_flags")
-    def test_rcp_with_flags_positive_case(self, mock_rcp: MagicMock) -> None:
+    @patch.object(RemarkableWorkspace, "process_rcp_with_options")
+    def test_rcp_with_options_positive_case(self, mock_rcp: MagicMock) -> None:
         source = "path/to/"
         target = "./foo"
         flag = "-a"
