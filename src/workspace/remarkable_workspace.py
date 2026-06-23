@@ -624,6 +624,8 @@ class RemarkableWorkspace:
                 visible_name=filename
             )
 
+            print(f"SOURCE_FILE: {source_file}")
+
             self._source.remote_copy(source_file=source_file,
                                      metadata=metadata, content=content)
 
@@ -706,7 +708,7 @@ class RemarkableWorkspace:
                     continue
                 dir_uuid = self._get_or_create_collection(parent, directory)
                 parent = dir_uuid
-            result.append((filename, parent))
+            result.append((abs_path, parent))
         return result
 
     def _get_or_create_collection(self, parent: str, child_visible_name: str) -> str:

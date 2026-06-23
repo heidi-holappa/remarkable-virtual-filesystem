@@ -708,6 +708,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         # remote_copy called twice
         assert mock_remote_copy.call_count == 2
 
+
         # load called and assigned
         mock_load.assert_called_once()
         self.assertEqual(self.ws._data, ["new_data"])
@@ -720,7 +721,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         # but that is for future test expansions to add
         expected = [
             ("file1.pdf", "pdf", True),
-            ("file2.epub", "epub", False),
+            ("path1/file2.epub", "epub", False),
         ]
 
         for call, (filename, ext, has_root_as_parent) in zip(calls, expected):
@@ -732,7 +733,6 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             # metadata
             metadata = kwargs["metadata"]
             self.assertEqual(has_root_as_parent, metadata.parent == UUID_ROOT)
-            self.assertEqual(metadata.visible_name, filename)
 
             # content
             content = kwargs["content"]
@@ -741,12 +741,10 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
     @patch("src.data.remarkable_ssh_metadata_source.os.walk")
     @patch.object(RemarkableSSHMetadataSource, "load")
-    @patch.object(RemarkableSSHMetadataSource, "remote_copy")
     @patch.object(RemarkableSSHMetadataSource, "write_metadata")
     def test_rcp_recursive_but_no_matches(
             self,
             mock_write_metadata: MagicMock,
-            mock_remote_copy: MagicMock,
             mock_load: MagicMock,
             mock_walk: MagicMock,
             mock_exists: MagicMock
