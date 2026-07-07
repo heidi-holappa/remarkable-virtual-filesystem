@@ -1,9 +1,9 @@
 # Test report
 
-Release: 
-Date: 
-reMarkable device: 
-Used test material: content of directory `test/`
+Release:  
+Date:  
+reMarkable device:  
+Used test material: content of directory `test/`  
 
 
 ## Test Suite: ls
