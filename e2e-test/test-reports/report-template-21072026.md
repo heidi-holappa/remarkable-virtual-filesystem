@@ -8,17 +8,17 @@ Used test material: content of directory `test/`
 
 ## Test Suite: ls
 
-* [ ] TC1: list directory content
+* [x] TC1: list directory content
   0. start at root directory 
   1. input: `cd test`
   2. input: `ls`
   3. expected outcome: all files and sub-directories in path `/test` should be listed
-* [ ] TC2: list with args
+* [x] TC2: list with args
   0. start at root directory 
   1. input: `cd test`
   2. input: `ls test_0`
   3. expected outcome: all files and sub-directories in path `/test/test_0/` 
-* [ ] TC3: list with invalid arg
+* [x] TC3: list with invalid arg
   0. start at root directory 
   1. input: `ls /test/abc`
   2. expected outcome: descriptive message of no such path existing
@@ -26,55 +26,55 @@ Used test material: content of directory `test/`
 
 ## Test Suite: cd
 
-* [ ] TC1: change directory with absolute path
+* [x] TC1: change directory with absolute path
   0. start at root directory 
   1. input: `cd /test/test_0/`
   2. expected outcome: directory now is `/test/test_0/`
-* [ ] TC2: change directory without argument
+* [x] TC2: change directory without argument
   0. start at root directory 
   1. input: `cd /test/test_0/`
   2. input: `cd`
   3. expected outcome: directory is now root / home directory
-* [ ] TC3: change directory with relative path
+* [x] TC3: change directory with relative path
   0. start at root directory 
   1. input: `cd /test/test_0/`
   2. input: `cd ../test_1/`
   3. expected outcome: directory now is `/test/test_1/`
-* [ ] TC4: change directory when directory name has whitespace
+* [x] TC4: change directory when directory name has whitespace
   0. start at root directory 
   1. input: `cd test`
   2. input: `cd 'test 3'`
   3. expected outcome: directory now is `/test/test 3/`
-* [ ] TC5: change directory into current directory
+* [x] TC5: change directory into current directory
   0. start at root directory 
   1. input: `cd test`
   2. input: `cd .`
   3. expected outcome: directory is now `/test/`
-* [ ] TC6: change directory above root directory
+* [x] TC6: change directory above root directory
   0. start at root directory 
   1. input: `cd ..` (in root)
   2. expected outcome: directory is now `/`
-* [ ] TC7: change directory with multiple args
+* [x] TC7: change directory with multiple args
   0. start at root directory 
   1. input: `cd test test_0`
   2. expected outcome: descriptive error message instructing of usage
 
 ## Test Suite: help
 
-* [ ] TC1: help without args
+* [x] TC1: help without args
   1. input: `help`
   2. expected outcome: list of available commands
-* [ ] TC2: help with command as an arg
+* [x] TC2: help with command as an arg
   1. input `help mv`
   2. expected outcome: description of command move and supported arguments. Contains an example of usage
-* [ ] TC3: help with non-existing command as an arg
+* [x] TC3: help with non-existing command as an arg
   1. input `help no-such-command`
   2. expected outcome: descriptive error message instructing of usage
 
 
 ## Test Suite: rename
 
-* [ ] TC1: rename a file
+* [x] TC1: rename a file
   0. start at root directory 
   1. input `cd test`
   2. input `rename document-0.pdf document-2.pdf`
@@ -83,14 +83,21 @@ Used test material: content of directory `test/`
   5. reset:  
     a. input `rename document-2.pdf document-0.pdf`  
     b. confirm state reset with `ls`
-* [ ] TC2: rename a directory
+* [x] TC2: rename a directory
   0. start at root directory 
-* [ ] TC3: rename with invalid characters
+  1. input `cd test`
+  2. input `rename test_0 test_00`
+  3. input `ls`
+  4. expected outcome: `test_0` is not listed and `test_00` is listed
+  5. reset:  
+    a. input `rename test_00 test_0`  
+    b. confirm state reset with `ls`
+* [x] TC3: rename with invalid characters
   0. start at root directory 
   1. input `cd test`
   2. input `rename document-0.pdf @.pdf`
   3. expected outcome: descriptive error message informing of invalid characters
-* [ ] TC4: rename into a name that exist with the same parent
+* [x] TC4: rename into a name that exist with the same parent
   0. start at root directory 
   1. input `cd test`
   2. input `rename document-0.pdf document-1.pdf`
@@ -100,7 +107,7 @@ Used test material: content of directory `test/`
 ## Test Suite: move
 
 
-* [ ] TC1: move a file
+* [x] TC1: move a file
   0. start at root directory 
   1. input: `cd test`
   2. input: `mv document-0.pdf test_0`
@@ -110,7 +117,7 @@ Used test material: content of directory `test/`
     a. input: `mv /test/test_0/document-0.pdf /test/`  
     b. input: `ls /test/`  
     c. expected outcome: file `document-0.pdf` is now in path `/test/`  
-* [ ] TC2: move a path
+* [x] TC2: move a path
   0. start at root directory 
   1. input: `cd test`
   2. input: `mv test_1 test_0`
@@ -120,7 +127,7 @@ Used test material: content of directory `test/`
     a. input: `mv /test/test_0/test_1 /test/`  
     b. input: `ls /test/`  
     c. expected outcome: directory `test_1` is now in path `/test/`
-* [ ] TC3: move multiple items with wildcard
+* [x] TC3: move multiple items with wildcard
     0. start at root directory 
     1. input: `cd test`
     2. input: `mv document*.pdf test_0`
@@ -132,7 +139,7 @@ Used test material: content of directory `test/`
       a. input: `mv /test/test_0/document-0.pdf /test/`  
       b. input: `mv /test/test_0/document-1.pdf /test/`  
       c. confirm with `ls /test/`  
-* [ ] TC4: move non-existing file
+* [x] TC4: move non-existing file
   0. start at root directory 
   1. input: `cd test`
   2. input: `mv no-such-file.pdf test_0`
@@ -140,35 +147,35 @@ Used test material: content of directory `test/`
 
 ## Test Suite: remove
 
-* [ ] TC1: remove a file that exists
+* [x] TC1: remove a file that exists
   1. input: `cd test`
   2. input: `rm document-0.pdf`
   3. expected outcome: `document-0.pdf` should no longer be listed with `ls`
   4. reset state:  
     a. remove directory `/test/`  
     b. remote copy e2e-test files to reMarkable  
-* [ ] TC2: remove multiple files with a wildcard
+* [x] TC2: remove multiple files with a wildcard
   1. input: `cd test`
   2. input: `rm *.pdf`
   3. expected outcome: no `pdf` files should be listed with `ls`
   4. reset state:  
     a. remove directory `/test/`  
     b. remote copy e2e-test files to reMarkable  
-* [ ] TC3: remove a directory
+* [x] TC3: remove a directory
   1. input: `cd test`
   2. input: `rm test_0`
   3. expected outcome: path `test_0` is no longer listed with `ls`
   4. reset state:  
     a. remove directory `/test/`  
     b. remote copy e2e-test files to reMarkable
-* [ ] TC4: remove directories and files with wildcard
+* [x] TC4: remove directories and files with wildcard
   1. input: `cd test`
   2. input: `rm *`
   3. expected outcome: no files or paths should be listed with `ls`
   4. reset state:  
     a. remove directory `/test/`  
     b. remote copy e2e-test files to reMarkable  
-* [ ] TC5: try to remove a file that does not exist
+* [x] TC5: try to remove a file that does not exist
   1. input: `cd test`
   2. input: `rm does-not-exist.txt`
   3. expected outcome: descriptive error message informing of no such file found
@@ -176,17 +183,17 @@ Used test material: content of directory `test/`
 
 ## Test Suite: mkdir
 
-* [ ] TC1: mkdir with valid characters
+* [x] TC1: mkdir with valid characters
   1. input: `cd test`
   2. input: `mkdir abc`
   3. expected outcome: path `abc` is listed with `ls`
   4. reset state:
     1. remove created path: `rm /test/abc/`
-* [ ] TC2: mkdir with invalid characters
+* [x] TC2: mkdir with invalid characters
   1. input: `cd test`
   2. input: `mkdir @`
   3. expected outcome: descriptive message informing of invalid characters
-* [ ] TC3: mkdir but directory with same name exists
+* [x] TC3: mkdir but directory with same name exists
   1. input: `cd test`
   2. input: `mkdir test_0`
   3. expected outcome: descriptive message informing of path already existing
@@ -196,31 +203,40 @@ Used test material: content of directory `test/`
 ## Test Suite: rcp (remote copy)
 
 
-* [ ] TC1: Remote copy a single file
+* [x] TC1: Remote copy a single file
   1. input: `rcp /path/to/project/e2e-test/test/document-0.pdf /` 
   2. expected outcome: `ls` in root path lists `document-0.pdf`
   3. reset state:  
     a. input: `rm /document-0.pdf`  
-* [ ] TC2: Remote copy all documents in a directory
+* [x] TC2: Remote copy all documents in a directory
   1. input: `rcp -a /path/to/project/e2e-test/test/ /` 
   2. expected outcome: `ls` in root path lists `document-0.pdf` and `document-1.pdf`
   3. reset state:  
     a. input: `rm /document-0.pdf`  
     b. input: `rm /document-1.pdf`
-* [ ] TC3: Recursive remote copy
+* [x] TC3: Recursive remote copy
   0. preparation: `rm /test/`
   1. input: `rcp -r /path/to/project/e2e-test/ /` 
   2. expected outcome: all paths and supported document types are copied to root path from provided host path
-* [ ] TC4: Remote copy a file that does not exist
+* [x] TC4: Remote copy a file that does not exist
   1. input: `rcp /path/to/project/e2e-test/test/no-such-document.pdf /` 
   2. expected outcome: descriptive message of no such file existing
-* [ ] TC5: Remote copy to a directory that does not exist
+* [x] TC5: Remote copy to a directory that does not exist
   1. input: `rcp /path/to/project/e2e-test/test/document-0.pdf /does-not-exist/` 
   2. expected outcome: descriptive message of target path not existing
 
 
 ## Test Suite: refresh
 
-* [ ] TC1: Refresh restarts xochitl.service
+* [x] TC1: Refresh restarts xochitl.service
   1. input: `refresh`
   2. expected outcome: xochitl.service restarts. Verify this from the GUI application on reMarkable and on systemctl (e.g. `systemctl status xochitl.service`). 
+
+## Test Suite: exit
+
+* [x] TC1: Exit app with long command
+  1. input: `exit`
+  2. expected outcome: command exits the remarkable-vfs application
+* [x] TC2: Exit app with short command
+  1. input: `x`
+  2. expected outcome: command exits the remarkable-vfs application
