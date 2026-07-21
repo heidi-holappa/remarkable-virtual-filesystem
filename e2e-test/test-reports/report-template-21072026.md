@@ -1,8 +1,8 @@
 # Test report
 
-Release:  
-Date:  
-reMarkable device:  
+Release:  v0.4
+Date:  21.07.2026
+reMarkable device:  Paper Pro
 Used test material: content of directory `test/`  
 
 
