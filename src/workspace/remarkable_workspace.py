@@ -18,9 +18,11 @@ from src.data.metadata_source import MetadataSource
 from src.dto.content import Content
 from src.dto.entry_type_enum import EntityType
 from src.dto.metadata import Metadata
-from src.exception.constraint_violation_exception import ConstraintViolationException
+from src.exception import (
+    ConstraintViolationError,
+    InvalidMetadataError
+)
 from src.exception.invalid_content_exception import InvalidContentException
-from src.exception.invalid_metadata_exception import InvalidMetadataException
 from src.exception.invalid_path_exception import InvalidPathException
 from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirectoryException
 from src.exception.not_a_directory_exception import NotADirectoryException
@@ -303,7 +305,7 @@ class RemarkableWorkspace:
 
         In try-except following exceptions may occur:
           - InvalidPathException if target path does not exist
-          - InvalidMetadataException if metadata validation fails
+          - InvalidMetadataError if metadata validation fails
           - NotFoundException if the file to move is not found
 
         :param operand_source: name of the file to be moved
@@ -313,7 +315,7 @@ class RemarkableWorkspace:
         try:
             # Root path can not be moved
             if operand_source == "":
-                raise ConstraintViolationException("root path cannot be moved")
+                raise ConstraintViolationError("root path cannot be moved")
 
             # Attempt to resolve the target UUID
             # from the provided target path
@@ -339,7 +341,7 @@ class RemarkableWorkspace:
             for entity in entities_to_move:
                 self._move_entity(entity, target_uuid)
 
-        except (ConstraintViolationException,
+        except (ConstraintViolationError,
                 InvalidPathException,
                 NotFoundException) as e:
             print(f"mv: {e} ")
@@ -630,7 +632,7 @@ class RemarkableWorkspace:
                                      metadata=metadata, content=content)
 
 
-        except (NotFoundException, InvalidMetadataException,
+        except (NotFoundException, InvalidMetadataError,
                 InvalidContentException) as e:
             print(e)
 
@@ -976,11 +978,11 @@ class RemarkableWorkspace:
         try:
             if self._entry_is_a_collection(entity_uuid) and \
                 self._is_target_path_descendant_of_source_path(target_uuid, entity_uuid):
-                raise ConstraintViolationException(
+                raise ConstraintViolationError(
                     "collection can not be moved into itself or its descendant")
 
             if self._exists_visible_name_in_collection(entity_uuid, target_uuid):
-                raise ConstraintViolationException(
+                raise ConstraintViolationError(
                     f"destination must not contain a child with the same name: "
                     f"{self.get_visible_name_for_uuid(entity_uuid)}")
 
@@ -997,8 +999,8 @@ class RemarkableWorkspace:
             self._data[entity_uuid] = new_metadata_entry
 
         except (NotFoundException,
-                InvalidMetadataException,
-                ConstraintViolationException,
+                InvalidMetadataError,
+                ConstraintViolationError,
                 RemarkableWriteException) as e:
             print(f"mv: {e} ")
 

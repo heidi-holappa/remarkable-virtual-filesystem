@@ -6,7 +6,7 @@ import unittest
 
 from src.dto.entry_type_enum import EntityType
 from src.dto.metadata import Metadata
-from src.exception.invalid_metadata_exception import InvalidMetadataException
+from src.exception import InvalidMetadataError
 
 
 class TestMetadata(unittest.TestCase):
@@ -39,7 +39,7 @@ class TestMetadata(unittest.TestCase):
 
 
     def test_negative_created_time_raises_validation_exception(self) -> None:
-        with self.assertRaises(InvalidMetadataException) as context:
+        with self.assertRaises(InvalidMetadataError) as context:
             Metadata(
                 created_time=-1,
                 last_modified=int(time.time() * 1000),
@@ -55,7 +55,7 @@ class TestMetadata(unittest.TestCase):
 
 
     def test_last_modified_in_far_future_raises_validation_exception(self) -> None:
-        with self.assertRaises(InvalidMetadataException) as context:
+        with self.assertRaises(InvalidMetadataError) as context:
             Metadata(
                 created_time=int(time.time() * 1000),
                 last_modified=int((time.time() + 100000) * 1000),
@@ -70,7 +70,7 @@ class TestMetadata(unittest.TestCase):
         self.assertTrue("lastModified" in str(context.exception))
 
     def test_none_as_last_modified_raises_validation_exception(self) -> None:
-        with self.assertRaises(InvalidMetadataException) as context:
+        with self.assertRaises(InvalidMetadataError) as context:
             Metadata(
                 created_time=int(time.time() * 1000),
                 last_modified=None,
@@ -86,7 +86,7 @@ class TestMetadata(unittest.TestCase):
 
 
     def test_none_as_new_raises_validation_exception(self) -> None:
-        with self.assertRaises(InvalidMetadataException) as context:
+        with self.assertRaises(InvalidMetadataError) as context:
             Metadata(
                 created_time=int(time.time() * 1000),
                 last_modified=int(time.time() * 1000),
@@ -101,7 +101,7 @@ class TestMetadata(unittest.TestCase):
         self.assertTrue("new" in str(context.exception))
 
     def test_string_as_new_raises_validation_exception(self) -> None:
-        with self.assertRaises(InvalidMetadataException) as context:
+        with self.assertRaises(InvalidMetadataError) as context:
             Metadata(
                 created_time=int(time.time() * 1000),
                 last_modified=int(time.time() * 1000),
@@ -116,7 +116,7 @@ class TestMetadata(unittest.TestCase):
         self.assertTrue("new" in str(context.exception))
 
     def test_None_as_parent_raises_validation_exception(self) -> None:
-        with self.assertRaises(InvalidMetadataException) as context:
+        with self.assertRaises(InvalidMetadataError) as context:
             Metadata(
                 created_time=int(time.time() * 1000),
                 last_modified=int(time.time() * 1000),
@@ -131,7 +131,7 @@ class TestMetadata(unittest.TestCase):
         self.assertTrue("parent" in str(context.exception))
 
     def test_invalid_uuid_as_parent_raises_validation_exception(self) -> None:
-        with self.assertRaises(InvalidMetadataException) as context:
+        with self.assertRaises(InvalidMetadataError) as context:
             Metadata(
                 created_time=int(time.time() * 1000),
                 last_modified=int(time.time() * 1000),
@@ -146,7 +146,7 @@ class TestMetadata(unittest.TestCase):
         self.assertTrue("parent" in str(context.exception))
 
     def test_str_as_pinned_raises_validation_exception(self) -> None:
-        with self.assertRaises(InvalidMetadataException) as context:
+        with self.assertRaises(InvalidMetadataError) as context:
             Metadata(
                 created_time=int(time.time() * 1000),
                 last_modified=int(time.time() * 1000),
@@ -160,7 +160,7 @@ class TestMetadata(unittest.TestCase):
         self.assertTrue("pinned" in str(context.exception))
 
     def test_none_as_source_raises_validation_exception(self) -> None:
-        with self.assertRaises(InvalidMetadataException) as context:
+        with self.assertRaises(InvalidMetadataError) as context:
             Metadata(
                 created_time=int(time.time() * 1000),
                 last_modified=int(time.time() * 1000),
@@ -174,7 +174,7 @@ class TestMetadata(unittest.TestCase):
         self.assertTrue("source" in str(context.exception))
 
     def test_str_as_type_raises_validation_exception(self) -> None:
-        with self.assertRaises(InvalidMetadataException) as context:
+        with self.assertRaises(InvalidMetadataError) as context:
             Metadata(
                 created_time=int(time.time() * 1000),
                 last_modified=int(time.time() * 1000),
@@ -189,7 +189,7 @@ class TestMetadata(unittest.TestCase):
 
 
     def test_none_as_visible_name_raises_validation_exception(self) -> None:
-        with self.assertRaises(InvalidMetadataException) as context:
+        with self.assertRaises(InvalidMetadataError) as context:
             Metadata(
                 created_time=int(time.time() * 1000),
                 last_modified=int(time.time() * 1000),
