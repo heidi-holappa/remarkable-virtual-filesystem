@@ -704,7 +704,8 @@ class RemarkableWorkspace:
         for abs_path in files:
             rel_path = abs_path.removeprefix(source_path).removeprefix('/')
             dirs_and_filename: List[str] = rel_path.split('/')
-            filename: str = dirs_and_filename[-1:][0]
+            # Note: the last element contains the filename:
+            # filename: str = dirs_and_filename[-1:][0]
             dirs: List[str] = dirs_and_filename[:-1]
             parent = target_collection
             for directory in dirs:
