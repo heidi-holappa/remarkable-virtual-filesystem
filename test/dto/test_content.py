@@ -5,8 +5,7 @@ import unittest
 
 from src.dto.content import Content
 from src.dto.file_type_enum import FileType
-from src.exception.invalid_content_exception import InvalidContentException
-
+from src.exception import InvalidContentError
 
 class TestContent(unittest.TestCase):
 
@@ -20,14 +19,14 @@ class TestContent(unittest.TestCase):
         self.assertTrue("epub", content.file_type.value)
 
     def test_content_with_file_type_none_raises_exception(self) -> None:
-        with self.assertRaises(InvalidContentException) as context:
+        with self.assertRaises(InvalidContentError) as context:
             Content(file_type=None)
 
         self.assertTrue("fileType for content file must be an Enum FileType"
                         in str(context.exception), msg=context.exception)
 
     def test_content_with_file_type_str_raises_exception(self) -> None:
-        with self.assertRaises(InvalidContentException) as context:
+        with self.assertRaises(InvalidContentError) as context:
             Content(file_type="pdf")
 
         self.assertTrue("fileType for content file must be an Enum FileType"
@@ -51,12 +50,12 @@ class TestContent(unittest.TestCase):
 
 
     def test_from_dict_missing_field_raises_exception(self) -> None:
-        with self.assertRaises(InvalidContentException) as context:
+        with self.assertRaises(InvalidContentError) as context:
             Content.from_dict({})
         self.assertTrue("Missing content field" in str(context.exception))
 
     def test_from_dict_invalid_file_type(self) -> None:
-        with self.assertRaises(InvalidContentException) as context:
+        with self.assertRaises(InvalidContentError) as context:
             Content.from_dict({"fileType": "txt"})
         self.assertTrue("fileType: invalid value" in str(context.exception))
 

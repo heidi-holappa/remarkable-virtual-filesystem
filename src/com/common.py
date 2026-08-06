@@ -8,10 +8,12 @@ import subprocess
 from typing import List
 
 from src.constant import ROOT_COLLECTION
-from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirectoryException
-from src.exception.not_a_directory_exception import NotADirectoryException
-from src.exception.not_found_exception import NotFoundException
-from src.exception.remarkable_operation_exception import RemarkableOperationException
+from src.exception import (
+    RemarkableOperationError,
+    NotFoundError,
+    NoSuchFileOrDirectoryError,
+    NoSuchDirectoryError
+)
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from src.workspace.workspace_manager import WorkspaceManager
 
@@ -39,8 +41,8 @@ def cd(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> Non
         try:
             operand: str = utility_arguments[0]
             ws.change_collection(operand)
-        except (NoSuchFileOrDirectoryException,
-                NotADirectoryException) as e:
+        except (NoSuchFileOrDirectoryError,
+                NoSuchDirectoryError) as e:
             print(f"cd: {str(e)}")
 
 def mv(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> None:
@@ -138,7 +140,7 @@ def ls(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> Non
     try:
         ws = workspace_manager.get()
         ws.process_ls(utility_arguments)
-    except NotFoundException as e:
+    except NotFoundError as e:
         print(e)
 
 def mkdir(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> None:
@@ -189,7 +191,7 @@ def refresh(workspace_manager: WorkspaceManager) -> None:
     ws = workspace_manager.get()
     try:
         ws.restart_xochitl()
-    except RemarkableOperationException as e:
+    except RemarkableOperationError as e:
         print(f"refresh: unexpected error occurred: {e}")
 
 
@@ -203,6 +205,6 @@ def handle_exit(workspace_manager: WorkspaceManager) -> None:
     try:
         ws.restart_xochitl()
         sys.exit(0)
-    except RemarkableOperationException as e:
+    except RemarkableOperationError as e:
         print(e)
         sys.exit(1)

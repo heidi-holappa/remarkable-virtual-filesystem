@@ -28,8 +28,15 @@ class InvalidPathError(FilesystemError):
 
 class NoSuchFileOrDirectoryError(FilesystemError):
     """
+    Exception indicating that no metadata file
+    with given path exists. This includes both
+    DocumentTypes (files) and CollectionTypes
+    (paths).
+    """
+
+class NoSuchDirectoryError(FilesystemError):
+    """
     Exception for handling paths that are expected to point
     to a directory but point to another type of entity. Currently,
     the only other type of entities are DocumentTypes (files)
     """
-
