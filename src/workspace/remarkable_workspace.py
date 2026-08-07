@@ -18,15 +18,19 @@ from src.data.metadata_source import MetadataSource
 from src.dto.content import Content
 from src.dto.entry_type_enum import EntityType
 from src.dto.metadata import Metadata
-from src.exception.constraint_violation_exception import ConstraintViolationException
-from src.exception.invalid_content_exception import InvalidContentException
-from src.exception.invalid_metadata_exception import InvalidMetadataException
-from src.exception.invalid_path_exception import InvalidPathException
-from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirectoryException
-from src.exception.not_a_directory_exception import NotADirectoryException
-from src.exception.not_found_exception import NotFoundException
-from src.exception.remarkable_write_exception import RemarkableWriteException
-from src.exception.invalid_argument_exception import InvalidArgumentException
+from src.exception import (
+    ConstraintViolationError,
+    InvalidMetadataError
+)
+from src.exception import (
+    RemarkableWriteError,
+    NotFoundError,
+    NoSuchFileOrDirectoryError,
+    NoSuchDirectoryError,
+    InvalidPathError,
+    InvalidArgumentError,
+    InvalidContentError
+)
 
 
 class RemarkableWorkspace:
@@ -55,7 +59,7 @@ class RemarkableWorkspace:
         Returns the data for the provided UUID.
 
         Raises:
-          - NotFoundException if data is not found
+          - NotFoundError if data is not found
 
         :param entry_uuid: UUID of the entry
         :return: a dictionary of metadata
@@ -64,7 +68,7 @@ class RemarkableWorkspace:
         data: Optional[Dict[str, Any]] = self._data.get(entry_uuid)
 
         if not data:
-            raise NotFoundException(f"Metadata not found for {entry_uuid}")
+            raise NotFoundError(f"Metadata not found for {entry_uuid}")
 
         return data
 
@@ -74,7 +78,7 @@ class RemarkableWorkspace:
         returns an empty string
 
         Raises:
-          - NotFoundException if the entity is not found
+          - NotFoundError if the entity is not found
 
         :param entity_uuid: UUID for a Document or Collection type
         :return: visible name of the entity
@@ -86,7 +90,7 @@ class RemarkableWorkspace:
         data: Optional[Dict[str, Any]] = self._data.get(entity_uuid)
 
         if not data:
-            raise NotFoundException(f"Metadata not found for {entity_uuid}")
+            raise NotFoundError(f"Metadata not found for {entity_uuid}")
 
         return data.get('visibleName')
 
@@ -111,20 +115,20 @@ class RemarkableWorkspace:
         :param collection: UUID of the collection or an empty string for root
 
         raises:
-          - NotFoundException: if collection is not found
+          - NotFoundError: if collection is not found
         """
         is_root = collection == ''
         is_valid_collection = (self._data.get(collection)
                                and self._data[collection].get('type') == 'CollectionType')
         if not (is_root or is_valid_collection):
-            raise NotFoundException(COLLECTION_NOT_FOUND)
+            raise NotFoundError(COLLECTION_NOT_FOUND)
         self._current_collection = collection
 
 
     def get_parent(self, entity_uuid: Optional[str] = None) -> str:
         """
         raises:
-          - NotFoundException: if parent is not found
+          - NotFoundError: if parent is not found
 
         :param entity_uuid: optional uuid of an entity for which parent should be given
                         if no parameter is given, parent of current collection is returned
@@ -139,7 +143,7 @@ class RemarkableWorkspace:
             return ROOT_COLLECTION
 
         if not self._data.get(entity_uuid):
-            raise NotFoundException(COLLECTION_NOT_FOUND)
+            raise NotFoundError(COLLECTION_NOT_FOUND)
 
         return self._data.get(entity_uuid).get('parent')
 
@@ -149,7 +153,7 @@ class RemarkableWorkspace:
         parent and a matching visible name
 
         raises:
-          - NotADirectoryException: if only match for a segment of a path is a DocumentType (file)
+          - NoSuchDirectoryError: if only match for a segment of a path is a DocumentType (file)
 
         :param file_name: a name of the collection
         :param parent: UUID of the parent
@@ -165,7 +169,7 @@ class RemarkableWorkspace:
             if v.get('visibleName') == file_name:
                 has_document_type_with_given_file_name = True
         if has_document_type_with_given_file_name:
-            raise NotADirectoryException(f'{file_name}: {NOT_A_DIRECTORY}')
+            raise NoSuchDirectoryError(f'{file_name}: {NOT_A_DIRECTORY}')
 
         return None
 
@@ -212,7 +216,7 @@ class RemarkableWorkspace:
         Processes ls command and lists files either in current
         collection or matching the provided argument. The argument
         is expected to be a path (collection). If argument is provided,
-        and it does not match any collection, raises NotFoundException.
+        and it does not match any collection, raises NotFoundError.
 
         :param utility_args: optional utility arguments for ls
         """
@@ -224,7 +228,7 @@ class RemarkableWorkspace:
             collection_to_list_uuid: str | None = (
                 self._traverse_path(operand_path))
             if collection_to_list_uuid is None:
-                raise NotFoundException("ls: no such path")
+                raise NotFoundError("ls: no such path")
         else:
             collection_to_list_uuid = self.get_current_collection()
 
@@ -268,12 +272,12 @@ class RemarkableWorkspace:
         """
         Attempts to change current collection to the provided
         collection. If traversal of given path fails to locate
-        a collection, InvalidPathException is raised.
+        a collection, InvalidPathError is raised.
 
         raises:
-          - NotADirectoryException: instead of passing the raised exception a
+          - NoSuchDirectoryError: instead of passing the raised exception a
           new one is thrown to include the full path in error message
-          - NoSuchFileOrDirectoryException: no matching file or directory was found
+          - NoSuchFileOrDirectoryError: no matching file or directory was found
 
         :param operand_path: a string representation of a path operand
         """
@@ -281,10 +285,10 @@ class RemarkableWorkspace:
 
         try:
             collection_pointer = self._traverse_path(operand_path)
-        except NotADirectoryException as e:
-            raise NotADirectoryException(f"{operand_path}: {NOT_A_DIRECTORY}") from e
+        except NoSuchDirectoryError as e:
+            raise NoSuchDirectoryError(f"{operand_path}: {NOT_A_DIRECTORY}") from e
         if collection_pointer is None:
-            raise NoSuchFileOrDirectoryException(f"{operand_path}: {NO_SUCH_FILE_OR_DIRECTORY}")
+            raise NoSuchFileOrDirectoryError(f"{operand_path}: {NO_SUCH_FILE_OR_DIRECTORY}")
 
         self._current_collection = collection_pointer
 
@@ -302,9 +306,9 @@ class RemarkableWorkspace:
         names of the entities.
 
         In try-except following exceptions may occur:
-          - InvalidPathException if target path does not exist
-          - InvalidMetadataException if metadata validation fails
-          - NotFoundException if the file to move is not found
+          - InvalidPathError if target path does not exist
+          - InvalidMetadataError if metadata validation fails
+          - NotFoundError if the file to move is not found
 
         :param operand_source: name of the file to be moved
         :param operand_target: the directory of the target parent
@@ -313,13 +317,13 @@ class RemarkableWorkspace:
         try:
             # Root path can not be moved
             if operand_source == "":
-                raise ConstraintViolationException("root path cannot be moved")
+                raise ConstraintViolationError("root path cannot be moved")
 
             # Attempt to resolve the target UUID
             # from the provided target path
             target_uuid: Optional[str] = self._traverse_path(operand_target)
             if target_uuid is None:
-                raise InvalidPathException(f'{operand_target}: {NO_SUCH_FILE_OR_DIRECTORY}')
+                raise InvalidPathError(f'{operand_target}: {NO_SUCH_FILE_OR_DIRECTORY}')
 
             visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(operand_source)
 
@@ -333,15 +337,15 @@ class RemarkableWorkspace:
                 visible_name, parent_uuid))
 
             if not entities_to_move:
-                raise NotFoundException(
+                raise NotFoundError(
                     f"cannot move {operand_source}: {NO_SUCH_FILE_OR_DIRECTORY}")
 
             for entity in entities_to_move:
                 self._move_entity(entity, target_uuid)
 
-        except (ConstraintViolationException,
-                InvalidPathException,
-                NotFoundException) as e:
+        except (ConstraintViolationError,
+                InvalidPathError,
+                NotFoundError) as e:
             print(f"mv: {e} ")
 
     # -------------------------
@@ -354,7 +358,7 @@ class RemarkableWorkspace:
         pattern from the reMarkable device.
 
         Handles following exceptions and informs user of an error:
-          - NotFoundException if source path is not found
+          - NotFoundError if source path is not found
           - KeyError: if UUID is not found for data to be removed
 
         :param target_pattern: pattern for sources to be removed
@@ -372,7 +376,7 @@ class RemarkableWorkspace:
             for item_uuid in entities_to_remove:
                 self._data.pop(item_uuid)
 
-        except (NotFoundException, KeyError) as e:
+        except (NotFoundError, KeyError) as e:
             print(f"ERROR: {e}")
 
 
@@ -395,7 +399,7 @@ class RemarkableWorkspace:
             options: List[str] = utility_args[:-2]
 
             if len(options) > 1 or not self._has_only_valid_options(options):
-                raise InvalidArgumentException(
+                raise InvalidArgumentError(
                     f"invalid options: {','.join(options)}: hint: help rcp")
 
             # The source and target MUST be the last two arguments
@@ -427,7 +431,7 @@ class RemarkableWorkspace:
 
             self._data = self._source.load()
 
-        except (InvalidArgumentException, NotFoundException) as e:
+        except (InvalidArgumentError, NotFoundError) as e:
             print(f"rcp: {e}")
 
     def process_rcp_command_without_options(self, source_file: str, target_collection: str) -> None:
@@ -449,7 +453,7 @@ class RemarkableWorkspace:
 
             self._data = self._source.load()
 
-        except NotFoundException as e:
+        except NotFoundError as e:
             print(f"rcp: {e}")
 
     # -------------------------
@@ -461,8 +465,8 @@ class RemarkableWorkspace:
         parent.
 
         Handles possible raised errors:
-          - InvalidPathException if path is not valid
-          - RemarkableWriteException if an error occurs while
+          - InvalidPathError if path is not valid
+          - RemarkableWriteError if an error occurs while
             communicating with the remarkable device
 
         :param operand_path: path to create
@@ -479,9 +483,9 @@ class RemarkableWorkspace:
             self._create_collection_metadata_and_invoke_write(
                 parent, operand_path)
 
-        except InvalidPathException as e:
+        except InvalidPathError as e:
             print(f"mkdir: {operand_path}: {e}: hint: try help mkdir")
-        except RemarkableWriteException as e:
+        except RemarkableWriteError as e:
             print(f"mkdir: {operand_path}: error writing to remarkable: {e}")
 
     # --------------------------------
@@ -519,9 +523,9 @@ class RemarkableWorkspace:
             # Update local data
             self._data[entity_uuid] = new_metadata_entry
 
-        except InvalidArgumentException as e:
+        except InvalidArgumentError as e:
             print(f"rename: {target} {new_visible_name}: {e}: hint: help rename")
-        except NotFoundException as e:
+        except NotFoundError as e:
             print(f"rename: {target} {new_visible_name}: {e}: hint: help rename")
 
 
@@ -553,7 +557,7 @@ class RemarkableWorkspace:
         Metadata entry and attempts to write it. Callee must take
         any possible validation into consideration.
 
-        Raises: RemarkableWriteException in case write operation
+        Raises: RemarkableWriteError in case write operation
                 fails. Callee must handle the possible exception
 
         :param parent: UUID of the parent collection
@@ -630,8 +634,8 @@ class RemarkableWorkspace:
                                      metadata=metadata, content=content)
 
 
-        except (NotFoundException, InvalidMetadataException,
-                InvalidContentException) as e:
+        except (NotFoundError, InvalidMetadataError,
+                InvalidContentError) as e:
             print(e)
 
     @staticmethod
@@ -652,9 +656,9 @@ class RemarkableWorkspace:
                                          target_collection: str,
                                          target_uuid: Optional[str]) -> None:
         if not os.path.exists(source):
-            raise NotFoundException(f"rcp: source file {source} not found")
+            raise NotFoundError(f"rcp: source file {source} not found")
         if target_uuid is None:
-            raise NotFoundException(f"rcp: target path {target_collection} not found")
+            raise NotFoundError(f"rcp: target path {target_collection} not found")
 
     @staticmethod
     def _find_all_pdf_and_epub_files_in_path(path: str, recurse: bool) -> List[str]:
@@ -687,7 +691,7 @@ class RemarkableWorkspace:
         collections to reMarkable in case of recursive remote copy.
 
         Raises: called function _get_or_create_collection may raise
-        RemarkableWriteException which must be handled by the callee.
+        RemarkableWriteError which must be handled by the callee.
 
         :param source_path: the absolute path from which files are copied
         :param files: absolute path to each file
@@ -700,7 +704,8 @@ class RemarkableWorkspace:
         for abs_path in files:
             rel_path = abs_path.removeprefix(source_path).removeprefix('/')
             dirs_and_filename: List[str] = rel_path.split('/')
-            filename: str = dirs_and_filename[-1:][0]
+            # Note: the last element contains the filename:
+            # filename: str = dirs_and_filename[-1:][0]
             dirs: List[str] = dirs_and_filename[:-1]
             parent = target_collection
             for directory in dirs:
@@ -716,7 +721,7 @@ class RemarkableWorkspace:
         Either gets a collection with a given visible name and parent,
         or creates the collection.
 
-        Raises: invoked function may raise MetadataWriteException. Callee
+        Raises: invoked function may raise MetadataWriteError. Callee
                 must handle this.
 
         :param parent: UUID of the parent
@@ -756,12 +761,12 @@ class RemarkableWorkspace:
         """
 
         if not new_visible_name:
-            raise InvalidArgumentException("visible name cannot be an empty string")
+            raise InvalidArgumentError("visible name cannot be an empty string")
         if self._has_visible_name_equal_to_entry_uuid_in_collection(
                 entry_uuid, new_visible_name, parent_uuid):
-            raise InvalidArgumentException("parent has a child with the same name")
+            raise InvalidArgumentError("parent has a child with the same name")
         if not bool(VALID_VISIBLE_NAME_REGEX.fullmatch(new_visible_name)):
-            raise InvalidArgumentException("visible name contains invalid characters")
+            raise InvalidArgumentError("visible name contains invalid characters")
 
 
 
@@ -777,22 +782,22 @@ class RemarkableWorkspace:
           (a-zA-Z0-9), slash (-), underscore (_) and dots (.)
 
         raises:
-          - InvalidPathException: if validation fails
+          - InvalidPathError: if validation fails
 
         :param path: path to validate
         """
 
         if not path:
-            raise InvalidPathException("path cannot be an empty string")
+            raise InvalidPathError("path cannot be an empty string")
 
         if self._parent_has_child_path_with_given_name(self._current_collection, path):
-            raise InvalidPathException("path with same name already exists")
+            raise InvalidPathError("path with same name already exists")
 
         if '/' in path:
-            raise InvalidPathException("relative or absolute paths are not yet supported")
+            raise InvalidPathError("relative or absolute paths are not yet supported")
 
         if not bool(VALID_VISIBLE_NAME_REGEX.fullmatch(path)):
-            raise InvalidPathException("path contains invalid characters")
+            raise InvalidPathError("path contains invalid characters")
 
 
     def _parent_has_child_path_with_given_name(self, parent_uuid, child_visible_name) -> bool:
@@ -820,7 +825,7 @@ class RemarkableWorkspace:
         or for multiple entities matching a wild card.
 
         Raises:
-            - NotFoundException if the parent can not be resolved
+            - NotFoundError if the parent can not be resolved
                 when path is provided with the source
 
         :param source: a source for one or several entities
@@ -832,7 +837,7 @@ class RemarkableWorkspace:
             parent_path, visible_name = source.rsplit(sep='/', maxsplit=1)
             parent_uuid = self._traverse_path(parent_path)
             if parent_uuid is None:
-                raise NotFoundException(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}")
+                raise NotFoundError(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}")
         else:
             visible_name = source
             parent_uuid = self._current_collection
@@ -906,7 +911,7 @@ class RemarkableWorkspace:
         Collects UUIDs of all descendants for the given entity_uuid.
 
         Raises:
-          - InvalidPathException if the given UUID is not a valid
+          - InvalidPathError if the given UUID is not a valid
             UUID for a CollectionType metadata entry.
 
         :param entity_uuid: a UUID for a CollectionType
@@ -914,7 +919,7 @@ class RemarkableWorkspace:
         """
 
         if not self._entry_is_a_collection(entity_uuid):
-            raise InvalidPathException(f"Metadata for CollectionType not found: {entity_uuid}")
+            raise InvalidPathError(f"Metadata for CollectionType not found: {entity_uuid}")
 
         descendants: List[str] = []
 
@@ -936,8 +941,8 @@ class RemarkableWorkspace:
         See the project wiki for a comprehensive list of path changing rules.
 
         raises:
-          - `NotADirectoryException`: if the only match is a DocumentType (file)
-          - `NotFoundException`: if parent is not found
+          - `NoSuchDirectoryError`: if the only match is a DocumentType (file)
+          - `NotFoundError`: if parent is not found
 
         :param path: a string representation of a path
         :return: an optional uuid of the target collection or None if
@@ -976,11 +981,11 @@ class RemarkableWorkspace:
         try:
             if self._entry_is_a_collection(entity_uuid) and \
                 self._is_target_path_descendant_of_source_path(target_uuid, entity_uuid):
-                raise ConstraintViolationException(
+                raise ConstraintViolationError(
                     "collection can not be moved into itself or its descendant")
 
             if self._exists_visible_name_in_collection(entity_uuid, target_uuid):
-                raise ConstraintViolationException(
+                raise ConstraintViolationError(
                     f"destination must not contain a child with the same name: "
                     f"{self.get_visible_name_for_uuid(entity_uuid)}")
 
@@ -996,10 +1001,10 @@ class RemarkableWorkspace:
             # Update local data
             self._data[entity_uuid] = new_metadata_entry
 
-        except (NotFoundException,
-                InvalidMetadataException,
-                ConstraintViolationException,
-                RemarkableWriteException) as e:
+        except (NotFoundError,
+                InvalidMetadataError,
+                ConstraintViolationError,
+                RemarkableWriteError) as e:
             print(f"mv: {e} ")
 
 
@@ -1013,7 +1018,7 @@ class RemarkableWorkspace:
 
         try:
             self._source.remove(entity_uuids)
-        except RemarkableWriteException as e:
+        except RemarkableWriteError as e:
             print(f"ERROR: {e}")
 
 
@@ -1023,7 +1028,7 @@ class RemarkableWorkspace:
         that matches the given wildcard.
 
         Raises:
-            - NotFoundException if the parent UUID is not found
+            - NotFoundError if the parent UUID is not found
 
         :param parent_uuid:
         :param wildcard:
@@ -1033,10 +1038,10 @@ class RemarkableWorkspace:
 
         try:
             if not self._entry_is_a_collection(parent_uuid):
-                raise NotFoundException(PARENT_NOT_FOUND.format(
+                raise NotFoundError(PARENT_NOT_FOUND.format(
                     parent=parent_uuid, entity=wildcard))
-        except NotFoundException as e:
-            raise NotFoundException(
+        except NotFoundError as e:
+            raise NotFoundError(
                 PARENT_NOT_FOUND.format(parent=parent_uuid, entity=wildcard)) from e
 
 
@@ -1070,7 +1075,7 @@ class RemarkableWorkspace:
         exists in the target path.
 
         Raises:
-          - NotFoundException if metadata for entry_uuid is not found
+          - NotFoundError if metadata for entry_uuid is not found
 
         :param entry_uuid: an entry of metadata
         :param target_collection_uuid: a target collection
@@ -1091,7 +1096,7 @@ class RemarkableWorkspace:
         exists in the target path.
 
         Raises:
-          - NotFoundException if metadata for entry_uuid is not found
+          - NotFoundError if metadata for entry_uuid is not found
 
         :param entry_uuid: an entry of metadata
         :param visible_name: visible name to search for
@@ -1144,7 +1149,7 @@ class RemarkableWorkspace:
         may either be a DocumentType or a CollectionType.
 
         Raises:
-          - NotFoundException, if no match is found
+          - NotFoundError, if no match is found
 
         :param filename: the visibleName of the entry
         :param parent_uuid: the parent of the entry
@@ -1164,7 +1169,7 @@ class RemarkableWorkspace:
             path: Optional[str] = self.generate_absolute_collection_path(parent_uuid)
             if path:
                 path_prefix = f"{path}"
-        raise NotFoundException(f"cannot access {path_prefix}/{filename}: "
+        raise NotFoundError(f"cannot access {path_prefix}/{filename}: "
                                 f"{NO_SUCH_FILE_OR_DIRECTORY}")
 
     def _entry_is_a_collection(self, entity_uuid) -> bool:
@@ -1173,7 +1178,7 @@ class RemarkableWorkspace:
         is of type CollectionType.
 
         Raises:
-          - NotFoundException if a metadata entry for the given
+          - NotFoundError if a metadata entry for the given
             UUID is not found
 
         :param entity_uuid: UUID of the entry

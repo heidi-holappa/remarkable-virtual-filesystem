@@ -3,7 +3,7 @@ from io import StringIO
 from unittest.mock import patch, MagicMock
 
 from src.com.common import cd, ls, mv, rename, rm, mkdir, rcp, clear, refresh, handle_exit
-from src.exception.remarkable_operation_exception import RemarkableOperationException
+from src.exception import RemarkableOperationError
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from test.stub_remarkable_metadata_source import StubRemarkableMetadataSource
 from src.workspace.workspace_manager import WorkspaceManager
@@ -387,7 +387,7 @@ class TestCommon(unittest.TestCase):
 
     @patch.object(RemarkableWorkspace, "restart_xochitl")
     def test_refresh_logs_exception(self, mock_restart_xochitl: MagicMock) -> None:
-        mock_restart_xochitl.side_effect = RemarkableOperationException("failure")
+        mock_restart_xochitl.side_effect = RemarkableOperationError("failure")
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             refresh(self.manager)
@@ -412,7 +412,7 @@ class TestCommon(unittest.TestCase):
     @patch.object(RemarkableWorkspace, "restart_xochitl")
     def test_handle_exit_failure(self, mock_restart_xochitl: MagicMock) -> None:
         # Arrange
-        mock_restart_xochitl.side_effect = RemarkableOperationException("failure")
+        mock_restart_xochitl.side_effect = RemarkableOperationError("failure")
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             with self.assertRaises(SystemExit) as context:

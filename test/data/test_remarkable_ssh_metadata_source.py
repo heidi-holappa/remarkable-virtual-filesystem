@@ -42,7 +42,7 @@ from src.dto.content import Content
 from src.dto.entry_type_enum import EntityType
 from src.dto.file_type_enum import FileType
 from src.dto.metadata import Metadata
-from src.exception.remarkable_write_exception import RemarkableWriteException
+from src.exception import RemarkableWriteError
 from test.test_data import UUID_FAIRYTALE, UUID_FAIRYTALE_2
 
 # System under test (SUT)
@@ -261,7 +261,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         mock_popen.return_value.__enter__.return_value = mock_proc
 
 
-        with self.assertRaises(RemarkableWriteException) as context:
+        with self.assertRaises(RemarkableWriteError) as context:
             self.call_write_metadata_to_remarkable_with_valid_data()
 
 
@@ -269,7 +269,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
     @patch("subprocess.Popen", side_effect=OSError('test'))
     def test_metadata_write_fails_due_to_os_error(self, mock_popen) -> None:
-        with self.assertRaises(RemarkableWriteException) as context:
+        with self.assertRaises(RemarkableWriteError) as context:
             self.call_write_metadata_to_remarkable_with_valid_data()
 
         self.assertTrue("OS error while writing metadata" in str(context.exception))
@@ -326,7 +326,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
     @patch("subprocess.Popen", side_effect=OSError('test'))
     def test_remove_fails_due_to_os_error(self, mock_popen) -> None:
-        with self.assertRaises(RemarkableWriteException) as context:
+        with self.assertRaises(RemarkableWriteError) as context:
             self.source.remove([UUID_FAIRYTALE])
 
         self.assertTrue("OS error while removing files:" in str(context.exception))
@@ -340,7 +340,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
         mock_popen.return_value.__enter__.return_value = mock_proc
 
-        with self.assertRaises(RemarkableWriteException) as context:
+        with self.assertRaises(RemarkableWriteError) as context:
             self.source.remove([UUID_FAIRYTALE])
 
         self.assertTrue("Failed to remove files:" in str(context.exception))
@@ -445,7 +445,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         with patch(f"{SUT}.shutil.copy"), \
                 patch(f"{SUT}.open", create=True), \
                 patch(f"{SUT}.json.dump"):
-            with self.assertRaises(RemarkableWriteException):
+            with self.assertRaises(RemarkableWriteError):
                 self.source.remote_copy(
                     source_file=source_file,
                     metadata=metadata,

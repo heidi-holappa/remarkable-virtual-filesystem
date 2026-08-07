@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Any, Self, Set
 
 from src.dto.file_type_enum import FileType
-from src.exception.invalid_content_exception import InvalidContentException
+from src.exception import InvalidContentError
 
 
 @dataclass(slots=True)
@@ -33,7 +33,7 @@ class Content:
             validation_errors.append("fileType for content file must be either pdf or epub")
 
         if validation_errors:
-            raise InvalidContentException(
+            raise InvalidContentError(
                 f"one or more fields for .content file have invalid values: {','.join(validation_errors)}")
 
 
@@ -57,7 +57,7 @@ class Content:
         content file.
 
         Raises:
-            - InvalidContentException if the provided dictionary
+            - InvalidContentError if the provided dictionary
                 violates the validation rules of Content instance
 
         :param content_dict: a dictionary from which content is generated
@@ -71,7 +71,7 @@ class Content:
         missing_fields: Set[str] = required_fields - set(content_dict.keys())
 
         if missing_fields:
-            raise InvalidContentException(
+            raise InvalidContentError(
                 f"Missing content fields: {', '.join(sorted(missing_fields))}"
             )
 
@@ -79,7 +79,7 @@ class Content:
         try:
             file_type = FileType(content_dict["fileType"])
         except Exception as e:
-            raise InvalidContentException(
+            raise InvalidContentError(
                 f"fileType: invalid value {content_dict['fileType']}"
             ) from e
 
