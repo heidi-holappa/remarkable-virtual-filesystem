@@ -20,8 +20,10 @@ from src.constant import (
 from src.data.metadata_source import MetadataSource
 from src.dto.content import Content
 from src.dto.metadata import Metadata
-from src.exception.remarkable_operation_exception import RemarkableOperationException
-from src.exception.remarkable_write_exception import RemarkableWriteException
+from src.exception import (
+    RemarkableOperationError,
+    RemarkableWriteError
+)
 
 
 class RemarkableSSHMetadataSource(MetadataSource):
@@ -52,7 +54,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
         the Xochitl process.
 
         raises:
-          **RemarkableWriteException**: indicates an exception occurred during write operation
+          **RemarkableWriteError**: indicates an exception occurred during write operation
 
         :param entry_uuid: the UUID for which a metadata-file is to be written
         :param metadata: a Metadata DTO containing the metadata to be written
@@ -75,12 +77,12 @@ class RemarkableSSHMetadataSource(MetadataSource):
                 _ , stderr = proc.communicate(metadata_content)
 
                 if proc.returncode != 0:
-                    raise RemarkableWriteException(
+                    raise RemarkableWriteError(
                         f"Failed to write metadata: {stderr.strip()}"
                     )
 
         except OSError as e:
-            raise RemarkableWriteException(
+            raise RemarkableWriteError(
                 f"OS error while writing metadata: {e}"
             ) from e
 
@@ -92,7 +94,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
         given UUID as a suffix.
 
         Raises:
-          - **RemarkableWriteException**: indicates an exception occurred during write operation
+          - **RemarkableWriteError**: indicates an exception occurred during write operation
 
         :param entity_uuids: UUID of the entity to remove
         """
@@ -116,12 +118,12 @@ class RemarkableSSHMetadataSource(MetadataSource):
                 _, stderr = proc.communicate()
 
                 if proc.returncode != 0:
-                    raise RemarkableWriteException(
+                    raise RemarkableWriteError(
                         f"Failed to remove files: {stderr.strip()}"
                     )
 
         except OSError as e:
-            raise RemarkableWriteException(
+            raise RemarkableWriteError(
                 f"OS error while removing files: {e}"
             ) from e
 
@@ -161,7 +163,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
                 # ---- Transfer using tar over ssh ----
                 self._invoke_file_transfer(tmp_dir)
 
-            except RemarkableWriteException as e:
+            except RemarkableWriteError as e:
                 raise e
 
     @staticmethod
@@ -190,7 +192,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
                 ssh_proc.communicate()
 
                 if ssh_proc.returncode != 0:
-                    raise RemarkableWriteException(
+                    raise RemarkableWriteError(
                         f"rcp: failed to copy file. subprocess return code: {ssh_proc.returncode}")
 
     @staticmethod
@@ -201,7 +203,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
         This is typically required after modifying files in the xochitl data
         directory for changes to take effect.
 
-        :raises RemarkableOperationException: if the restart command fails
+        :raises RemarkableOperationError: if the restart command fails
         """
 
         cmd = ["ssh", SSH_REMOTE_HOST, "systemctl restart xochitl"]
@@ -214,7 +216,7 @@ class RemarkableSSHMetadataSource(MetadataSource):
                 check=True,
             )
         except subprocess.CalledProcessError as e:
-            raise RemarkableOperationException(
+            raise RemarkableOperationError(
                 f"Failed to restart xochitl:\n"
                 f"STDOUT: {e.stdout}\n"
                 f"STDERR: {e.stderr}"

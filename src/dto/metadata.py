@@ -8,7 +8,7 @@ from typing import List, Dict, Set, Any, Self
 
 from src.constant import UUID_REGEX
 from src.dto.entry_type_enum import EntityType
-from src.exception.invalid_metadata_exception import InvalidMetadataException
+from src.exception import InvalidMetadataError
 
 
 @dataclass(slots=True)
@@ -57,7 +57,7 @@ class Metadata:
 
 
         if validation_errors:
-            raise InvalidMetadataException(
+            raise InvalidMetadataError(
                 f"one or more metadata fields have invalid values: {','.join(validation_errors)}")
 
     # -------------------------------
@@ -86,7 +86,7 @@ class Metadata:
         it MUST contain all keys that are present in metadata
 
         Raises:
-            - InvalidMetadataException if the provided dictionary
+            - InvalidMetadataError if the provided dictionary
                 violates the validation rules of Metadata instance
 
         :param metadata_dict: a dictionary from which metadata is generated
@@ -107,7 +107,7 @@ class Metadata:
         missing_fields: Set[str] = required_fields - set(metadata_dict.keys())
 
         if missing_fields:
-            raise InvalidMetadataException(
+            raise InvalidMetadataError(
                 f"Missing metadata fields: {', '.join(sorted(missing_fields))}"
             )
 
@@ -116,7 +116,7 @@ class Metadata:
         try:
             entity_type = EntityType(metadata_dict["type"])
         except Exception as e:
-            raise InvalidMetadataException(
+            raise InvalidMetadataError(
                 f"type: invalid value {metadata_dict['type']}"
             ) from e
 

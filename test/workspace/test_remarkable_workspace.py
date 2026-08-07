@@ -7,9 +7,11 @@ from unittest.mock import patch, MagicMock
 
 from src.constant import COLLECTION_NOT_FOUND, PARENT_NOT_FOUND, NO_SUCH_FILE_OR_DIRECTORY
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
-from src.exception.no_such_file_or_directory_exception import NoSuchFileOrDirectoryException
-from src.exception.not_found_exception import NotFoundException
-from src.exception.remarkable_operation_exception import RemarkableOperationException
+from src.exception import (
+    RemarkableOperationError,
+    NotFoundError,
+    NoSuchFileOrDirectoryError
+)
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from test.test_data import (
     TEST_DATA,
@@ -41,7 +43,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         assert self.ws.get_parent("") == ""
 
     def test_get_parent_for_collection_not_found_is_handled_gracefully(self) -> None:
-        with self.assertRaises(NotFoundException) as context:
+        with self.assertRaises(NotFoundError) as context:
             self.ws.get_parent("C")
 
         self.assertTrue(COLLECTION_NOT_FOUND in str(context.exception))
@@ -66,7 +68,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         assert self.ws.get_current_collection() == UUID_A
 
     def test_set_current_collection_with_invalid_collection(self) -> None:
-        with self.assertRaises(NotFoundException) as context:
+        with self.assertRaises(NotFoundError) as context:
             self.ws.set_current_collection("c")
 
         self.assertTrue(COLLECTION_NOT_FOUND in str(context.exception))
@@ -99,7 +101,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         assert self.ws.get_current_collection() == UUID_B0
 
     def test_change_collection_with_invalid_path_raises_error(self) -> None:
-        with self.assertRaises(NoSuchFileOrDirectoryException) as context:
+        with self.assertRaises(NoSuchFileOrDirectoryError) as context:
             self.ws.change_collection("C")
 
         self.assertTrue(NO_SUCH_FILE_OR_DIRECTORY in str(context.exception))
@@ -844,9 +846,9 @@ class RemarkableWorkspaceTest(unittest.TestCase):
 
     @patch.object(RemarkableSSHMetadataSource, "restart_xochitl")
     def test_refresh_raises_exception_when_refresh_fails(self, mock_restart) -> None:
-        mock_restart.side_effect = RemarkableOperationException("failure")
+        mock_restart.side_effect = RemarkableOperationError("failure")
 
-        with self.assertRaises(RemarkableOperationException) as context:
+        with self.assertRaises(RemarkableOperationError) as context:
             self.ws.restart_xochitl()
         
         mock_restart.assert_called_once()
@@ -892,7 +894,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     def test_raises_not_found_exception_if_parent_not_found(self) -> None:
         parent: str = "123-123"
         entity_wildcard = "*valid*.pdf"
-        with self.assertRaises(NotFoundException) as ctx:
+        with self.assertRaises(NotFoundError) as ctx:
             self.ws._get_matches_for_wildcard(parent, entity_wildcard)
         self.assertTrue(PARENT_NOT_FOUND.format(
             parent=parent, entity=entity_wildcard) in str(ctx.exception), msg=ctx.exception)
@@ -913,7 +915,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         )
 
     def test_raise_not_found_exception_if_entry_does_not_exist(self) -> None:
-        with self.assertRaises(NotFoundException) as ctx:
+        with self.assertRaises(NotFoundError) as ctx:
             self.assertFalse(
                 self.ws._exists_visible_name_in_collection("123-123", UUID_A)
             )
@@ -930,7 +932,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
 
     def test_when_file_is_not_found_exception_is_raised(self) -> None:
 
-        with self.assertRaises(NotFoundException) as context:
+        with self.assertRaises(NotFoundError) as context:
             self.ws._get_uuid_with_visible_name_and_parent(
                 'Sadtale.pdf', UUID_B)
 
@@ -990,7 +992,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.assertTrue(actual_root_visible_name == '')
 
     def test_not_found_exception_is_thrown_for_non_existing_uuid(self) -> None:
-        with self.assertRaises(NotFoundException) as context:
+        with self.assertRaises(NotFoundError) as context:
             self.ws.get_visible_name_for_uuid('some-uuid')
         self.assertTrue("Metadata not found for some-uuid" in str(context.exception),
                         msg=context.exception)
