@@ -111,7 +111,7 @@ SUPPORTED_INSTRUCTIONS: Dict[str, Dict[str, str | List[str]]] = {
 }
 
 
-def help_instruction(args: List[str]):
+def help_instruction(args: List[str]) -> None:
     """
         Help message provides instructions on how to
         use the reMarkable bash-emulator
@@ -143,22 +143,22 @@ def print_command_details(command: str) -> None:
     """
 
     print("")
-    command_help = SUPPORTED_INSTRUCTIONS.get(command)
-    print(f"{command}: {command_help.get("description")}")
+    command_help = SUPPORTED_INSTRUCTIONS[command]
+    print(f"{command}: {command_help["description"]}")
     if command_help.get("args"):
         print("")
         print("  args:")
-        for arg in command_help.get("args"):
+        for arg in command_help["args"]:
             print(f"    {arg}")
     if command_help.get("usage"):
         print("")
         print("  usage:")
-        for usage in command_help.get("usage"):
+        for usage in command_help["usage"]:
             print(f"    {usage}")
     if command_help.get("info"):
         print("")
         print("  additional information:")
-        for info in command_help.get("info"):
+        for info in command_help["info"]:
             print(f"    {info}")
     print("")
 

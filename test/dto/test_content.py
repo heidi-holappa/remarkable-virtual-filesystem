@@ -20,14 +20,14 @@ class TestContent(unittest.TestCase):
 
     def test_content_with_file_type_none_raises_exception(self) -> None:
         with self.assertRaises(InvalidContentError) as context:
-            Content(file_type=None)
+            Content(file_type=None) # type: ignore[arg-type]
 
         self.assertTrue("fileType for content file must be an Enum FileType"
                         in str(context.exception), msg=context.exception)
 
     def test_content_with_file_type_str_raises_exception(self) -> None:
         with self.assertRaises(InvalidContentError) as context:
-            Content(file_type="pdf")
+            Content(file_type="pdf") # type: ignore[arg-type]
 
         self.assertTrue("fileType for content file must be an Enum FileType"
                         in str(context.exception), msg=context.exception)
