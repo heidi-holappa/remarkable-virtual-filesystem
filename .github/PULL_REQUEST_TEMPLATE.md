@@ -14,7 +14,8 @@ Please check all items that have been addressed:
   - [ ] new functionality has been end-to-end tested
 - [ ]  new code has docstring or other documentation
 - [ ] new functionality has been documented and existing documentation has been updated
-- [ ] pylint score is 9.5 or higher
+- [ ] `pylint` score is 9.5 or higher
+- [ ] there are no `mypy` -errors
 - [ ] Included instructions on how to manually test any new functionality
 - [ ] Updated template for test report with new test cases 
 
