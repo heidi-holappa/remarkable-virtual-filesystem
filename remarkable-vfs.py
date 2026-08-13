@@ -1,10 +1,14 @@
 import shlex
+import argparse
+import logging
+from argparse import ArgumentParser, Namespace
 from typing import List
 
 from src.com.common import clear, ls, mv, rm, cd, rcp, mkdir, rename, refresh, handle_exit
 from src.com.help import help_instruction
 from src.workspace.workspace_manager import default_workspace_manager as workspace_manager
 
+logger = logging.getLogger(__name__)
 
 def main_loop() -> None:
 
@@ -46,5 +50,43 @@ def main_loop() -> None:
                 print(f"Command '{command}' not found.\nTry: help")
 
 
+def init_argparse() -> ArgumentParser:
+    """
+    Initializes argument parser
+
+    :return: initialized argument parser
+    """
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--log", action="store_true")
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARN", "ERROR"],
+        default="INFO",
+    )
+    return parser
+
+
+def init_logging(args: Namespace) -> None:
+    if args.log:
+        level = {
+            "DEBUG": logging.DEBUG,
+            "INFO": logging.INFO,
+            "WARN": logging.WARNING,
+            "ERROR": logging.ERROR,
+        }[args.log_level]
+
+        logging.basicConfig(
+            level=level,
+            format="%(levelname)s:%(name)s: %(message)s",
+        )
+        logger.info(f"Logging enabled. Using log level {args.log_level}")
+
+
 if __name__ == "__main__":
+    parser = init_argparse()
+    init_logging(parser.parse_args())
+
+    logger.info("Starting Remarkable VirtualFilesSystem main loop")
+
     main_loop()

@@ -3,6 +3,7 @@
 """
 import time
 import unittest
+from pydoc import visiblename
 
 from src.dto.entry_type_enum import EntityType
 from src.dto.metadata import Metadata
@@ -73,7 +74,7 @@ class TestMetadata(unittest.TestCase):
         with self.assertRaises(InvalidMetadataError) as context:
             Metadata(
                 created_time=int(time.time() * 1000),
-                last_modified=None,
+                last_modified=None, # type: ignore[arg-type]
                 new=False,
                 parent='d433121d-b050-4740-8db7-0ed11b980371',
                 pinned=False,
@@ -90,7 +91,7 @@ class TestMetadata(unittest.TestCase):
             Metadata(
                 created_time=int(time.time() * 1000),
                 last_modified=int(time.time() * 1000),
-                new=None,
+                new=None, # type: ignore[arg-type]
                 parent='d433121d-b050-4740-8db7-0ed11b980371',
                 pinned=False,
                 source='',
@@ -105,7 +106,7 @@ class TestMetadata(unittest.TestCase):
             Metadata(
                 created_time=int(time.time() * 1000),
                 last_modified=int(time.time() * 1000),
-                new='False',
+                new='False', # type: ignore[arg-type]
                 parent='d433121d-b050-4740-8db7-0ed11b980371',
                 pinned=False,
                 source='',
@@ -121,7 +122,7 @@ class TestMetadata(unittest.TestCase):
                 created_time=int(time.time() * 1000),
                 last_modified=int(time.time() * 1000),
                 new=False,
-                parent=None,
+                parent=None,# type: ignore[arg-type]
                 pinned=False,
                 source='',
                 type=EntityType.DOCUMENT_TYPE,
@@ -152,7 +153,7 @@ class TestMetadata(unittest.TestCase):
                 last_modified=int(time.time() * 1000),
                 new=False,
                 parent='d433121d-b050-4740-8db7-0ed11b980371',
-                pinned="False",
+                pinned="False", # type: ignore[arg-type]
                 source='',
                 type=EntityType.DOCUMENT_TYPE,
                 visible_name='secret-algorithms.pdf'
@@ -167,7 +168,7 @@ class TestMetadata(unittest.TestCase):
                 new=False,
                 parent='d433121d-b050-4740-8db7-0ed11b980371',
                 pinned=False,
-                source=None,
+                source=None, # type: ignore[arg-type]
                 type=EntityType.DOCUMENT_TYPE,
                 visible_name='secret-algorithms.pdf'
             )
@@ -182,7 +183,7 @@ class TestMetadata(unittest.TestCase):
                 parent='d433121d-b050-4740-8db7-0ed11b980371',
                 pinned=False,
                 source='',
-                type='DocumentType',
+                type='DocumentType', # type: ignore[arg-type]
                 visible_name='secret-algorithms.pdf'
             )
         self.assertTrue("type" in str(context.exception))
@@ -198,7 +199,7 @@ class TestMetadata(unittest.TestCase):
                 pinned=False,
                 source='',
                 type=EntityType.DOCUMENT_TYPE,
-                visible_name=None
+                visible_name=None # type: ignore[arg-type]
             )
         self.assertTrue("visibleName" in str(context.exception))
 
@@ -208,26 +209,35 @@ class TestMetadata(unittest.TestCase):
 
         time_now = int(time.time() * 1000)
 
+        created_time = time_now
+        last_modified = time_now
+        new = False
+        parent = 'd433121d-b050-4740-8db7-0ed11b980371'
+        pinned = False
+        source = ''
+        type_value = EntityType.COLLECTION_TYPE
+        visiblename_value = 'secret_algorithms'
+
         expected_dict = {
-            "createdTime": time_now,
-            "lastModified": time_now,
-            "new": False,
-            "parent": 'd433121d-b050-4740-8db7-0ed11b980371',
-            "pinned": False,
-            "source": '',
-            "type": EntityType.COLLECTION_TYPE,
-            "visibleName": 'secret_algorithms',
+            "createdTime": created_time,
+            "lastModified": last_modified,
+            "new": new,
+            "parent": parent,
+            "pinned": pinned,
+            "source": source,
+            "type": type_value,
+            "visibleName": visiblename_value,
         }
 
         metadata = Metadata(
-            created_time=expected_dict.get('createdTime'),
-            last_modified=expected_dict.get('lastModified'),
-            new=expected_dict.get('new'),
-            parent=expected_dict.get('parent'),
-            pinned=expected_dict.get('pinned'),
-            source=expected_dict.get('source'),
-            type=expected_dict.get('type'),
-            visible_name=expected_dict.get('visibleName')
+            created_time=created_time,
+            last_modified=last_modified,
+            new=new,
+            parent=parent,
+            pinned=pinned,
+            source=source,
+            type=type_value,
+            visible_name=visiblename_value
         )
 
         self.assertEqual(expected_dict, metadata.to_dict())
@@ -243,7 +253,7 @@ class TestMetadata(unittest.TestCase):
                 source='',
                 type=EntityType.DOCUMENT_TYPE,
                 visible_name='secret-algorithms.pdf'
-            )
+            ) # type: ignore[call-arg]
 
         self.assertTrue("parent" in str(context.exception))
 

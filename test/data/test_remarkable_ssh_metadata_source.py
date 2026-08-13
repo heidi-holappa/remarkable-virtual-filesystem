@@ -33,7 +33,7 @@ import tarfile
 import time
 import unittest
 from io import BytesIO
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 from unittest.mock import patch, MagicMock
 
 from src.constant import SSH_CONNECT, REMOTE_PREFIX
@@ -50,14 +50,14 @@ SUT: str = "src.data.remarkable_ssh_metadata_source"
 
 class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.source = RemarkableSSHMetadataSource()
 
     # --------------------------------------------------
     # Helpers
     # --------------------------------------------------
 
-    def _create_tar_bytes(self, files: dict[str, dict]) -> bytes:
+    def _create_tar_bytes(self, files: Dict[str, Dict[Any, Any]]) -> bytes:
         """
         Create an in-memory tar archive containing *.metadata files.
         `files` is a dict of uuid -> metadata_dict
@@ -77,7 +77,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
     @patch.object(RemarkableSSHMetadataSource, "_get_file_sizes")
     @patch.object(RemarkableSSHMetadataSource, "_fetch_metadata")
-    def test_load_merges_sizes(self, mock_fetch, mock_sizes):
+    def test_load_merges_sizes(self, mock_fetch: MagicMock, mock_sizes: MagicMock) -> None:
         mock_fetch.return_value = {
             "uuid1": {"name": "doc1"},
             "uuid2": {"name": "doc2"},
@@ -98,7 +98,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
     @patch("subprocess.Popen")
     @patch.object(RemarkableSSHMetadataSource, "_get_file_sizes")
-    def test_fetch_metadata_success(self, mock_sizes, mock_popen):
+    def test_fetch_metadata_success(self, mock_sizes: MagicMock, mock_popen: MagicMock) -> None:
         tar_bytes = self._create_tar_bytes({
             "uuid1": {"name": "doc1"},
             "uuid2": {"name": "doc2"},
@@ -125,7 +125,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         self.assertNotIn("size", result["uuid2"])
 
     @patch("subprocess.Popen")
-    def test_fetch_metadata_nonzero_returncode_raises(self, mock_popen):
+    def test_fetch_metadata_nonzero_returncode_raises(self, mock_popen: MagicMock) -> None:
         mock_proc = MagicMock()
 
         # Make context manager return the same object
@@ -141,7 +141,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         self.assertIn("error", str(ctx.exception))
 
     @patch("subprocess.Popen")
-    def test_fetch_metadata_no_tar_bytes_raises(self, mock_popen):
+    def test_fetch_metadata_no_tar_bytes_raises(self, mock_popen: MagicMock) -> None:
         mock_proc = MagicMock()
         # Make context manager return the same object
         mock_proc.__enter__.return_value = mock_proc
@@ -157,7 +157,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
     @patch("subprocess.Popen")
     @patch.object(RemarkableSSHMetadataSource, "_get_file_sizes")
-    def test_fetch_metadata_invalid_json_skipped(self, mock_sizes, mock_popen):
+    def test_fetch_metadata_invalid_json_skipped(self, mock_sizes: MagicMock, mock_popen: MagicMock) -> None:
         # Create tar with one invalid JSON file
         tar_buffer = BytesIO()
         with tarfile.open(fileobj=tar_buffer, mode="w:") as tar:
@@ -186,7 +186,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
     # --------------------------------------------------
 
     @patch("subprocess.Popen")
-    def test_get_file_sizes_success(self, mock_popen):
+    def test_get_file_sizes_success(self, mock_popen: MagicMock) -> None:
         mock_proc = MagicMock()
         # Make context manager return the same object
         mock_proc.__enter__.return_value = mock_proc
@@ -204,7 +204,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         self.assertEqual(result["uuid2"], 200)
 
     @patch("subprocess.Popen")
-    def test_get_file_sizes_nonzero_return_code_raises(self, mock_popen):
+    def test_get_file_sizes_nonzero_return_code_raises(self, mock_popen: MagicMock) -> None:
         mock_proc = MagicMock()
         # Make context manager return the same object
         mock_proc.__enter__.return_value = mock_proc
@@ -223,7 +223,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
     # --------------------------------------------------
 
     @patch("subprocess.Popen")
-    def test_metadata_write_operation_succeeds(self, mock_popen) -> None:
+    def test_metadata_write_operation_succeeds(self, mock_popen: MagicMock) -> None:
         # And assuming the process finished successfully
         mock_proc = MagicMock()
         mock_proc.communicate.return_value = ("", "")
@@ -252,7 +252,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         mock_proc.communicate.assert_called_once_with(expected_content)
 
     @patch("subprocess.Popen")
-    def test_metadata_write_fails_with_returncode(self, mock_popen) -> None:
+    def test_metadata_write_fails_with_returncode(self, mock_popen: MagicMock) -> None:
         # And assuming the process finished successfully
         mock_proc = MagicMock()
         mock_proc.communicate.return_value = ("", "")
@@ -268,7 +268,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         self.assertTrue("Failed to write metadata" in str(context.exception))
 
     @patch("subprocess.Popen", side_effect=OSError('test'))
-    def test_metadata_write_fails_due_to_os_error(self, mock_popen) -> None:
+    def test_metadata_write_fails_due_to_os_error(self, mock_popen: MagicMock) -> None:
         with self.assertRaises(RemarkableWriteError) as context:
             self.call_write_metadata_to_remarkable_with_valid_data()
 
@@ -300,7 +300,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
     # --------------------------------------------------
 
     @patch("subprocess.Popen")
-    def test_remove_positive_case(self, mock_popen) -> None:
+    def test_remove_positive_case(self, mock_popen: MagicMock) -> None:
         # Assuming popen process finished successfully
         mock_proc = MagicMock()
         mock_proc.communicate.return_value = ("", "")
@@ -325,14 +325,14 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         )
 
     @patch("subprocess.Popen", side_effect=OSError('test'))
-    def test_remove_fails_due_to_os_error(self, mock_popen) -> None:
+    def test_remove_fails_due_to_os_error(self, mock_popen: MagicMock) -> None:
         with self.assertRaises(RemarkableWriteError) as context:
             self.source.remove([UUID_FAIRYTALE])
 
         self.assertTrue("OS error while removing files:" in str(context.exception))
 
     @patch("subprocess.Popen")
-    def test_remove_fails_due_process_error_code(self, mock_popen) -> None:
+    def test_remove_fails_due_process_error_code(self, mock_popen: MagicMock) -> None:
         # And assuming the process finished successfully
         mock_proc = MagicMock()
         mock_proc.communicate.return_value = ("", "")
@@ -350,7 +350,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
     # --------------------------------------------------
 
     @patch(f"{SUT}.subprocess.Popen")
-    def test_remote_copy_success(self, mock_popen) -> None:
+    def test_remote_copy_success(self, mock_popen: MagicMock) -> None:
         # ---- Mock processes ----
         mock_tar_proc = MagicMock()
         mock_ssh_proc = MagicMock()
@@ -410,7 +410,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         self.assertEqual(ssh_kwargs["stdin"], mock_tar_proc.stdout)
 
     @patch(f"{SUT}.subprocess.Popen")
-    def test_remote_copy_ssh_failure(self, mock_popen) -> None:
+    def test_remote_copy_ssh_failure(self, mock_popen: MagicMock) -> None:
         # ---- Mock processes ----
         mock_tar_proc = MagicMock()
         mock_ssh_proc = MagicMock()
@@ -468,7 +468,7 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
     # --------------------------------------------------
 
     @patch("src.data.remarkable_ssh_metadata_source.subprocess.run")
-    def test_restart_xochitl_success(self, mock_run) -> None:
+    def test_restart_xochitl_success(self, mock_run: MagicMock) -> None:
         # ---- Mock subprocess result ----
         mock_result = MagicMock()
         mock_result.returncode = 0
