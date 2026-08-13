@@ -4,7 +4,7 @@
     updating test data may break existing test cases.
 """
 
-from typing import Dict
+from typing import Dict, Any
 
 UUID_ROOT = ''
 # CollectionType A and its descendants
@@ -25,7 +25,7 @@ UUID_A_UNDER_B = "b21ca949-1d94-4b61-afd8-59bcf7330721"
 UUID_A0_UNDER_B = "40b7fe05-1c55-4944-b434-74e3f1c48bff"
 UUID_D_1 = "0cee4351-e773-4f83-858d-0e4f52c82627"
 
-TEST_DATA: Dict[str, Dict[str, str]] = {
+TEST_DATA: Dict[str, Dict[str, Any]] = {
     UUID_A: {
         "type": "CollectionType",
         "parent": "",

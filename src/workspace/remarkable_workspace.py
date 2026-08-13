@@ -79,6 +79,7 @@ class RemarkableWorkspace:
 
         Raises:
           - NotFoundError if the entity is not found
+          - InvalidMetadataError if visibleName is not an instance of str
 
         :param entity_uuid: UUID for a Document or Collection type
         :return: visible name of the entity
@@ -92,7 +93,12 @@ class RemarkableWorkspace:
         if not data:
             raise NotFoundError(f"Metadata not found for {entity_uuid}")
 
-        return data.get('visibleName')
+        visible_name = data['visibleName']
+
+        if not isinstance(visible_name, str):
+            raise InvalidMetadataError(f"invalid visible_name: {visible_name}")
+
+        return visible_name
 
 
 
@@ -129,6 +135,7 @@ class RemarkableWorkspace:
         """
         raises:
           - NotFoundError: if parent is not found
+          - InvalidMetadataError if field parent is not instance of str
 
         :param entity_uuid: optional uuid of an entity for which parent should be given
                         if no parameter is given, parent of current collection is returned
@@ -136,16 +143,25 @@ class RemarkableWorkspace:
                     parent is root or the current collection is root, an empty string is returned
         """
 
-        if entity_uuid is None:
+        if entity_uuid is None or not isinstance(entity_uuid, str):
             entity_uuid = self._current_collection
 
-        if entity_uuid == ROOT_COLLECTION or self._data.get(entity_uuid) == ROOT_COLLECTION:
+        entity_uuid_str = str(entity_uuid)
+
+        if entity_uuid_str == ROOT_COLLECTION:
             return ROOT_COLLECTION
 
-        if not self._data.get(entity_uuid):
+        if not self.get_data().get(entity_uuid_str):
             raise NotFoundError(COLLECTION_NOT_FOUND)
 
-        return self._data.get(entity_uuid).get('parent')
+        candidate: Dict[str, Any] = self.get_data()[entity_uuid_str]
+
+        parent = candidate['parent']
+
+        if not isinstance(parent, str):
+            raise InvalidMetadataError(f'parent was not an instance of str: {parent}')
+
+        return parent
 
     def get_collection(self, file_name: str, parent: str) -> Optional[str]:
         """
@@ -198,15 +214,24 @@ class RemarkableWorkspace:
         if not self._data.get(item_uuid):
             return './<NA>'
 
-        # print(f"data for {uuid}: {remarkable_metadata.get(uuid)}")
-        if self._data[item_uuid].get('parent') == '':
-            return "/" + self._data[item_uuid]['visibleName']
+        entity = self.get_data()[item_uuid]
+        parent = entity.get('parent')
+        visible_name = entity.get('visibleName')
+
+        if not isinstance(parent, str):
+            raise InvalidMetadataError('parent was not an instance of str')
+
+        if not isinstance(visible_name, str):
+            raise InvalidMetadataError('visibleName was not an instance of str')
+
+
+        if parent == '':
+            return "/" + visible_name
 
         if self._data[item_uuid].get('parent') == 'trash':
-            return '/trash/' + self._data[item_uuid].get('visibleName')
+            return '/trash/' + visible_name
 
-        return (self.generate_absolute_collection_path(self._data[item_uuid]['parent']) +
-                "/" + self._data[item_uuid].get('visibleName'))
+        return self.generate_absolute_collection_path(parent) + "/" + visible_name
 
     # -------------------------
     # ls
@@ -220,8 +245,6 @@ class RemarkableWorkspace:
 
         :param utility_args: optional utility arguments for ls
         """
-
-        collection_to_list_uuid: str
 
         if utility_args:
             operand_path: str = utility_args[0]
@@ -255,13 +278,13 @@ class RemarkableWorkspace:
 
         for t in sorted(collections, key=lambda x: x[0].lower()):
             name, size = t
-            padding: str = ' '*(LS_COLUMN_WIDTH - len(size))
-            list_result.append(f"{size}{padding}{name}")
+            padding_col: str = ' '*(LS_COLUMN_WIDTH - len(size))
+            list_result.append(f"{size}{padding_col}{name}")
 
         for t in sorted(documents, key=lambda x: x[0].lower()):
             name, size = t
-            padding: str = ' ' * (LS_COLUMN_WIDTH - len(size))
-            list_result.append(f"{size}{padding}{name}")
+            padding_doc: str = ' ' * (LS_COLUMN_WIDTH - len(size))
+            list_result.append(f"{size}{padding_doc}{name}")
 
         self._output_ls_result(list_result)
 
@@ -406,7 +429,8 @@ class RemarkableWorkspace:
             source_path, target_collection = utility_args[-2:]
 
             target_uuid: Optional[str] = self._traverse_path(target_collection)
-            self._validate_source_and_target_uuid(source_path, target_collection, target_uuid)
+            validated_target_uuid = self._validate_source_and_target_uuid(
+                source_path, target_collection, target_uuid)
 
             recurse = options[0] == "-r"
 
@@ -419,7 +443,7 @@ class RemarkableWorkspace:
 
             files_and_parents: List[Tuple[str, str]] = (
                 self._generate_target_path_uuid_and_source_file_pairs(
-                source_path, files_to_copy, target_uuid))
+                source_path, files_to_copy, validated_target_uuid))
 
             print(f"found {len(files_to_copy)} files to copy. copying files one-by-one."
                   f"\nDO NOT disconnect reMarkable while operation is ongoing.")
@@ -447,9 +471,10 @@ class RemarkableWorkspace:
         try:
 
             target_uuid: Optional[str] = self._traverse_path(target_collection)
-            self._validate_source_and_target_uuid(source_file, target_collection, target_uuid)
+            validated_target_uuid = self._validate_source_and_target_uuid(
+                source_file, target_collection, target_uuid)
 
-            self._copy_file_from_host_to_target(source_file, target_uuid)
+            self._copy_file_from_host_to_target(source_file, validated_target_uuid)
 
             self._data = self._source.load()
 
@@ -511,7 +536,7 @@ class RemarkableWorkspace:
 
             self._validate_visible_name(parent_uuid, entity_uuid, new_visible_name)
 
-            new_metadata_entry: Dict[str, Any] = copy.deepcopy(self._data.get(entity_uuid))
+            new_metadata_entry: Dict[str, Any] = copy.deepcopy(self._data[entity_uuid])
             new_metadata_entry['visibleName'] = new_visible_name
 
             # Create a Metadata DTO for given UUID
@@ -654,11 +679,13 @@ class RemarkableWorkspace:
     @staticmethod
     def _validate_source_and_target_uuid(source: str,
                                          target_collection: str,
-                                         target_uuid: Optional[str]) -> None:
+                                         target_uuid: Optional[str]) -> str:
         if not os.path.exists(source):
             raise NotFoundError(f"rcp: source file {source} not found")
         if target_uuid is None:
             raise NotFoundError(f"rcp: target path {target_collection} not found")
+
+        return target_uuid
 
     @staticmethod
     def _find_all_pdf_and_epub_files_in_path(path: str, recurse: bool) -> List[str]:
@@ -734,10 +761,10 @@ class RemarkableWorkspace:
                 if entry['visibleName'] == child_visible_name and entry['parent'] == parent:
                     return entry_uuid
 
-        entry_uuid: str =  self._create_collection_metadata_and_invoke_write(
+        new_entry_uuid: str =  self._create_collection_metadata_and_invoke_write(
             parent, child_visible_name)
 
-        return entry_uuid
+        return new_entry_uuid
 
     def _validate_visible_name(self, parent_uuid: str,
                                entry_uuid: str,
@@ -800,7 +827,8 @@ class RemarkableWorkspace:
             raise InvalidPathError("path contains invalid characters")
 
 
-    def _parent_has_child_path_with_given_name(self, parent_uuid, child_visible_name) -> bool:
+    def _parent_has_child_path_with_given_name(
+            self, parent_uuid: str, child_visible_name: str) -> bool:
         """
         Verifies, whether the provided parent UUID has a child collection
         with the given visibleName.
@@ -893,9 +921,9 @@ class RemarkableWorkspace:
             entities_to_write.extend(
                 self._get_matches_for_wildcard(parent_uuid, visible_name)
             )
-            for entity_uuid in entities_to_write:
-                if self._entry_is_a_collection(entity_uuid):
-                    entities_to_write.extend(self._get_descendant_uuids(entity_uuid))
+            for entry_uuid in entities_to_write:
+                if self._entry_is_a_collection(entry_uuid):
+                    entities_to_write.extend(self._get_descendant_uuids(entry_uuid))
         else:
             # Get the metadata and UUID of the file in question
             entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
@@ -949,7 +977,8 @@ class RemarkableWorkspace:
                     collection could not be found
         """
         directory_changes: list[str] = path.split(sep="/")
-        collection_pointer = self._current_collection
+        collection_pointer: Optional[str] = self._current_collection
+
         if directory_changes[0] == '':
             # In absolute path traversal begins at root
             collection_pointer = ROOT_COLLECTION
@@ -964,6 +993,8 @@ class RemarkableWorkspace:
                     collection_pointer = self.get_parent(collection_pointer)
                 # Traverse to descendant
                 case _:
+                    if not isinstance(collection_pointer, str):
+                        break
                     collection_pointer = self.get_collection(directory, collection_pointer)
             if collection_pointer is None:
                 break
@@ -989,7 +1020,7 @@ class RemarkableWorkspace:
                     f"destination must not contain a child with the same name: "
                     f"{self.get_visible_name_for_uuid(entity_uuid)}")
 
-            new_metadata_entry: Dict[str, Any] = copy.deepcopy(self._data.get(entity_uuid))
+            new_metadata_entry: Dict[str, Any] = copy.deepcopy(self._data[entity_uuid])
             new_metadata_entry['parent'] = target_uuid
 
             # Create a Metadata DTO for given UUID
@@ -1049,7 +1080,7 @@ class RemarkableWorkspace:
 
         for k, v in self.get_data().items():
             has_matching_visible_name: bool = self._visible_name_matches_wildcard(
-                wildcard, v.get('visibleName'))
+                wildcard, v['visibleName'])
             if v.get('parent') == parent_uuid and has_matching_visible_name:
                 wildcard_matches.append(k)
 
@@ -1082,8 +1113,7 @@ class RemarkableWorkspace:
         :return: True, if entry with identical visibleName exists
         """
 
-        entry_visible_name: str = (self.get_data_for_uuid(entry_uuid)
-                                   .get('visibleName'))
+        entry_visible_name: str = self.get_data_for_uuid(entry_uuid)['visibleName']
 
         return self._has_visible_name_equal_to_entry_uuid_in_collection(
             entry_uuid, entry_visible_name, target_collection_uuid)
@@ -1172,7 +1202,7 @@ class RemarkableWorkspace:
         raise NotFoundError(f"cannot access {path_prefix}/{filename}: "
                                 f"{NO_SUCH_FILE_OR_DIRECTORY}")
 
-    def _entry_is_a_collection(self, entity_uuid) -> bool:
+    def _entry_is_a_collection(self, entity_uuid: str) -> bool:
         """
         Validates whether the metadata entry with the given UUID
         is of type CollectionType.

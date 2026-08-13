@@ -25,7 +25,7 @@ from test.test_data import (
 class RemarkableWorkspaceTest(unittest.TestCase):
 
     @patch.object(RemarkableSSHMetadataSource, "load")
-    def setUp(self, mock_load) -> None:
+    def setUp(self, mock_load: MagicMock) -> None:
         mock_load.return_value = copy.deepcopy(TEST_DATA)
         self.ws = RemarkableWorkspace(RemarkableSSHMetadataSource())
 
@@ -199,7 +199,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             self.assertTrue(f"mv: /C: {NO_SUCH_FILE_OR_DIRECTORY}" in output, msg=f"Output was: {output}")
 
     @patch.object(RemarkableSSHMetadataSource, "write_metadata")
-    def test_document_with_invalid_metadata_cannot_be_moved_and_error_is_shown(self, mock_write) -> None:
+    def test_document_with_invalid_metadata_cannot_be_moved_and_error_is_shown(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.ws.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
@@ -449,7 +449,8 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.assertEqual(mock_write.call_count, 1)
         self.assertIsNotNone(self.ws.get_data().get(actual_path_uuid),
                              msg=f"UUID {actual_path_uuid} not found in data")
-        actual_visible_name = self.ws.get_data().get(actual_path_uuid).get('visibleName')
+        actual_dict = self.ws.get_data()[actual_path_uuid]
+        actual_visible_name = actual_dict['visibleName']
         self.assertEqual(actual_path_to_make, actual_visible_name,
                          msg=f"visibleName {actual_visible_name} does not match path {actual_path_to_make}")
 
@@ -589,7 +590,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         mock_exists.return_value = True
         mock_load.return_value = ["new_data"]
 
-        self.ws._traverse_path = MagicMock(return_value=UUID_ROOT)
+        self.ws._traverse_path = MagicMock(return_value=UUID_ROOT) # type: ignore[method-assign]
 
         source_file = "/path/to/file.pdf"
         target_path = "/"
@@ -639,7 +640,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         mock_walk.return_value = [(source_path, [], ["file1.pdf", "file2.epub"])]
         mock_load.return_value = ["new_data"]
 
-        self.ws._traverse_path = MagicMock(return_value=UUID_ROOT)
+        self.ws._traverse_path = MagicMock(return_value=UUID_ROOT) # type: ignore[method-assign]
 
         target_path = "/"
 
@@ -698,7 +699,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         mock_walk.return_value = [(source_path, [], ["file1.pdf", "path1/file2.epub"])]
         mock_load.return_value = ["new_data"]
 
-        self.ws._traverse_path = MagicMock(return_value=UUID_ROOT)
+        self.ws._traverse_path = MagicMock(return_value=UUID_ROOT) # type: ignore[method-assign]
 
         target_path = "/"
 
@@ -758,7 +759,7 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         mock_walk.return_value = [(source_path, [], [])]
         mock_load.return_value = ["new_data"]
 
-        self.ws._traverse_path = MagicMock(return_value=UUID_ROOT)
+        self.ws._traverse_path = MagicMock(return_value=UUID_ROOT) # type: ignore[method-assign]
 
         target_path = "/"
 
@@ -839,13 +840,13 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     # Process refresh command
     # -------------------------------------
     @patch.object(RemarkableSSHMetadataSource, "restart_xochitl")
-    def test_refresh_invokes_metadata_source(self, mock_restart) -> None:
+    def test_refresh_invokes_metadata_source(self, mock_restart: MagicMock) -> None:
 
         self.ws.restart_xochitl()
         mock_restart.assert_called_once()
 
     @patch.object(RemarkableSSHMetadataSource, "restart_xochitl")
-    def test_refresh_raises_exception_when_refresh_fails(self, mock_restart) -> None:
+    def test_refresh_raises_exception_when_refresh_fails(self, mock_restart: MagicMock) -> None:
         mock_restart.side_effect = RemarkableOperationError("failure")
 
         with self.assertRaises(RemarkableOperationError) as context:
