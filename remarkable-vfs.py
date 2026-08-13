@@ -8,6 +8,7 @@ from src.com.common import clear, ls, mv, rm, cd, rcp, mkdir, rename, refresh, h
 from src.com.help import help_instruction
 from src.workspace.workspace_manager import default_workspace_manager as workspace_manager
 
+logger = logging.getLogger(__name__)
 
 def main_loop() -> None:
 
@@ -79,10 +80,13 @@ def init_logging(args: Namespace) -> None:
             level=level,
             format="%(levelname)s:%(name)s: %(message)s",
         )
+        logger.info(f"Logging enabled. Using log level {args.log_level}")
 
 
-def main() -> None:
+if __name__ == "__main__":
     parser = init_argparse()
     init_logging(parser.parse_args())
+
+    logger.info("Starting Remarkable VirtualFilesSystem main loop")
 
     main_loop()
