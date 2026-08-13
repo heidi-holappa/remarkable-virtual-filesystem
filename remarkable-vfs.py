@@ -10,7 +10,7 @@ from src.workspace.workspace_manager import default_workspace_manager as workspa
 
 logger = logging.getLogger(__name__)
 
-def main_loop() -> None:
+def main_loop():
 
     ws = workspace_manager.get()
 
