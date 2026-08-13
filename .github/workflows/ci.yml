@@ -31,6 +31,11 @@ jobs:
           source venv/bin/activate
           pylint src/ --fail-under=9.5
 
+      - name: Run mypy
+        run: |
+          source venv/bin/activate
+          mypy src/
+
       - name: Run tests with coverage
         run: |
           source venv/bin/activate
