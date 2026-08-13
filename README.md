@@ -108,10 +108,36 @@ pip install -r requirements-dev.txt
 > Review `requirements-dev.txt` before installing.
 
 
+### Developer tools: Logging
+
+The purpose of logging is to support in development process and its focus should always remain on that. No information relevant to end user should ever be passed in a log message. 
+
+Logging with default level
+```bash
+$ python3 remarkable-vfs.py --log 
+```
+
+Logging with user specified level
+```bash
+$ python3 remarkable-vfs.py --log  --log-level DEBUG
+```
+
+More information on supported arguments and available log levels: 
+```bash
+$ python3 remarkable-vfs.py --help
+```
+
+
 ### Linting
 
 ```bash
 pylint src/
+```
+
+### Type checking
+
+```bash
+mypy .
 ```
 
 ### Testing
