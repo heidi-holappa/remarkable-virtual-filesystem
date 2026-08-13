@@ -224,3 +224,16 @@ Used test material: content of directory `test/`
 * [ ] TC1: Refresh restarts xochitl.service
   1. input: `refresh`
   2. expected outcome: xochitl.service restarts. Verify this from the GUI application on reMarkable and on systemctl (e.g. `systemctl status xochitl.service`). 
+
+## Test Suite: developer tool: logging
+
+* [ ] TC1: Logging with default level
+  1. Launch the application with `python3 remarkable-vfs.py --log` 
+  2. Confirm that the default log level is used (INFO). 
+* [ ] TC2: Specifying the log level
+  1. Launch the application with `python3 remarkable-vfs.py --log  --log-level DEBUG`
+  2. Confirm that the log level DEBUG is used. 
+  3. Also try this with other supported log levels.
+* [ ] TC3: No logging 
+  1. Launch the application with `python3 remarkable-vfs.py`
+  2. Confirm that logging is disabled
