@@ -65,7 +65,7 @@ Clone the repository (preferably from the `main` branch) or download a release.
 Run:
 
 ```
-python3 remarkable-vfs.py
+python3 remarkable_vfs.py
 ```
 
 ### Quick start
@@ -114,17 +114,17 @@ The purpose of logging is to support in development process and its focus should
 
 Logging with default level
 ```bash
-$ python3 remarkable-vfs.py --log 
+$ python3 remarkable_vfs.py --log 
 ```
 
 Logging with user specified level
 ```bash
-$ python3 remarkable-vfs.py --log  --log-level DEBUG
+$ python3 remarkable_vfs.py --log  --log-level DEBUG
 ```
 
 More information on supported arguments and available log levels: 
 ```bash
-$ python3 remarkable-vfs.py --help
+$ python3 remarkable_vfs.py --help
 ```
 
 
@@ -144,7 +144,7 @@ mypy .
 
 Run tests with coverage:  
 ```bash
-coverage run --source=src -m pytest
+coverage run --source=. -m pytest
 ```
 
 View summary:  
@@ -160,7 +160,7 @@ coverage html
 Run all and open report:
 
 ```bash
-coverage run --source=src -m pytest && coverage html && coverage report && xdg-open htmlcov/index.html
+coverage run --source=. -m pytest && coverage html && coverage report && xdg-open htmlcov/index.html
 ```
 
 
