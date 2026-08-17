@@ -11,44 +11,63 @@ from src.workspace.workspace_manager import default_workspace_manager as workspa
 logger = logging.getLogger(__name__)
 
 def main_loop() -> None:
-
     ws = workspace_manager.get()
 
     while True:
         path = ws.get_current_path()
-        cmd_line: List[str] = shlex.split(input(f"remarkable~{path}$ "))
+        line = input(f"remarkable~{path}$ ")
 
-        if not cmd_line:
+        parsed = parse_command(line)
+
+        if parsed is None:
             continue
 
-        command, *utility_arguments = cmd_line
+        command, arguments = parsed
 
-        match command:
-            case "cd":
-                cd(utility_arguments, workspace_manager)
-            case "clear":
-                clear()
-            case "rm":
-                rm(utility_arguments, workspace_manager)
-            case "ls":
-                ls(utility_arguments, workspace_manager)
-            case "mv":
-                mv(utility_arguments, workspace_manager)
-            case "rcp":
-                rcp(utility_arguments, workspace_manager)
-            case "help":
-                help_instruction(utility_arguments)
-            case "refresh":
-                refresh(workspace_manager)
-            case "mkdir":
-                mkdir(utility_arguments, workspace_manager)
-            case "rename":
-                rename(utility_arguments, workspace_manager)
-            case "exit" | "x":
-                handle_exit(workspace_manager)
-            case _:
-                print(f"Command '{command}' not found.\nTry: help")
+        if not execute_command(command, arguments):
+            return
 
+def parse_command(line: str) -> tuple[str, list[str]] | None:
+    cmd_line = shlex.split(line)
+
+    if not cmd_line:
+        return None
+
+    command, *arguments = cmd_line
+    return command, arguments
+
+def execute_command(
+    command: str,
+    utility_arguments: list[str],
+) -> bool:
+    match command:
+        case "cd":
+            cd(utility_arguments, workspace_manager)
+        case "clear":
+            clear()
+        case "rm":
+            rm(utility_arguments, workspace_manager)
+        case "ls":
+            ls(utility_arguments, workspace_manager)
+        case "mv":
+            mv(utility_arguments, workspace_manager)
+        case "rcp":
+            rcp(utility_arguments, workspace_manager)
+        case "help":
+            help_instruction(utility_arguments)
+        case "refresh":
+            refresh(workspace_manager)
+        case "mkdir":
+            mkdir(utility_arguments, workspace_manager)
+        case "rename":
+            rename(utility_arguments, workspace_manager)
+        case "exit" | "x":
+            handle_exit(workspace_manager)
+            return False
+        case _:
+            print(f"Command '{command}' not found.\nTry: help")
+
+    return True
 
 def init_argparse() -> ArgumentParser:
     """

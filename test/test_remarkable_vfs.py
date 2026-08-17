@@ -3,10 +3,42 @@ import unittest
 from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
-from remarkable_vfs import main_loop, init_logging
+from remarkable_vfs import main_loop, init_logging, main, execute_command
 
 
 class TestMainLoop(unittest.TestCase):
+
+    @patch("remarkable_vfs.main_loop")
+    @patch("remarkable_vfs.logger")
+    @patch("remarkable_vfs.init_logging")
+    @patch("remarkable_vfs.init_argparse")
+    def test_main(
+            self,
+            mock_init_argparse,
+            mock_init_logging,
+            mock_logger,
+            mock_main_loop,
+    ):
+        mock_parser = MagicMock()
+        mock_args = Namespace(
+            log=True,
+            log_level="DEBUG",
+        )
+
+        mock_init_argparse.return_value = mock_parser
+        mock_parser.parse_args.return_value = mock_args
+
+        main()
+
+        mock_init_argparse.assert_called_once_with()
+        mock_parser.parse_args.assert_called_once_with()
+        mock_init_logging.assert_called_once_with(mock_args)
+
+        mock_logger.info.assert_called_once_with(
+            "Starting Remarkable VirtualFilesSystem main loop"
+        )
+
+        mock_main_loop.assert_called_once_with()
 
     @patch("remarkable_vfs.cd")
     @patch("builtins.input")
@@ -226,29 +258,38 @@ class TestMainLoop(unittest.TestCase):
             mock_workspace_manager,
         )
 
+    @patch("remarkable_vfs.execute_command")
     @patch("builtins.input")
     @patch("remarkable_vfs.workspace_manager")
-    def test_x_command(
+    def test_exit_command(
             self,
             mock_workspace_manager,
             mock_input,
+            mock_execute_command,
     ):
         mock_ws = MagicMock()
         mock_ws.get_current_path.return_value = "/home/test"
         mock_workspace_manager.get.return_value = mock_ws
 
-        mock_input.side_effect = ["x"]
+        mock_input.return_value = "exit"
+        mock_execute_command.return_value = False
 
-        with patch(
-                "remarkable_vfs.handle_exit",
-                side_effect=SystemExit,
-        ) as mock_exit:
-            with self.assertRaises(SystemExit):
-                main_loop()
+        result = main_loop()
 
-        mock_exit.assert_called_once_with(
-            mock_workspace_manager,
+        self.assertIsNone(result)
+
+        mock_execute_command.assert_called_once_with(
+            "exit",
+            [],
         )
+
+    @patch("remarkable_vfs.handle_exit")
+    def test_x_command_returns_false(self, mock_handle_exit):
+
+        result = execute_command("x", [])
+
+        mock_handle_exit.assert_called_once()
+        self.assertFalse(result)
 
     @patch("remarkable_vfs.cd")
     @patch("builtins.input")
