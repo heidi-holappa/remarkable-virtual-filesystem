@@ -1,3 +1,5 @@
+"""Entry point and command loop for the Remarkable Virtual File System."""
+
 import shlex
 import argparse
 import logging
@@ -11,6 +13,12 @@ from src.workspace.workspace_manager import default_workspace_manager as workspa
 logger = logging.getLogger(__name__)
 
 def main_loop() -> None:
+    """
+    Runs the interactive command loop.
+
+    Reads commands from standard input, parses them, and executes them
+    until the user issues an exit command.
+    """
     ws = workspace_manager.get()
 
     while True:
@@ -28,6 +36,13 @@ def main_loop() -> None:
             return
 
 def parse_command(line: str) -> tuple[str, list[str]] | None:
+    """
+    Parses a command line into a command and its arguments.
+
+    :param line: Raw command line entered by the user.
+    :return: A tuple containing the command and its arguments, or None
+        if the input is empty.
+    """
     cmd_line = shlex.split(line)
 
     if not cmd_line:
@@ -38,8 +53,16 @@ def parse_command(line: str) -> tuple[str, list[str]] | None:
 
 def execute_command(
     command: str,
-    utility_arguments: list[str],
+    utility_arguments: List[str],
 ) -> bool:
+    """
+    Executes a command with the supplied arguments.
+
+    :param command: Command name to execute.
+    :param utility_arguments: Arguments passed to the command.
+    :return: True if the command loop should continue, False if it
+        should terminate.
+    """
     match command:
         case "cd":
             cd(utility_arguments, workspace_manager)
@@ -71,9 +94,9 @@ def execute_command(
 
 def init_argparse() -> ArgumentParser:
     """
-    Initializes argument parser
+    Creates and configures the command-line argument parser.
 
-    :return: initialized argument parser
+    :return: Configured argument parser.
     """
     parser = argparse.ArgumentParser()
 
@@ -87,6 +110,11 @@ def init_argparse() -> ArgumentParser:
 
 
 def init_logging(args: Namespace) -> None:
+    """
+    Configures application logging when logging is enabled.
+
+    :param args: Parsed command-line arguments containing logging options.
+    """
     if args.log:
         level = {
             "DEBUG": logging.DEBUG,
@@ -99,10 +127,13 @@ def init_logging(args: Namespace) -> None:
             level=level,
             format="%(levelname)s:%(name)s: %(message)s",
         )
-        logger.info(f"Logging enabled. Using log level {args.log_level}")
+        logger.info("Logging enabled. Using log level %s" , args.log_level)
 
 
 def main() -> None:
+    """
+    Initializes the application and starts the main command loop.
+    """
     parser = init_argparse()
     args = parser.parse_args()
     init_logging(args)

@@ -386,7 +386,8 @@ class TestLogging(unittest.TestCase):
         )
 
         mock_logger.info.assert_called_once_with(
-            "Logging enabled. Using log level DEBUG"
+            "Logging enabled. Using log level %s",
+            args.log_level,
         )
 
     @patch("remarkable_vfs.logging.basicConfig")
