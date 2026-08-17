@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 from remarkable_vfs import main_loop, init_logging, main, execute_command
 
-
 class TestMainLoop(unittest.TestCase):
 
     @patch("remarkable_vfs.main_loop")
@@ -14,11 +13,11 @@ class TestMainLoop(unittest.TestCase):
     @patch("remarkable_vfs.init_argparse")
     def test_main(
             self,
-            mock_init_argparse,
-            mock_init_logging,
-            mock_logger,
-            mock_main_loop,
-    ):
+            mock_init_argparse: MagicMock,
+            mock_init_logging: MagicMock,
+            mock_logger: MagicMock,
+            mock_main_loop: MagicMock,
+    ) -> None:
         mock_parser = MagicMock()
         mock_args = Namespace(
             log=True,
@@ -45,10 +44,10 @@ class TestMainLoop(unittest.TestCase):
     @patch("remarkable_vfs.workspace_manager")
     def test_cd_command(
             self,
-            mock_workspace_manager,
-            mock_input,
-            mock_cd,
-    ):
+            mock_workspace_manager: MagicMock,
+            mock_input: MagicMock,
+            mock_cd: MagicMock,
+    ) -> None:
         mock_ws = MagicMock()
         mock_ws.get_current_path.return_value = "/home/test"
         mock_workspace_manager.get.return_value = mock_ws
@@ -76,10 +75,10 @@ class TestMainLoop(unittest.TestCase):
     @patch("remarkable_vfs.workspace_manager")
     def test_ls_command(
             self,
-            mock_workspace_manager,
-            mock_input,
-            mock_ls,
-    ):
+            mock_workspace_manager: MagicMock,
+            mock_input: MagicMock,
+            mock_ls: MagicMock,
+    ) -> None:
         mock_ws = MagicMock()
         mock_ws.get_current_path.return_value = "/home/test"
         mock_workspace_manager.get.return_value = mock_ws
@@ -110,10 +109,10 @@ class TestMainLoop(unittest.TestCase):
     @patch("remarkable_vfs.workspace_manager")
     def test_clear_command(
             self,
-            mock_workspace_manager,
-            mock_input,
-            mock_clear,
-    ):
+            mock_workspace_manager: MagicMock,
+            mock_input: MagicMock,
+            mock_clear: MagicMock,
+    ) -> None:
         self.run_command(
             "clear",
             mock_input,
@@ -127,10 +126,10 @@ class TestMainLoop(unittest.TestCase):
     @patch("remarkable_vfs.workspace_manager")
     def test_rm_command(
             self,
-            mock_workspace_manager,
-            mock_input,
-            mock_rm,
-    ):
+            mock_workspace_manager: MagicMock,
+            mock_input: MagicMock,
+            mock_rm: MagicMock,
+    ) -> None:
         self.run_command(
             "rm file.txt",
             mock_input,
@@ -147,10 +146,10 @@ class TestMainLoop(unittest.TestCase):
     @patch("remarkable_vfs.workspace_manager")
     def test_mv_command(
             self,
-            mock_workspace_manager,
-            mock_input,
-            mock_mv,
-    ):
+            mock_workspace_manager: MagicMock,
+            mock_input: MagicMock,
+            mock_mv: MagicMock,
+    ) -> None:
         self.run_command(
             "mv old.txt new.txt",
             mock_input,
@@ -167,10 +166,10 @@ class TestMainLoop(unittest.TestCase):
     @patch("remarkable_vfs.workspace_manager")
     def test_rcp_command(
             self,
-            mock_workspace_manager,
-            mock_input,
-            mock_rcp,
-    ):
+            mock_workspace_manager: MagicMock,
+            mock_input: MagicMock,
+            mock_rcp: MagicMock,
+    ) -> None:
         self.run_command(
             "rcp source.txt destination.txt",
             mock_input,
@@ -187,10 +186,10 @@ class TestMainLoop(unittest.TestCase):
     @patch("remarkable_vfs.workspace_manager")
     def test_help_command(
             self,
-            mock_workspace_manager,
-            mock_input,
-            mock_help,
-    ):
+            mock_workspace_manager: MagicMock,
+            mock_input: MagicMock,
+            mock_help: MagicMock,
+    ) -> None:
         self.run_command(
             "help ls",
             mock_input,
@@ -204,10 +203,10 @@ class TestMainLoop(unittest.TestCase):
     @patch("remarkable_vfs.workspace_manager")
     def test_refresh_command(
             self,
-            mock_workspace_manager,
-            mock_input,
-            mock_refresh,
-    ):
+            mock_workspace_manager: MagicMock,
+            mock_input: MagicMock,
+            mock_refresh: MagicMock,
+    ) -> None:
         self.run_command(
             "refresh",
             mock_input,
@@ -223,10 +222,10 @@ class TestMainLoop(unittest.TestCase):
     @patch("remarkable_vfs.workspace_manager")
     def test_mkdir_command(
             self,
-            mock_workspace_manager,
-            mock_input,
-            mock_mkdir,
-    ):
+            mock_workspace_manager: MagicMock,
+            mock_input: MagicMock,
+            mock_mkdir: MagicMock,
+    ) -> None:
         self.run_command(
             "mkdir test_dir",
             mock_input,
@@ -243,10 +242,10 @@ class TestMainLoop(unittest.TestCase):
     @patch("remarkable_vfs.workspace_manager")
     def test_rename_command(
             self,
-            mock_workspace_manager,
-            mock_input,
-            mock_rename,
-    ):
+            mock_workspace_manager: MagicMock,
+            mock_input: MagicMock,
+            mock_rename: MagicMock,
+    ) -> None:
         self.run_command(
             "rename old new",
             mock_input,
@@ -263,10 +262,10 @@ class TestMainLoop(unittest.TestCase):
     @patch("remarkable_vfs.workspace_manager")
     def test_exit_command(
             self,
-            mock_workspace_manager,
-            mock_input,
-            mock_execute_command,
-    ):
+            mock_workspace_manager: MagicMock,
+            mock_input: MagicMock,
+            mock_execute_command: MagicMock,
+    ) -> None:
         mock_ws = MagicMock()
         mock_ws.get_current_path.return_value = "/home/test"
         mock_workspace_manager.get.return_value = mock_ws
@@ -274,9 +273,7 @@ class TestMainLoop(unittest.TestCase):
         mock_input.return_value = "exit"
         mock_execute_command.return_value = False
 
-        result = main_loop()
-
-        self.assertIsNone(result)
+        main_loop()
 
         mock_execute_command.assert_called_once_with(
             "exit",
@@ -284,7 +281,8 @@ class TestMainLoop(unittest.TestCase):
         )
 
     @patch("remarkable_vfs.handle_exit")
-    def test_x_command_returns_false(self, mock_handle_exit):
+    def test_x_command_returns_false(self,
+                                     mock_handle_exit: MagicMock) -> None:
 
         result = execute_command("x", [])
 
@@ -296,10 +294,10 @@ class TestMainLoop(unittest.TestCase):
     @patch("remarkable_vfs.workspace_manager")
     def test_empty_command_is_ignored(
             self,
-            mock_workspace_manager,
-            mock_input,
-            mock_cd,
-    ):
+            mock_workspace_manager: MagicMock,
+            mock_input: MagicMock,
+            mock_cd: MagicMock,
+    ) -> None:
         mock_ws = MagicMock()
         mock_ws.get_current_path.return_value = "/home/test"
         mock_workspace_manager.get.return_value = mock_ws
@@ -327,10 +325,10 @@ class TestMainLoop(unittest.TestCase):
     @patch("builtins.print")
     def test_unknown_command(
             self,
-            mock_print,
-            mock_workspace_manager,
-            mock_input,
-    ):
+            mock_print: MagicMock,
+            mock_workspace_manager: MagicMock,
+            mock_input: MagicMock,
+    ) -> None:
         mock_ws = MagicMock()
         mock_ws.get_current_path.return_value = "/home/test"
         mock_workspace_manager.get.return_value = mock_ws
@@ -351,7 +349,10 @@ class TestMainLoop(unittest.TestCase):
             "Command 'foobar' not found.\nTry: help"
         )
 
-    def run_command(self, command, mock_input, mock_workspace_manager):
+    def run_command(self,
+                    command: str,
+                    mock_input: MagicMock,
+                    mock_workspace_manager: MagicMock) -> MagicMock:
         mock_ws = MagicMock()
         mock_ws.get_current_path.return_value = "/home/test"
         mock_workspace_manager.get.return_value = mock_ws
@@ -372,7 +373,9 @@ class TestLogging(unittest.TestCase):
 
     @patch("remarkable_vfs.logging.basicConfig")
     @patch("remarkable_vfs.logger")
-    def test_logging_enabled(self, mock_logger, mock_basic_config):
+    def test_logging_enabled(self,
+                             mock_logger: MagicMock,
+                             mock_basic_config: MagicMock) -> None:
         args = Namespace(
             log=True,
             log_level="DEBUG",
@@ -392,7 +395,9 @@ class TestLogging(unittest.TestCase):
 
     @patch("remarkable_vfs.logging.basicConfig")
     @patch("remarkable_vfs.logger")
-    def test_logging_disabled(self, mock_logger, mock_basic_config):
+    def test_logging_disabled(self,
+                              mock_logger: MagicMock,
+                              mock_basic_config: MagicMock) -> None:
         args = Namespace(
             log=False,
             log_level="DEBUG",
@@ -410,22 +415,22 @@ from remarkable_vfs import init_argparse
 
 class TestInitArgparse(unittest.TestCase):
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.parser = init_argparse()
 
-    def test_default_arguments(self):
+    def test_default_arguments(self) -> None:
         args = self.parser.parse_args([])
 
         self.assertFalse(args.log)
         self.assertEqual(args.log_level, "INFO")
 
-    def test_log_flag(self):
+    def test_log_flag(self) -> None:
         args = self.parser.parse_args(["--log"])
 
         self.assertTrue(args.log)
         self.assertEqual(args.log_level, "INFO")
 
-    def test_log_level(self):
+    def test_log_level(self) -> None:
         for level in ["DEBUG", "INFO", "WARN", "ERROR"]:
             with self.subTest(level=level):
                 args = self.parser.parse_args([
@@ -435,7 +440,7 @@ class TestInitArgparse(unittest.TestCase):
 
                 self.assertEqual(args.log_level, level)
 
-    def test_invalid_log_level(self):
+    def test_invalid_log_level(self) -> None:
         with self.assertRaises(SystemExit):
             self.parser.parse_args([
                 "--log-level",
