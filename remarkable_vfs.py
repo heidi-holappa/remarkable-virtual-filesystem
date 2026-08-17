@@ -83,10 +83,15 @@ def init_logging(args: Namespace) -> None:
         logger.info(f"Logging enabled. Using log level {args.log_level}")
 
 
-if __name__ == "__main__":
+def main() -> None:
     parser = init_argparse()
-    init_logging(parser.parse_args())
+    args = parser.parse_args()
+    init_logging(args)
 
     logger.info("Starting Remarkable VirtualFilesSystem main loop")
 
     main_loop()
+
+
+if __name__ == "__main__":
+    main()
