@@ -10,7 +10,8 @@ from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
 from src.exception import (
     RemarkableOperationError,
     NotFoundError,
-    NoSuchFileOrDirectoryError
+    NoSuchFileOrDirectoryError,
+    InvalidMetadataError
 )
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from test.test_data import (
@@ -128,6 +129,12 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     def test_path_is_returned_correctly(self) -> None:
         self.ws.set_current_collection(UUID_A)
         self.assertEqual('/A', self.ws.get_current_path())
+
+    # -----------------------
+    # process ls command
+    # -----------------------
+    def test_when_entry_is_not_document_or_collection_message_is_shown(self) -> None:
+        # TODO: write test
 
     # -----------------------
     # Handle move instruction
@@ -998,6 +1005,18 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.assertTrue("Metadata not found for some-uuid" in str(context.exception),
                         msg=context.exception)
 
+
+
+    def test_visible_name_none_raises_invalid_metadata_error(self) -> None:
+        invalid_data_uuid = "some-uuid"
+        invalid_data = {"visibleName": None}
+        self.ws._data[invalid_data_uuid] = invalid_data
+        with self.assertRaises(InvalidMetadataError) as context:
+            self.ws.get_visible_name_for_uuid(invalid_data_uuid)
+
+        self.assertTrue("invalid visible_name" in str(context.exception),
+                        msg=context.exception)
+
     # -------------------------------------
     # Get parent
     # -------------------------------------
@@ -1008,3 +1027,56 @@ class RemarkableWorkspaceTest(unittest.TestCase):
                         msg=f'get parent returned {self.ws.get_parent()}, '
                             f'which is NOT UUID of the parent of current collection (UUID_A): {UUID_A}')
 
+
+
+    def test_parent_none_raises_invalid_metadata_error(self) -> None:
+        invalid_data_uuid = "some-uuid"
+        invalid_data = {"parent": None}
+        self.ws._data[invalid_data_uuid] = invalid_data
+        with self.assertRaises(InvalidMetadataError) as context:
+            self.ws.get_parent(invalid_data_uuid)
+
+        self.assertTrue("parent was not an instance of str" in str(context.exception),
+                        msg=context.exception)
+
+    # -------------------------------------
+    # Generate absolute collection path
+    # -------------------------------------
+
+    def test_when_collection_not_found_na_is_returned(self) -> None:
+        invalid_data_uuid = "some-uuid"
+        self.ws._data.pop(invalid_data_uuid, None)
+        actual_path = self.ws.generate_absolute_collection_path(invalid_data_uuid)
+        self.assertEqual("./<NA>", actual_path)
+
+
+    def test_when_parent_is_none_invalid_metadata_error_is_raised(self) -> None:
+        invalid_data_uuid = "some-uuid"
+        self.ws._data.pop(invalid_data_uuid, None)
+        invalid_data = {"parent": None, "visibleName": "some-name.pdf"}
+        self.ws._data[invalid_data_uuid] = invalid_data
+        with self.assertRaises(InvalidMetadataError) as context:
+            self.ws.generate_absolute_collection_path(invalid_data_uuid)
+
+        self.assertTrue("parent was not an instance of str" in str(context.exception),
+                        msg=context.exception)
+
+    def test_when_visible_name_is_none_invalid_metadata_error_is_raised(self) -> None:
+        invalid_data_uuid = "some-uuid"
+        self.ws._data.pop(invalid_data_uuid, None)
+        invalid_data = {"parent": "parent-uuid", "visibleName": None}
+        self.ws._data[invalid_data_uuid] = invalid_data
+        with self.assertRaises(InvalidMetadataError) as context:
+            self.ws.generate_absolute_collection_path(invalid_data_uuid)
+
+        self.assertTrue("visibleName was not an instance of str" in str(context.exception),
+                        msg=context.exception)
+
+
+    def test_when_parent_is_trash_child_is_trash_also(self) -> None:
+        invalid_data_uuid = "some-uuid"
+        self.ws._data.pop(invalid_data_uuid, None)
+        invalid_data = {"parent": "trash", "visibleName": "some.pdf"}
+        self.ws._data[invalid_data_uuid] = invalid_data
+        actual_path = self.ws.generate_absolute_collection_path(invalid_data_uuid)
+        self.assertEqual("/trash/some.pdf", actual_path)
