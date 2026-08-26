@@ -36,13 +36,13 @@ from io import BytesIO
 from typing import Dict, List, Tuple, Any
 from unittest.mock import patch, MagicMock
 
-from src.constant import SSH_CONNECT, REMOTE_PREFIX
+from src.constant import SSH_CONNECT, REMOTE_PREFIX, SSH_REMOTE_HOST
 from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
 from src.dto.content import Content
 from src.dto.entry_type_enum import EntityType
 from src.dto.file_type_enum import FileType
 from src.dto.metadata import Metadata
-from src.exception import RemarkableWriteError
+from src.exception import RemarkableWriteError, RemarkableOperationError
 from test.test_data import UUID_FAIRYTALE, UUID_FAIRYTALE_2
 
 # System under test (SUT)
@@ -180,6 +180,42 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         result = self.source._fetch_metadata()
 
         self.assertEqual(result, {})
+
+    def test_fetch_metadata_skips_member_without_file(self) -> None:
+        member = MagicMock()
+        member.name = "./test.metadata"
+
+        tar = MagicMock()
+        tar.__iter__.return_value = [member]
+        tar.extractfile.return_value = None
+
+        mock_tarfile = MagicMock()
+        mock_tarfile.__enter__.return_value = tar
+
+        proc = MagicMock()
+        proc.returncode = 0
+        proc.communicate.return_value = (b"some tar bytes", b"")
+
+        with (
+            patch(
+                "src.data.remarkable_ssh_metadata_source.subprocess.Popen"
+            ) as mock_popen,
+            patch(
+                "src.data.remarkable_ssh_metadata_source.tarfile.open",
+                return_value=mock_tarfile,
+            ),
+            patch.object(
+                RemarkableSSHMetadataSource,
+                "_get_file_sizes",
+                return_value={},
+            ),
+        ):
+            mock_popen.return_value.__enter__.return_value = proc
+
+            result = self.source._fetch_metadata()
+
+        assert result == {}
+        tar.extractfile.assert_called_once_with(member)
 
     # --------------------------------------------------
     # _get_file_sizes()
@@ -345,6 +381,13 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
 
         self.assertTrue("Failed to remove files:" in str(context.exception))
 
+
+    @patch("subprocess.Popen")
+    def test_remove_returns_none_when_no_uuids_are_provided(self,
+                                                            mock_open: MagicMock) -> None:
+        self.source.remove([])
+        mock_open.assert_not_called()
+
     # --------------------------------------------------
     # remote copy
     # --------------------------------------------------
@@ -492,3 +535,17 @@ class TestRemarkableSSHMetadataSource(unittest.TestCase):
         # Verify subprocess options
         assert kwargs["capture_output"] is True
         assert kwargs["text"] is True
+
+    def test_restart_xochitl_raises_on_command_failure(self) -> None:
+        error = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["ssh", SSH_REMOTE_HOST, "systemctl restart xochitl"],
+            output="some stdout",
+            stderr="some stderr",
+        )
+
+        with patch("src.data.remarkable_ssh_metadata_source.subprocess.run", side_effect=error):
+            with self.assertRaises(RemarkableOperationError) as exc_info:
+                self.source.restart_xochitl()
+
+        self.assertTrue("Failed to restart xochitl:" in str(exc_info.exception))

@@ -257,3 +257,37 @@ class TestMetadata(unittest.TestCase):
 
         self.assertTrue("parent" in str(context.exception))
 
+    def test_from_dict_raises_when_required_fields_are_missing(self) -> None:
+        metadata_dict = {
+            "createdTime": "123",
+            "lastModified": "456",
+            "new": False,
+            "parent": "",
+            "pinned": False,
+            "source": "test",
+            "type": "valid_type",
+            # "visibleName" is intentionally missing
+        }
+
+        with self.assertRaises(InvalidMetadataError) as exc_info:
+            Metadata.from_dict(metadata_dict)
+
+
+        self.assertTrue("Missing metadata fields: visibleName" in str(exc_info.exception))
+
+    def test_from_dict_raises_for_invalid_entity_type(self) -> None:
+        metadata_dict = {
+            "createdTime": "123",
+            "lastModified": "456",
+            "new": False,
+            "parent": "",
+            "pinned": False,
+            "source": "test",
+            "type": "not_a_valid_entity_type",
+            "visibleName": "Test",
+        }
+
+        with self.assertRaises(InvalidMetadataError) as exc_info:
+            Metadata.from_dict(metadata_dict)
+
+        self.assertTrue("type: invalid value not_a_valid_entity_type" in str(exc_info.exception))
