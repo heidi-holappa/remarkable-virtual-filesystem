@@ -19,17 +19,15 @@ from src.dto.content import Content
 from src.dto.entry_type_enum import EntityType
 from src.dto.metadata import Metadata
 from src.exception import (
-    ConstraintViolationError,
-    InvalidMetadataError
-)
-from src.exception import (
     RemarkableWriteError,
     NotFoundError,
     NoSuchFileOrDirectoryError,
     NoSuchDirectoryError,
     InvalidPathError,
     InvalidArgumentError,
-    InvalidContentError
+    InvalidContentError,
+    ConstraintViolationError,
+    InvalidMetadataError
 )
 
 

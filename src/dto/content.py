@@ -29,8 +29,6 @@ class Content:
 
         if not isinstance(self.file_type, FileType):
             validation_errors.append("fileType for content file must be an Enum FileType")
-        elif self.file_type.value not in ("pdf", "epub"):
-            validation_errors.append("fileType for content file must be either pdf or epub")
 
         if validation_errors:
             raise InvalidContentError(
