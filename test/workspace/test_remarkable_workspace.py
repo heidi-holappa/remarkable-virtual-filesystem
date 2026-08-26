@@ -11,7 +11,9 @@ from src.exception import (
     RemarkableOperationError,
     NotFoundError,
     NoSuchFileOrDirectoryError,
-    InvalidMetadataError
+    InvalidMetadataError,
+    RemarkableWriteError,
+    InvalidPathError
 )
 from src.workspace.remarkable_workspace import RemarkableWorkspace
 from test.test_data import (
@@ -135,6 +137,23 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     # -----------------------
     def test_when_entry_is_not_document_or_collection_message_is_shown(self) -> None:
         # TODO: write test
+        original_data = self.ws.get_data()
+        invalid_data = {
+            "some-uuid": {
+                "type": "UnknownType",
+                "parent": ""
+            }
+
+        }
+        self.ws._data = invalid_data
+        self.ws.process_ls([])
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.process_ls([])
+            output: str = mock_out.getvalue()
+            self.assertTrue(f"ls: entry is neither a file or a directory: some-uuid" in output,
+                            msg=f"Output was: {output}")
+        self.ws._data = original_data
+
 
     # -----------------------
     # Handle move instruction
@@ -509,6 +528,22 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             self.assertTrue(
                 "mkdir: : path cannot be an empty string: hint: try help mkdir" in output,
                 msg=f"Output was: {output}")
+
+    @patch.object(RemarkableSSHMetadataSource, "write_metadata")
+    def test_make_directory_when_write_metadata_fails(self, mock_write: MagicMock) -> None:
+        mock_write.side_effect = RemarkableWriteError("write failed")
+        self.ws.set_current_collection(UUID_A)
+        actual_path_to_make = "foo"
+
+        with patch("sys.stdout", new=StringIO()) as mock_out:
+            self.ws.process_mkdir(actual_path_to_make)
+
+            self.assertEqual(mock_write.call_count, 1)
+            output: str = mock_out.getvalue()
+            self.assertIn(
+                "mkdir: foo: error writing to remarkable: write failed",
+                output,
+            )
 
     # -------------------------------------
     # Process remove instruction
@@ -899,13 +934,36 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.assertEqual(1, len(matches))
         self.assertTrue(UUID_INVALID_LAST_MODIFIED in matches)
 
-    def test_raises_not_found_exception_if_parent_not_found(self) -> None:
+    def test_raises_not_found_exception_if_parent_is_not_a_parent(self) -> None:
+        parent: str = UUID_FAIRYTALE
+        entity_wildcard = "*valid*.pdf"
+        with self.assertRaises(NotFoundError) as ctx:
+            self.ws._get_matches_for_wildcard(parent, entity_wildcard)
+        self.assertTrue(PARENT_NOT_FOUND.format(
+            parent=parent, entity=entity_wildcard) in str(ctx.exception), msg=ctx.exception)
+
+    def test_raises_not_found_exception_if_parent_uuid_does_not_exist(self) -> None:
         parent: str = "123-123"
         entity_wildcard = "*valid*.pdf"
         with self.assertRaises(NotFoundError) as ctx:
             self.ws._get_matches_for_wildcard(parent, entity_wildcard)
         self.assertTrue(PARENT_NOT_FOUND.format(
             parent=parent, entity=entity_wildcard) in str(ctx.exception), msg=ctx.exception)
+
+    @patch.object(RemarkableSSHMetadataSource, "remote_copy")
+    def test_copy_file_from_host_to_target_when_remote_copy_fails(
+            self, mock_remote_copy: MagicMock) -> None:
+        mock_remote_copy.side_effect = NotFoundError("file not found")
+
+        source_file = "/tmp/foo.pdf"
+        target_uuid = str(UUID_A)
+
+        with patch("sys.stdout", new=StringIO()) as mock_out:
+            self.ws._copy_file_from_host_to_target(source_file, target_uuid)
+
+            self.assertEqual(mock_remote_copy.call_count, 1)
+            output: str = mock_out.getvalue()
+            self.assertIn("file not found", output)
 
 
     # -------------------------------------
@@ -1080,3 +1138,102 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.ws._data[invalid_data_uuid] = invalid_data
         actual_path = self.ws.generate_absolute_collection_path(invalid_data_uuid)
         self.assertEqual("/trash/some.pdf", actual_path)
+
+
+    # --------------------------
+    # Validate source and target uuid
+    # --------------------------
+
+    @patch("os.path.exists", return_value=True)
+    def test_when_target_uuid_is_none_not_found_error_is_raised(
+            self, mock_exists: MagicMock) -> None:
+        with self.assertRaises(NotFoundError) as context:
+            self.ws._validate_source_and_target_uuid("", "/foo", None)
+
+        mock_exists.assert_called_once_with("")
+
+        self.assertTrue(
+            "rcp: target path /foo not found" in str(context.exception),
+            msg=context.exception
+        )
+
+
+    # ----------------------------
+    # _generate_target_path_uuid_and_source_file_pairs
+    # ----------------------------
+    def test_generate_target_path_uuid_and_source_file_pairs_skips_empty_directory(
+            self) -> None:
+        source_path = "/tmp/source"
+        target_collection = str(UUID_A)
+        files = ["/tmp/source//foo.pdf"]
+
+        with patch.object(
+                self.ws,
+                "_get_or_create_collection",
+                return_value=str(UUID_B),
+        ) as mock_get_or_create:
+            result = self.ws._generate_target_path_uuid_and_source_file_pairs(
+                source_path,
+                files,
+                target_collection,
+            )
+
+        # The empty directory component between the two '/' characters
+        # should have been skipped.
+        mock_get_or_create.assert_not_called()
+        self.assertEqual(
+            result,
+            [("/tmp/source//foo.pdf", target_collection)],
+        )
+
+    # -------------------
+    # _get_or_create_collection
+    # -------------------
+    def test_when_child_already_exists_it_is_returned(self) -> None:
+        parent_uuid = UUID_A
+        child_visible_name = "A_0"
+        actual_uuid = self.ws._get_or_create_collection(parent_uuid, child_visible_name)
+        self.assertEqual(UUID_A0, actual_uuid)
+
+    # -------------------
+    # _get_descendant_uuids
+    # -------------------
+    def test_when_when_entity_is_not_a_collection_error_is_raised(self) -> None:
+        with self.assertRaises(InvalidPathError) as context:
+            self.ws._get_descendant_uuids(UUID_FAIRYTALE)
+
+        self.assertTrue(f"Metadata for CollectionType not found: {UUID_FAIRYTALE}"
+                        in str(context.exception), msg=context.exception)
+
+    # -------------------
+    # _traverse_path
+    # -------------------
+    def test_traverse_path_breaks_when_collection_pointer_is_not_string(self) -> None:
+        # This should not happen, but we confirm this defensive check works
+        with patch.object(
+                self.ws,
+                "_current_collection",
+                None,
+        ):
+            result = self.ws._traverse_path("foo")
+
+        self.assertEqual(result, None)
+
+
+    # -------------------
+    # _remove_entities
+    # -------------------
+    @patch.object(RemarkableSSHMetadataSource, "remove")
+    def test_remove_entities_when_remove_fails(
+            self, mock_remove: MagicMock) -> None:
+        mock_remove.side_effect = RemarkableWriteError("write failed")
+
+        entity_uuids = [str(UUID_A)]
+
+        with patch("sys.stdout", new=StringIO()) as mock_out:
+            self.ws._remove_entities(entity_uuids)
+
+        mock_remove.assert_called_once_with(entity_uuids)
+
+        output: str = mock_out.getvalue()
+        self.assertIn("ERROR: write failed", output)
