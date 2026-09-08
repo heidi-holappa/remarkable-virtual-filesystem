@@ -78,9 +78,11 @@ class TestEntry(unittest.TestCase):
             size=1234,
         )
 
-        entry.content.file_type = FileType.EPUB
-
-        self.assertEqual(entry.content.file_type, FileType.EPUB)
+        self.assertIsNotNone(entry.content)
+        # None-check not really needed here, but mypy is pleased.
+        if entry.content:
+            entry.content.file_type = FileType.EPUB
+            self.assertEqual(entry.content.file_type, FileType.EPUB)
 
     def test_entry_metadata_can_be_replaced(self) -> None:
         metadata = self.create_metadata()
