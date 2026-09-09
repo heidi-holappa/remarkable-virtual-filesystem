@@ -7,7 +7,7 @@ from src.dto.metadata import Metadata
 @dataclass
 class Entry:
     metadata: Metadata
-    content: Content | None
-    size: int
+    content: Content | None = None
+    size: int | None = None
 
 
