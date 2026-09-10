@@ -1,0 +1,1010 @@
+"""
+    Module for the functionalities of accessing
+    reMarkable metadata content
+"""
+
+import copy
+import os
+import uuid
+import time
+from fnmatch import fnmatchcase
+from typing import Dict, List, Tuple, Optional
+
+from src.repository.remarkable_data_repository import RemarkableDataRepository
+from src.constant import (
+    ROOT_COLLECTION, PARENT_NOT_FOUND,
+    NOT_A_DIRECTORY, NO_SUCH_FILE_OR_DIRECTORY, LS_COLUMN_WIDTH,
+    VALID_VISIBLE_NAME_REGEX)
+from src.dto.content import Content
+from src.dto.entry_type_enum import EntityType
+from src.dto.metadata import Metadata
+from src.dto.entry import Entry
+from src.exception import (
+    RemarkableWriteError,
+    NotFoundError,
+    NoSuchFileOrDirectoryError,
+    NoSuchDirectoryError,
+    InvalidPathError,
+    InvalidArgumentError,
+    InvalidContentError,
+    ConstraintViolationError,
+    InvalidMetadataError
+)
+
+
+class RemarkableWorkspaceV2:
+    """
+        Class for accessing metadata content from
+        reMarkable user collections
+    """
+
+    def __init__(self, repository: RemarkableDataRepository):
+        self._repository = repository
+
+
+    # -------------------------
+    # ls
+    # -------------------------
+    def process_ls(self, utility_args: Optional[List[str]]) -> None:
+        """
+        Processes ls command and lists files either in current
+        collection or matching the provided argument. The argument
+        is expected to be a path (collection). If argument is provided,
+        and it does not match any collection, raises NotFoundError.
+
+        :param utility_args: optional utility arguments for ls
+        """
+
+        if utility_args:
+            operand_path: str = utility_args[0]
+            collection_to_list_uuid: str | None = (
+                self._traverse_path(operand_path))
+            if collection_to_list_uuid is None:
+                raise NotFoundError("ls: no such path")
+        else:
+            collection_to_list_uuid = self._repository.get_current_collection()
+
+        remarkable_metadata: Dict[str, Entry] = self._repository.get_data()
+
+        list_result: List[str] = []
+        collections: List[Tuple[str, str]] = []
+        documents: List[Tuple[str, str]] = []
+
+
+        if collection_to_list_uuid != ROOT_COLLECTION:
+            list_result.append(f"{' '*LS_COLUMN_WIDTH}../")
+        list_result.append(f"{' '*LS_COLUMN_WIDTH}./")
+
+        for item_uuid, v in remarkable_metadata.items():
+            if v.metadata.parent != collection_to_list_uuid:
+                continue
+            if v.metadata.type == EntityType.COLLECTION_TYPE:
+                collection_visible_name: str = v.metadata.visible_name
+                collection_size: int = 0
+                if v.size:
+                    collection_size = v.size
+                collections.append((f"{collection_visible_name}/", f"{collection_size}"))
+            elif v.metadata.type == EntityType.DOCUMENT_TYPE:
+                document_visible_name: str = v.metadata.visible_name
+                document_size: int = 0
+                if v.size:
+                    document_size = v.size
+                documents.append((f"{document_visible_name}", f"{document_size}"))
+            else:
+                print(f"ls: entry is neither a file or a directory: {item_uuid}")
+
+        for t in sorted(collections, key=lambda x: x[0].lower()):
+            name, entry_size = t
+            padding_col: str = ' '*(LS_COLUMN_WIDTH - len(entry_size))
+            list_result.append(f"{entry_size}{padding_col}{name}")
+
+        for t in sorted(documents, key=lambda x: x[0].lower()):
+            name, entry_size = t
+            padding_doc: str = ' ' * (LS_COLUMN_WIDTH - len(entry_size))
+            list_result.append(f"{entry_size}{padding_doc}{name}")
+
+        self._output_ls_result(list_result)
+
+    # -------------------------
+    # cd
+    # -------------------------
+    def change_collection(self, operand_path: str) -> None:
+        """
+        Attempts to change current collection to the provided
+        collection. If traversal of given path fails to locate
+        a collection, InvalidPathError is raised.
+
+        raises:
+          - NoSuchDirectoryError: instead of passing the raised exception a
+          new one is thrown to include the full path in error message
+          - NoSuchFileOrDirectoryError: no matching file or directory was found
+
+        :param operand_path: a string representation of a path operand
+        """
+
+
+        try:
+            collection_pointer = self._traverse_path(operand_path)
+        except NoSuchDirectoryError as e:
+            raise NoSuchDirectoryError(f"{operand_path}: {NOT_A_DIRECTORY}") from e
+        if collection_pointer is None:
+            raise NoSuchFileOrDirectoryError(f"{operand_path}: {NO_SUCH_FILE_OR_DIRECTORY}")
+
+        self._repository.set_current_collection(collection_pointer)
+
+    # -------------------------
+    # mv
+    # -------------------------
+    def process_move_command(self, operand_source: str, operand_target: str) -> None:
+        """
+        A single move instruction moves one or several entities
+        with a common parent to the provided target path. This
+        method prepares a list of source entities to be moved
+        and then separately invokes a helper method to handle
+        the move operation for each entity. The list of entries
+        will be sorted in alphabetical order based on the visible
+        names of the entities.
+
+        In try-except following exceptions may occur:
+          - InvalidPathError if target path does not exist
+          - InvalidMetadataError if metadata validation fails
+          - NotFoundError if the file to move is not found
+
+        :param operand_source: name of the file to be moved
+        :param operand_target: the directory of the target parent
+        """
+
+        try:
+            # Root path can not be moved
+            if operand_source == "":
+                raise ConstraintViolationError("root path cannot be moved")
+
+            # Attempt to resolve the target UUID
+            # from the provided target path
+            target_uuid: Optional[str] = self._traverse_path(operand_target)
+            if target_uuid is None:
+                raise InvalidPathError(f'{operand_target}: {NO_SUCH_FILE_OR_DIRECTORY}')
+
+            visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(operand_source)
+
+            # attempt to move entities to the same parent
+            # should result in a no-op
+            if parent_uuid == target_uuid:
+                return
+
+            entities_to_move: List[str] =  (
+                self._collect_uuids_for_children_matching_name_or_pattern(
+                visible_name, parent_uuid))
+
+            if not entities_to_move:
+                raise NotFoundError(
+                    f"cannot move {operand_source}: {NO_SUCH_FILE_OR_DIRECTORY}")
+
+            for entity in entities_to_move:
+                self._move_entity(entity, target_uuid)
+
+        except (ConstraintViolationError,
+                InvalidPathError,
+                NotFoundError) as e:
+            print(f"mv: {e} ")
+
+    # -------------------------
+    # rm
+    # -------------------------
+    def process_remove_command(self, target_pattern: str) -> None:
+        """
+        A remove command removes one or several entities
+        (documents and/or collections) matching the provided
+        pattern from the reMarkable device.
+
+        Handles following exceptions and informs user of an error:
+          - NotFoundError if source path is not found
+          - KeyError: if UUID is not found for data to be removed
+
+        :param target_pattern: pattern for sources to be removed
+        """
+
+        try:
+            visible_name, parent_uuid = self._resolve_source_parent_and_visible_name(target_pattern)
+
+            entities_to_remove: List[str] = (
+                self._collect_uuids_matching_name_or_pattern_and_all_descendants_of_matches(
+                visible_name, parent_uuid))
+
+            self._repository.remove_entities(entities_to_remove)
+
+            for item_uuid in entities_to_remove:
+                self._repository.remove_entry(item_uuid)
+
+        except (NotFoundError, KeyError) as e:
+            print(f"ERROR: {e}")
+
+
+    # -------------------------
+    # rcp
+    # -------------------------
+    def process_rcp_with_options(self, utility_args: List[str]) -> None:
+        """
+        Handles rcp command with options. Flags are meant for
+        copying multiple files with one command. This method
+        validates the arguments, resolves a list of
+        files to be copied and then for each file invokes
+        `process_rcp_command` separately
+
+        :param utility_args: list of utility arguments
+        """
+
+        try:
+            # options MUST precede source_path and target_path
+            options: List[str] = utility_args[:-2]
+
+            if len(options) > 1 or not self._has_only_valid_options(options):
+                raise InvalidArgumentError(
+                    f"invalid options: {','.join(options)}: hint: help rcp")
+
+            # The source and target MUST be the last two arguments
+            source_path, target_collection = utility_args[-2:]
+
+            target_uuid: Optional[str] = self._traverse_path(target_collection)
+            validated_target_uuid = self._validate_source_and_target_uuid(
+                source_path, target_collection, target_uuid)
+
+            recurse = options[0] == "-r"
+
+            files_to_copy: List[str] = self._find_all_pdf_and_epub_files_in_path(
+                source_path, recurse)
+
+            if not files_to_copy:
+                print(f"rcp: no pdf or epub files found in directory: {source_path}")
+                return
+
+            files_and_parents: List[Tuple[str, str]] = (
+                self._generate_target_path_uuid_and_source_file_pairs(
+                source_path, files_to_copy, validated_target_uuid))
+
+            print(f"found {len(files_to_copy)} files to copy. copying files one-by-one."
+                  f"\nDO NOT disconnect reMarkable while operation is ongoing.")
+            for idx, file_parent_pair in enumerate(files_and_parents):
+                source_file, parent_uuid = file_parent_pair
+                self._copy_file_from_host_to_target(source_file, parent_uuid)
+                print(f"{idx + 1}/{len(files_to_copy)}: "
+                      f"{source_file} copied to {target_collection}")
+
+            self._repository.refresh_data()
+
+        except (InvalidArgumentError, NotFoundError) as e:
+            print(f"rcp: {e}")
+
+    def process_rcp_command_without_options(self, source_file: str, target_collection: str) -> None:
+        """
+        Copies a single file defined by the user as the
+        source file to the target collection in reMarkable
+        device.
+
+        :param source_file: absolute path of a PDF or EPUB file
+        :param target_collection: absolute path of the target collection
+        """
+
+        try:
+
+            target_uuid: Optional[str] = self._traverse_path(target_collection)
+            validated_target_uuid = self._validate_source_and_target_uuid(
+                source_file, target_collection, target_uuid)
+
+            self._copy_file_from_host_to_target(source_file, validated_target_uuid)
+
+            self._repository.refresh_data()
+
+        except NotFoundError as e:
+            print(f"rcp: {e}")
+
+    # -------------------------
+    # mkdir
+    # -------------------------
+    def process_mkdir(self, operand_path: str, parent: Optional[str] = None) -> None:
+        """
+        Tries to create a new subdirectory to the current
+        parent.
+
+        Handles possible raised errors:
+          - InvalidPathError if path is not valid
+          - RemarkableWriteError if an error occurs while
+            communicating with the remarkable device
+
+        :param operand_path: path to create
+        :param parent: optional UUID of parent collection.
+                        Defaults to current parent collection
+        """
+
+        if not parent:
+            parent = self._repository.get_current_collection()
+
+        try:
+            self._validate_path(operand_path)
+
+            self._create_collection_metadata_and_invoke_write(
+                parent, operand_path)
+
+        except InvalidPathError as e:
+            print(f"mkdir: {operand_path}: {e}: hint: try help mkdir")
+        except RemarkableWriteError as e:
+            print(f"mkdir: {operand_path}: error writing to remarkable: {e}")
+
+    # --------------------------------
+    #  rename
+    # --------------------------------
+
+    def process_rename(self, target: str, new_visible_name: str) -> None:
+        """
+        Tries to rename a document or a collection with
+        the provided new_visible_name. User is informed,
+        if the new_visible_name violates naming constraints
+        or if target does not exist.
+
+        :param target: target entry to rename
+        :param new_visible_name: new name for the source
+        """
+        try:
+
+            visible_name, parent_uuid =  self._resolve_source_parent_and_visible_name(target)
+
+            entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
+                visible_name, parent_uuid)
+
+            self._validate_visible_name(parent_uuid, entity_uuid, new_visible_name)
+
+            current_metadata = self._repository.get_metadata_for_uuid(entity_uuid)
+            updated_metadata: Metadata = copy.deepcopy(current_metadata)
+            updated_metadata.visible_name = new_visible_name
+
+            # update metadata to in-memory data and target machine
+            self._repository.write_metadata(entity_uuid, updated_metadata)
+
+        except InvalidArgumentError as e:
+            print(f"rename: {target} {new_visible_name}: {e}: hint: help rename")
+        except NotFoundError as e:
+            print(f"rename: {target} {new_visible_name}: {e}: hint: help rename")
+
+
+
+    # ----------------------------------
+    # private methods
+    # ----------------------------------
+
+
+    def _create_collection_metadata_and_invoke_write(self, parent: str, path_name: str) -> str:
+        """
+        Creates metadata for a new collection and attempts to invoke
+        a write operation for reMarkable reader. reMarkable is lax
+        regarding rules for naming. For instance, nothing prevents
+        two entries with the same parent to have the same visible name.
+        This method does no validation and instead just perpares a
+        Metadata entry and attempts to write it. Callee must take
+        any possible validation into consideration.
+
+        Raises: RemarkableWriteError in case write operation
+                fails. Callee must handle the possible exception
+
+        :param parent: UUID of the parent collection
+        :param path_name: visible name of the new path
+
+        :return: UUID of the new created collection.
+
+        """
+
+        metadata: Metadata = Metadata(
+            created_time=int(time.time()),
+            last_modified=int(time.time()),
+            new=False,
+            parent=parent,
+            pinned=False,
+            source="",
+            type=EntityType.COLLECTION_TYPE,
+            visible_name=path_name
+        )
+
+        # Generate a random UUID for the new entry
+        path_uuid: str = str(uuid.uuid4())
+        self._repository.write_metadata(path_uuid, metadata)
+
+        return path_uuid
+
+    @staticmethod
+    def _output_ls_result(list_result: List[str]) -> None:
+        size_header = "size (kB)"
+        header_padding = " " * (LS_COLUMN_WIDTH - len(size_header))
+        name_header = "name"
+        header = f"{size_header}{header_padding}{name_header}"
+        print(header)
+        for entry in list_result:
+            print(entry)
+
+    def _copy_file_from_host_to_target(self, source_file: str, target_uuid: str) -> None:
+        """
+        Remote copy (rcp) command moves one file from host machine
+        to the provided collection on the target machine (reMarkable).
+        The source must be an absolute path to a file and the target
+        must be an absolute path to a collection.
+
+
+        :param source_file: source from which to copy
+        :param target_uuid: target collection UUID
+        """
+
+        try:
+            filename: str = os.path.basename(source_file)
+            # splitext return extension with dot. We want to remove that here.
+            file_extension: str = os.path.splitext(filename)[1][1:]
+
+            content: Content = Content.from_dict(
+                {"fileType": file_extension}
+            )
+
+            metadata: Metadata = Metadata(
+                created_time=int(time.time()),
+                last_modified=int(time.time()),
+                new=False,
+                parent=target_uuid,
+                pinned=False,
+                source="",
+                type=EntityType.DOCUMENT_TYPE,
+                visible_name=filename
+            )
+
+            print(f"SOURCE_FILE: {source_file}")
+
+            self._repository.invoke_remote_copy(source_file=source_file,
+                                     metadata=metadata, content=content)
+
+
+        except (NotFoundError, InvalidMetadataError,
+                InvalidContentError) as e:
+            print(e)
+
+    @staticmethod
+    def _has_only_valid_options(options: List[str]) -> bool:
+        """
+        Starting from milestone v0.3 rcp supports
+        flags (a)ll and (r)ecursive
+        """
+        valid_options = ['-a', '-r']
+        for op in options:
+            if op not in valid_options:
+                return False
+        return True
+
+
+    @staticmethod
+    def _validate_source_and_target_uuid(source: str,
+                                         target_collection: str,
+                                         target_uuid: Optional[str]) -> str:
+        if not os.path.exists(source):
+            raise NotFoundError(f"rcp: source file {source} not found")
+        if target_uuid is None:
+            raise NotFoundError(f"rcp: target path {target_collection} not found")
+
+        return target_uuid
+
+    @staticmethod
+    def _find_all_pdf_and_epub_files_in_path(path: str, recurse: bool) -> List[str]:
+        """
+        Walks through the path in host and collects all source
+        documents. With recurse flag also walks child paths
+
+        :param path: host path to walk
+        :param recurse: is the walk recursive
+        :return: a list of absolute paths
+        """
+        result = []
+
+        for dirpath, _, filenames in os.walk(path):
+            for file in filenames:
+                if file.lower().endswith((".pdf", ".epub")):
+                    result.append(os.path.abspath(os.path.join(dirpath, file)))
+            if not recurse:
+                break
+
+        return result
+
+
+    def _generate_target_path_uuid_and_source_file_pairs(
+            self, source_path: str,
+            files: List[str],
+            target_collection: str) -> List[Tuple[str, str]]:
+        """
+        Iterates through files and if needed, creates missing child
+        collections to reMarkable in case of recursive remote copy.
+
+        Raises: called function _get_or_create_collection may raise
+        RemarkableWriteError which must be handled by the callee.
+
+        :param source_path: the absolute path from which files are copied
+        :param files: absolute path to each file
+        :param target_collection: the target path to copy files into
+        :return: list of tuples with parent uuid and path to file
+        """
+
+        result: List[Tuple[str, str]] = []
+
+        for abs_path in files:
+            rel_path = abs_path.removeprefix(source_path).removeprefix('/')
+            dirs_and_filename: List[str] = rel_path.split('/')
+            # Note: the last element contains the filename:
+            # filename: str = dirs_and_filename[-1:][0]
+            dirs: List[str] = dirs_and_filename[:-1]
+            parent = target_collection
+            for directory in dirs:
+                if not directory:
+                    continue
+                dir_uuid = self._get_or_create_collection(parent, directory)
+                parent = dir_uuid
+            result.append((abs_path, parent))
+        return result
+
+    def _get_or_create_collection(self, parent: str, child_visible_name: str) -> str:
+        """
+        Either gets a collection with a given visible name and parent,
+        or creates the collection.
+
+        Raises: invoked function may raise MetadataWriteError. Callee
+                must handle this.
+
+        :param parent: UUID of the parent
+        :param child_visible_name: visible name of the collection
+        :return: UUID of the collection
+        """
+
+        if self._parent_has_child_path_with_given_name(parent, child_visible_name):
+            for entry_uuid, entry in self._repository.get_data().items():
+                if (entry.metadata.visible_name == child_visible_name and
+                        entry.metadata.parent == parent):
+                    return entry_uuid
+
+        new_entry_uuid: str =  self._create_collection_metadata_and_invoke_write(
+            parent, child_visible_name)
+
+        return new_entry_uuid
+
+    def _validate_visible_name(self, parent_uuid: str,
+                               entry_uuid: str,
+                               new_visible_name :str) -> None:
+        """
+        Validates that the provided visible name
+        fills the following constraints:
+
+        * visible name can contain alphanumeric characters
+          (a-zA-Z0-9), slash (-), underscore (_) and dots (.)
+        * visible name can not be None or an empty string
+        * parent must not have child entry with same name
+
+        :param parent_uuid: parent of the entry to be renamed
+        :param entity_uuid: uuid of entry to rename
+        :param new_visible_name: visible name of an entry
+
+        raises:
+          * invalid argument exception: if visible name
+            fails validation
+        """
+
+        if not new_visible_name:
+            raise InvalidArgumentError("visible name cannot be an empty string")
+        if self._has_visible_name_equal_to_entry_uuid_in_collection(
+                entry_uuid, new_visible_name, parent_uuid):
+            raise InvalidArgumentError("parent has a child with the same name")
+        if not bool(VALID_VISIBLE_NAME_REGEX.fullmatch(new_visible_name)):
+            raise InvalidArgumentError("visible name contains invalid characters")
+
+
+
+
+    def _validate_path(self, path: str) -> None:
+        """
+        Validates a provided path. Currently, a valid
+        path name meets the following conditions:
+
+        * path name can not be None or an empty string
+        * parent must not have child path with same name
+        * path name can contain: alphanumeric characters
+          (a-zA-Z0-9), slash (-), underscore (_) and dots (.)
+
+        raises:
+          - InvalidPathError: if validation fails
+
+        :param path: path to validate
+        """
+
+        if not path:
+            raise InvalidPathError("path cannot be an empty string")
+
+        if self._parent_has_child_path_with_given_name(
+                self._repository.get_current_collection(), path):
+            raise InvalidPathError("path with same name already exists")
+
+        if '/' in path:
+            raise InvalidPathError("relative or absolute paths are not yet supported")
+
+        if not bool(VALID_VISIBLE_NAME_REGEX.fullmatch(path)):
+            raise InvalidPathError("path contains invalid characters")
+
+
+    def _parent_has_child_path_with_given_name(
+            self, parent_uuid: str, child_visible_name: str) -> bool:
+        """
+        Verifies, whether the provided parent UUID has a child collection
+        with the given visibleName.
+
+        :param parent_uuid: UUID of the parent collection
+        :param child_visible_name: visibleName of the child
+        :rtype: bool indication of whether child exists
+        """
+
+        for entry in self._repository.get_data().values():
+            if (entry.metadata.type == EntityType.COLLECTION_TYPE and
+                    entry.metadata.parent == parent_uuid and
+                    entry.metadata.visible_name == child_visible_name):
+                return True
+
+        return False
+
+
+    def _resolve_source_parent_and_visible_name(self, source: str) -> Tuple[str, str]:
+        """
+        Resolves the parent for an entity with a matching visible name
+        or for multiple entities matching a wild card.
+
+        Raises:
+            - NotFoundError if the parent can not be resolved
+                when path is provided with the source
+
+        :param source: a source for one or several entities
+        :return: a tuple containing the visible name or a wild card
+                    for entity/entities with the parent returned
+        """
+        # Handle possible path in filename
+        if "/" in source:
+            parent_path, visible_name = source.rsplit(sep='/', maxsplit=1)
+            parent_uuid = self._traverse_path(parent_path)
+            if parent_uuid is None:
+                raise NotFoundError(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}")
+        else:
+            visible_name = source
+            parent_uuid = self._repository.get_current_collection()
+
+        return visible_name, parent_uuid
+
+    def _collect_uuids_for_children_matching_name_or_pattern(
+            self, visible_name: str, parent_uuid: str) -> List[str]:
+        """
+        Collects the UUIDs of all children with the provided
+        parent collection matching a visible name or a pattern.
+
+        :param visible_name: an exact match to a visible name
+                                or a pattern to match against
+        :param parent_uuid: parent of the entity or entities
+        :return: list of entities on which a write operation
+                    is to be executed
+        """
+
+        entities_to_write: List[str] = []
+
+        if '*' in visible_name:
+            entities_to_write.extend(
+                self._get_matches_for_wildcard(parent_uuid, visible_name)
+            )
+        else:
+            # Get the metadata and UUID of the file in question
+            entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
+                visible_name, parent_uuid)
+            entities_to_write.append(entity_uuid)
+
+        return entities_to_write
+
+
+    def _collect_uuids_matching_name_or_pattern_and_all_descendants_of_matches(
+            self, visible_name: str, parent_uuid: str) -> List[str]:
+        """
+        Collects the UUIDs of all children with the provided
+        parent collection matching a visible name or a pattern.
+        In addition, also collects all the descendants of
+        matching CollectionTypes
+
+        :param visible_name: an exact match to a visible name
+                                or a pattern to match against
+        :param parent_uuid: parent of the entity or entities
+        :return: list of entities on which a write operation
+                    is to be executed
+        """
+
+        entities_to_write: List[str] = []
+
+        if '*' in visible_name:
+            entities_to_write.extend(
+                self._get_matches_for_wildcard(parent_uuid, visible_name)
+            )
+            for entry_uuid in entities_to_write:
+                if self._entry_is_a_collection(entry_uuid):
+                    entities_to_write.extend(self._get_descendant_uuids(entry_uuid))
+        else:
+            # Get the metadata and UUID of the file in question
+            entity_uuid: str = self._get_uuid_with_visible_name_and_parent(
+                visible_name, parent_uuid)
+            entities_to_write.append(entity_uuid)
+            if self._entry_is_a_collection(entity_uuid):
+                entities_to_write.extend(self._get_descendant_uuids(entity_uuid))
+
+        return entities_to_write
+
+    def _get_descendant_uuids(self, entity_uuid: str) -> List[str]:
+        """
+        Collects UUIDs of all descendants for the given entity_uuid.
+
+        Raises:
+          - InvalidPathError if the given UUID is not a valid
+            UUID for a CollectionType metadata entry.
+
+        :param entity_uuid: a UUID for a CollectionType
+        :return: a list of entity UUIDs
+        """
+
+        if not self._entry_is_a_collection(entity_uuid):
+            raise InvalidPathError(f"Metadata for CollectionType not found: {entity_uuid}")
+
+        descendants: List[str] = []
+
+        for k in self._repository.get_data().keys():
+            if self._repository.get_parent(k) == entity_uuid:
+                descendants.append(k)
+                if self._entry_is_a_collection(k):
+                    descendants.extend(self._get_descendant_uuids(k))
+
+        return descendants
+
+    def _traverse_path(self, path: str) -> Optional[str]:
+        """
+        Splits the provided path into a list of entries and tries to
+        traverse through the given path changes. At its simplest a path
+        change can be traversing to one directory above the current position
+        with '..' or into a direct subdirectory.
+
+        See the project wiki for a comprehensive list of path changing rules.
+
+        raises:
+          - `NoSuchDirectoryError`: if the only match is a DocumentType (file)
+          - `NotFoundError`: if parent is not found
+
+        :param path: a string representation of a path
+        :return: an optional uuid of the target collection or None if
+                    collection could not be found
+        """
+        directory_changes: list[str] = path.split(sep="/")
+        collection_pointer: Optional[str] = self._repository.get_current_collection()
+
+        if directory_changes[0] == '':
+            # In absolute path traversal begins at root
+            collection_pointer = ROOT_COLLECTION
+
+        for directory in directory_changes:
+            match directory:
+                # No directory change
+                case '' | '.':
+                    continue
+                # Traverse to parent
+                case '..':
+                    collection_pointer = self._repository.get_parent(collection_pointer)
+                # Traverse to descendant
+                case _:
+                    if not isinstance(collection_pointer, str):
+                        break
+                    collection_pointer = self._repository.get_collection(
+                        directory, collection_pointer)
+            if collection_pointer is None:
+                break
+        return collection_pointer
+
+    def _move_entity(self, entity_uuid: str, target_uuid: str) -> None:
+        """
+        Sets the parent of the provided entity to be the
+        target UUID
+
+        :param entity_uuid: entity which parent is updated
+        :param target_uuid: the new parent of the entity
+        """
+
+        try:
+            if self._entry_is_a_collection(entity_uuid) and \
+                self._is_target_path_descendant_of_source_path(target_uuid, entity_uuid):
+                raise ConstraintViolationError(
+                    "collection can not be moved into itself or its descendant")
+
+            if self._exists_visible_name_in_collection(entity_uuid, target_uuid):
+                raise ConstraintViolationError(
+                    f"destination must not contain a child with the same name: "
+                    f"{self._repository.get_visible_name_for_uuid(entity_uuid)}")
+
+
+            current_metadata: Metadata = self._repository.get_metadata_for_uuid(entity_uuid)
+            new_metadata_entry: Metadata = copy.deepcopy(current_metadata)
+            new_metadata_entry.parent = target_uuid
+
+            self._repository.write_metadata(entity_uuid, new_metadata_entry)
+
+        except (NotFoundError,
+                InvalidMetadataError,
+                ConstraintViolationError,
+                RemarkableWriteError) as e:
+            print(f"mv: {e} ")
+
+
+
+
+
+    def _get_matches_for_wildcard(self, parent_uuid: str, wildcard: str) -> List[str]:
+        """
+        Finds all entries with the provided parent and visibleName
+        that matches the given wildcard.
+
+        Raises:
+            - NotFoundError if the parent UUID is not found
+
+        :param parent_uuid:
+        :param wildcard:
+        :return: a list of entry UUIDs matching the wildcard or an
+                    empty list, if no matches are found
+        """
+
+        try:
+            if not self._entry_is_a_collection(parent_uuid):
+                raise NotFoundError(PARENT_NOT_FOUND.format(
+                    parent=parent_uuid, entity=wildcard))
+        except NotFoundError as e:
+            raise NotFoundError(
+                PARENT_NOT_FOUND.format(parent=parent_uuid, entity=wildcard)) from e
+
+
+        wildcard_matches: List[str] = []
+
+        for entry_uuid, entry in self._repository.get_data().items():
+            has_matching_visible_name: bool = self._visible_name_matches_wildcard(
+                wildcard, entry.metadata.visible_name)
+            if entry.metadata.parent == parent_uuid and has_matching_visible_name:
+                wildcard_matches.append(entry_uuid)
+
+        return wildcard_matches
+
+    @staticmethod
+    def _visible_name_matches_wildcard(pattern: str, visible_name: str) -> bool:
+        """
+        Verifies whether the provided visibleName matches with the given wildcard.
+
+        :param pattern: A string with a wildcard symbol '*'
+        :param visible_name: visibleName of an entry
+        :return: boolean indication whether it is a match
+        """
+
+        return fnmatchcase(visible_name, pattern)
+
+    def _exists_visible_name_in_collection(
+            self, entry_uuid: str, target_collection_uuid: str) -> bool:
+        """
+        Verifies whether an entry (either a Document or a Collection) with
+        identical visibleName matching the visibleName of entry_uuid already
+        exists in the target path.
+
+        Raises:
+          - NotFoundError if metadata for entry_uuid is not found
+
+        :param entry_uuid: an entry of metadata
+        :param target_collection_uuid: a target collection
+        :return: True, if entry with identical visibleName exists
+        """
+
+        entry: Entry = self._repository.get_data_for_uuid(entry_uuid)
+        entry_visible_name: str = entry.metadata.visible_name
+
+        return self._has_visible_name_equal_to_entry_uuid_in_collection(
+            entry_uuid, entry_visible_name, target_collection_uuid)
+
+    def _has_visible_name_equal_to_entry_uuid_in_collection(
+            self, entry_uuid: str, visible_name: str, target_collection_uuid: str) -> bool:
+        """
+        Verifies whether an entry (either a Document or a Collection) with
+        identical visibleName matching the visibleName of entry_uuid already
+        exists in the target path.
+
+        Raises:
+          - NotFoundError if metadata for entry_uuid is not found
+
+        :param entry_uuid: an entry of metadata
+        :param visible_name: visible name to search for
+        :param target_collection_uuid: a target collection
+        :return: True, if entry with identical visibleName exists
+        """
+
+        data: dict[str, Entry] = self._repository.get_data()
+
+        for e_uuid, entry in data.items():
+            if e_uuid == entry_uuid:
+                continue
+            if (entry.metadata.parent == target_collection_uuid and
+                    entry.metadata.visible_name == visible_name):
+                return True
+
+        return False
+
+    def _is_target_path_descendant_of_source_path(
+            self, target_path_uuid: str, source_path_uuid: str) -> bool:
+        """
+        Verifies that the given target path is not a descendant of the source path,
+        i.e., the source path may not be an ancestor of the target path.
+
+        :param source_path_uuid:
+        :param target_path_uuid:
+        :return:
+        """
+
+        collection_pointer: str = target_path_uuid
+
+        while collection_pointer != '':
+            if collection_pointer == source_path_uuid:
+                return True
+            collection_pointer = self._repository.get_parent(collection_pointer)
+
+        return False
+
+
+    def _get_uuid_with_visible_name_and_parent(self, filename: str, parent_uuid: str) -> str:
+        """
+        Gets the data for the given entry and composes a dictionary
+        representation of the metadata. The entry is identified by
+        the following rules:
+
+          1. the visibleName of the entry is the filename
+          2. the parent of the entry is the parent_uuid
+
+        Note that the type of the entry is not consider, i.e., the entry
+        may either be a DocumentType or a CollectionType.
+
+        Raises:
+          - NotFoundError, if no match is found
+
+        :param filename: the visibleName of the entry
+        :param parent_uuid: the parent of the entry
+        :return: the UUID of the entry
+        """
+
+        # print(f"filename: {filename}, parent: {parent_uuid}")
+
+        for entry_uuid, entry in self._repository.get_data().items():
+            # if v.get('parent') == parent_uuid:
+                # print(v.get('visibleName'))
+            if (entry.metadata.parent == parent_uuid and
+                    entry.metadata.visible_name == filename):
+                return entry_uuid
+
+        path_prefix = ""
+        if parent_uuid != ROOT_COLLECTION:
+            path: Optional[str] = self._repository.generate_absolute_collection_path(parent_uuid)
+            if path:
+                path_prefix = f"{path}"
+        raise NotFoundError(f"cannot access {path_prefix}/{filename}: "
+                                f"{NO_SUCH_FILE_OR_DIRECTORY}")
+
+    def _entry_is_a_collection(self, entity_uuid: str) -> bool:
+        """
+        Validates whether the metadata entry with the given UUID
+        is of type CollectionType.
+
+        Raises:
+          - NotFoundError if a metadata entry for the given
+            UUID is not found
+
+        :param entity_uuid: UUID of the entry
+        :return: boolean indicating whether this entry has type CollectionType
+        """
+
+        if entity_uuid == ROOT_COLLECTION:
+            return True
+
+        metadata: Metadata = self._repository.get_metadata_for_uuid(entity_uuid)
+
+        return metadata.type == EntityType.COLLECTION_TYPE
