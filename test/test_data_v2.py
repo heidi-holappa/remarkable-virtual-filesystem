@@ -19,7 +19,6 @@ UUID_A1 = "f22a1fbd-e3fc-4013-a180-79704bf60933"
 UUID_FAIRYTALE = "38e9f881-9cba-400d-b238-75c3bd6d64a8"
 UUID_FAIRYTALE_2 = "ea2a9177-efb4-4772-8303-17a513fc2a23"
 UUID_FAIRYTALE_COPY = "30174240-1456-48c3-b272-0e5bae22145c"
-UUID_INVALID_LAST_MODIFIED = "5592fdc0-020c-4a69-b4d3-a3106ca328ca"
 
 # CollectionType B and its descendants
 UUID_B = "48635ee3-f8af-4013-98f3-7f2bfc2de0e4"
@@ -78,17 +77,6 @@ METADATA_FAIRYTALE_2 = {
     "visibleName": "Fairytale-2.pdf",
     "createdTime": 0,
     "lastModified": 123456789,
-    "new": False,
-    "pinned": False,
-    "source": ""
-}
-
-METADATA_INVALID_LAST_MODIFIED = {
-    "type": "DocumentType",
-    "parent": UUID_A,
-    "visibleName": "InvalidLastModified.pdf",
-    "createdTime": 0,
-    "lastModified": 0,
     "new": False,
     "pinned": False,
     "source": ""
@@ -184,11 +172,6 @@ TEST_DATA: Dict[str, Entry] = {
     UUID_FAIRYTALE_2: Entry(
         Metadata.from_dict(METADATA_FAIRYTALE_2),
         size=4096,
-        content=None
-    ),
-    UUID_INVALID_LAST_MODIFIED: Entry(
-        Metadata.from_dict(METADATA_INVALID_LAST_MODIFIED),
-        size=4,
         content=None
     ),
     UUID_B: Entry(

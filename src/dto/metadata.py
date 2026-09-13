@@ -152,6 +152,11 @@ class Metadata:
         """
         if not isinstance(uuid_field, str):
             return False
-        return uuid_field == "" or bool(UUID_REGEX.match(uuid_field))
+
+        accepted_non_uuid_values = {
+            "", # root
+            "trash" # trash path
+        }
+        return uuid_field in accepted_non_uuid_values or bool(UUID_REGEX.match(uuid_field))
 
 

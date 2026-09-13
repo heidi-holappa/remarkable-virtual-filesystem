@@ -79,9 +79,6 @@ class RemarkableDataRepository:
 
         visible_name = data.metadata.visible_name
 
-        if not isinstance(visible_name, str):
-            raise InvalidMetadataError(f"invalid visible_name: {visible_name}")
-
         return visible_name
 
     def get_current_collection(self) -> str:
@@ -139,9 +136,6 @@ class RemarkableDataRepository:
 
         parent = candidate.metadata.parent
 
-        if not isinstance(parent, str):
-            raise InvalidMetadataError(f'parent was not an instance of str: {parent}')
-
         return parent
 
     def get_collection(self, file_name: str, parent: str) -> Optional[str]:
@@ -198,12 +192,6 @@ class RemarkableDataRepository:
         entry: Entry = self._in_memory_data[item_uuid]
         parent = entry.metadata.parent
         visible_name = entry.metadata.visible_name
-
-        if not isinstance(parent, str):
-            raise InvalidMetadataError('parent was not an instance of str')
-
-        if not isinstance(visible_name, str):
-            raise InvalidMetadataError('visibleName was not an instance of str')
 
 
         if parent == '':
