@@ -17,6 +17,7 @@ from src.exception import (
 )
 from src.workspace.remarkable_workspace_v2 import RemarkableWorkspaceV2
 from src.repository.remarkable_data_repository import RemarkableDataRepository
+from test import test_data_v2
 from test.test_data_v2 import (
     TEST_DATA,
     UUID_ROOT,
@@ -33,6 +34,29 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
         mock_load.return_value = copy.deepcopy(TEST_DATA)
         self.ws = RemarkableWorkspaceV2(
             RemarkableDataRepository(RemarkableSSHMetadataSourceV2()))
+
+    # -----------------------
+    # process ls command
+    # -----------------------
+
+    def test_ls_happy_path_returns_correct_listing(self) -> None:
+        self.ws._repository.set_current_collection(UUID_A)
+        with patch('sys.stdout', new=StringIO()) as mock_out:
+            self.ws.process_ls(utility_args=[])
+            output: str = mock_out.getvalue()
+
+            in_memory_data = self.ws._repository.get_data()
+
+            self.assertTrue('..' in output,
+                            msg=f"Output was: {output}")
+            self.assertTrue(in_memory_data[UUID_FAIRYTALE].metadata.visible_name in output,
+                            msg=f"Output was: {output}")
+            self.assertTrue(in_memory_data[UUID_FAIRYTALE_2].metadata.visible_name in output,
+                            msg=f"Output was: {output}")
+            self.assertTrue(in_memory_data[UUID_A0].metadata.visible_name in output,
+                            msg=f"Output was: {output}")
+            self.assertTrue(in_memory_data[UUID_A1].metadata.visible_name in output,
+                            msg=f"Output was: {output}")
 
     # -----------------------
     # Handle move instruction
