@@ -5,24 +5,22 @@ from io import StringIO
 from typing import List, Set
 from unittest.mock import patch, MagicMock
 
-from src.constant import COLLECTION_NOT_FOUND, PARENT_NOT_FOUND, NO_SUCH_FILE_OR_DIRECTORY
+from src.constant import PARENT_NOT_FOUND, NO_SUCH_FILE_OR_DIRECTORY
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
 from src.exception import (
-    RemarkableOperationError,
     NotFoundError,
     NoSuchFileOrDirectoryError,
-    InvalidMetadataError,
+    NoSuchDirectoryError,
     RemarkableWriteError,
     InvalidPathError
 )
 from src.workspace.remarkable_workspace_v2 import RemarkableWorkspaceV2
 from src.repository.remarkable_data_repository import RemarkableDataRepository
-from test import test_data_v2
 from test.test_data_v2 import (
     TEST_DATA,
     UUID_ROOT,
     UUID_A, UUID_A0, UUID_A1,
-    UUID_B, UUID_B0, UUID_A_UNDER_B,
+    UUID_B, UUID_B0, UUID_A_UNDER_B, UUID_C,
     UUID_FAIRYTALE, UUID_FAIRYTALE_2,
     UUID_A0_UNDER_B, UUID_D_1, UUID_FAIRYTALE_COPY)
 
@@ -58,6 +56,53 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
             self.assertTrue(in_memory_data[UUID_A1].metadata.visible_name in output,
                             msg=f"Output was: {output}")
 
+
+    def test_ls_raises_when_collection_not_found(self) -> None:
+        with self.assertRaises(NotFoundError) as ctx:
+            self.ws.process_ls(["/not-found/"])
+
+        self.assertTrue("ls: no such path" in str(ctx.exception))
+
+    # -----------------------
+    # Change collection/directory tests
+    # -----------------------
+    def test_change_collection_from_root_to_direct_subpath(self) -> None:
+
+        self.ws.change_collection("/A")
+        assert self.ws._repository.get_current_collection() == UUID_A
+
+    def test_change_collection_from_root_to_direct_subpath_with_additional_slashes(self) -> None:
+        self.ws.change_collection("//////////A")
+        assert self.ws._repository.get_current_collection() == UUID_A
+
+    def test_change_collection_from_root_to_direct_subpath_with_relative_directories(self) -> None:
+        self.ws.change_collection("/././../A/..////A")
+        assert self.ws._repository.get_current_collection() == UUID_A
+
+    def test_change_collection_to_nested_subpath_with_absolute_path(self) -> None:
+        self.ws.change_collection("/A/A_0")
+        assert self.ws._repository.get_current_collection() == UUID_A0
+
+    def test_change_collection_to_nested_subpath_with_relative_path(self)  -> None:
+        # assumming the collection is A before the path change
+        self.ws.change_collection("/A")
+        self.ws.change_collection("../B/B_0")
+        # then the new path should be /B/B_0
+        assert self.ws._repository.get_current_collection() == UUID_B0
+
+    def test_change_collection_with_document_visible_name_raises_error(self) -> None:
+        with self.assertRaises(NoSuchDirectoryError) as context:
+            self.ws.change_collection("C")
+
+        self.assertTrue("C: Not a directory" in str(context.exception))
+
+    def test_change_collection_with_non_existing_path_raises_error(self) -> None:
+        with self.assertRaises(NoSuchFileOrDirectoryError) as context:
+            self.ws.change_collection("D")
+
+        self.assertTrue(NO_SUCH_FILE_OR_DIRECTORY in str(context.exception))
+
+
     # -----------------------
     # Handle move instruction
     # -----------------------
@@ -88,7 +133,7 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
         mock_write.return_value = None
         self.ws._repository.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            source = "/C/non-existing-file.pdf"
+            source = "/E/non-existing-file.pdf"
             self.ws.process_move_command(source, "/B")
             output: str = mock_out.getvalue()
             self.assertTrue(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}" in output,
@@ -112,9 +157,9 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
         mock_write.return_value = None
         self.ws._repository.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ws.process_move_command("/C", "/B")
+            self.ws.process_move_command("/E", "/B")
             output: str = mock_out.getvalue()
-            self.assertTrue(f"mv: cannot access /C: {NO_SUCH_FILE_OR_DIRECTORY} " in output, msg=f"Output was: {output}")
+            self.assertTrue(f"mv: cannot access /E: {NO_SUCH_FILE_OR_DIRECTORY} " in output, msg=f"Output was: {output}")
 
 
     # Constraint: destination must resolve to valid collection
@@ -123,9 +168,9 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
         mock_write.return_value = None
         self.ws._repository.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ws.process_move_command("/A/Fairytale.pdf", "/C")
+            self.ws.process_move_command("/A/Fairytale.pdf", "/E")
             output: str = mock_out.getvalue()
-            self.assertTrue(f"mv: /C: {NO_SUCH_FILE_OR_DIRECTORY}" in output, msg=f"Output was: {output}")
+            self.assertTrue(f"mv: /E: {NO_SUCH_FILE_OR_DIRECTORY}" in output, msg=f"Output was: {output}")
 
 
     # Constraint: A collection can not be moved into itself or its descendant
@@ -744,6 +789,14 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
         # Error was printed
         mock_print.assert_called_once()
 
+
+    def test_process_rcp_with_invalid_args(self) -> None:
+        with patch("sys.stdout", new=StringIO()) as mock_out:
+            self.ws.process_rcp_with_options(["-q", "/some/path/to/file.pdf", "/"])
+            output: str = mock_out.getvalue()
+            self.assertTrue("rcp: invalid options: -q" in output, msg=output)
+
+
     # -------------------------------------
     # Get wildcard matches
     # -------------------------------------
@@ -864,7 +917,8 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
             UUID_FAIRYTALE_COPY,
             UUID_B0,
             UUID_A_UNDER_B, UUID_A0_UNDER_B,
-            UUID_D_1
+            UUID_D_1,
+            UUID_C
         ]
         self.assertEqual(sorted(expected_descendants), sorted(actual_descendants))
 

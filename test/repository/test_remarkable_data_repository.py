@@ -1,30 +1,25 @@
 import copy
-import os
 import unittest
 from io import StringIO
-from typing import List, Set
 from unittest.mock import patch, MagicMock
 
+from src.constant import NOT_A_DIRECTORY
 from src.dto.metadata import Metadata
 from src.dto.entry import Entry
-from src.constant import COLLECTION_NOT_FOUND, PARENT_NOT_FOUND, NO_SUCH_FILE_OR_DIRECTORY
+from src.constant import COLLECTION_NOT_FOUND
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
 from src.exception import (
     RemarkableOperationError,
     NotFoundError,
-    NoSuchFileOrDirectoryError,
-    InvalidMetadataError,
-    RemarkableWriteError,
-    InvalidPathError
+    NoSuchDirectoryError,
+    RemarkableWriteError
 )
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 from test.test_data_v2 import (
     TEST_DATA,
     UUID_ROOT,
-    UUID_A, UUID_A0, UUID_A1,
-    UUID_B, UUID_B0, UUID_A_UNDER_B,
-    UUID_FAIRYTALE, UUID_FAIRYTALE_2,
-    UUID_A0_UNDER_B, UUID_D_1, UUID_FAIRYTALE_COPY)
+    UUID_A, UUID_A0,
+    UUID_B, UUID_B0)
 
 
 class RemarkableWorkspaceTest(unittest.TestCase):
@@ -57,13 +52,19 @@ class RemarkableWorkspaceTest(unittest.TestCase):
     # Get collection
     # -----------------------
     def test_get_collection_when_current_collection_is_root_and_collection_is_found(self) -> None:
-        assert self.repository.get_collection("A", "") == UUID_A
+        assert self.repository.get_collection("A", UUID_ROOT) == UUID_A
 
     def test_get_collection_when_current_collection_is_not_root_and_collection_is_found(self) -> None:
         assert self.repository.get_collection("A_0", UUID_A) == UUID_A0
 
+    def test_get_collection_when_parent_has_document_with_the_given_name_but_no_collectiion(self) -> None:
+        with self.assertRaises(NoSuchDirectoryError) as ctx:
+            self.repository.get_collection("C", UUID_ROOT)
+
+        self.assertTrue(NOT_A_DIRECTORY in str(ctx.exception))
+
     def test_get_collection_when_current_collection_is_root_and_collection_is_not_found(self) -> None:
-        self.assertIsNone(self.repository.get_collection("C", ""))
+        self.assertIsNone(self.repository.get_collection("D", UUID_ROOT))
 
     # -----------------------
     # Set current collection
@@ -165,6 +166,29 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         actual_path = self.repository.generate_absolute_collection_path(invalid_data_uuid)
         self.assertEqual(f"/trash/{visible_name}", actual_path)
 
+    # -------------------------------------
+    # Process refresh command
+    # -------------------------------------
+    def test_write_metadata_raises_when_uuid_not_found(self) -> None:
+        metadata = {
+            "type": "DocumentType",
+            "parent": "trash",
+            "visibleName": "some-document.pdf",
+            "createdTime": 0,
+            "lastModified": 123456789,
+            "new": False,
+            "pinned": False,
+            "source": ""
+        }
+
+        with self.assertRaises(NotFoundError) as ctx:
+            self.repository.write_metadata(
+                "non-existing-uuid",
+                Metadata.from_dict(metadata))
+
+        self.assertTrue("No entry found for uuid" in str(ctx.exception))
+
+
 
     # -------------------
     # _remove_entities
@@ -184,7 +208,27 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         output: str = mock_out.getvalue()
         self.assertIn("ERROR: write failed", output)
 
-        # -------------------------------------
+    # -------------------
+    # _remove_entry
+    # -------------------
+    def test_remove_raises_when_uuid_not_found(self) -> None:
+        metadata = {
+            "type": "DocumentType",
+            "parent": "trash",
+            "visibleName": "some-document.pdf",
+            "createdTime": 0,
+            "lastModified": 123456789,
+            "new": False,
+            "pinned": False,
+            "source": ""
+        }
+
+        with self.assertRaises(NotFoundError) as ctx:
+            self.repository.remove_entry("non-existing-uuid")
+
+        self.assertTrue("No entry found for uuid" in str(ctx.exception))
+
+    # -------------------------------------
     # Process refresh command
     # -------------------------------------
     @patch.object(RemarkableSSHMetadataSourceV2, "restart_xochitl")
@@ -200,3 +244,4 @@ class RemarkableWorkspaceTest(unittest.TestCase):
             self.repository.restart_xochitl()
 
         mock_restart.assert_called_once()
+

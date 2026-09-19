@@ -75,24 +75,21 @@ class RemarkableWorkspaceV2:
             list_result.append(f"{' '*LS_COLUMN_WIDTH}../")
         list_result.append(f"{' '*LS_COLUMN_WIDTH}./")
 
-        for item_uuid, v in remarkable_metadata.items():
-            if v.metadata.parent != collection_to_list_uuid:
+        for entry in remarkable_metadata.values():
+            if entry.metadata.parent != collection_to_list_uuid:
                 continue
-            if v.metadata.type == EntityType.COLLECTION_TYPE:
-                collection_visible_name: str = v.metadata.visible_name
+            if entry.metadata.type == EntityType.COLLECTION_TYPE:
+                collection_visible_name: str = entry.metadata.visible_name
                 collection_size: int = 0
-                if v.size:
-                    collection_size = v.size
+                if entry.size:
+                    collection_size = entry.size
                 collections.append((f"{collection_visible_name}/", f"{collection_size}"))
-            elif v.metadata.type == EntityType.DOCUMENT_TYPE:
-                document_visible_name: str = v.metadata.visible_name
+            elif entry.metadata.type == EntityType.DOCUMENT_TYPE:
+                document_visible_name: str = entry.metadata.visible_name
                 document_size: int = 0
-                if v.size:
-                    document_size = v.size
+                if entry.size:
+                    document_size = entry.size
                 documents.append((f"{document_visible_name}", f"{document_size}"))
-            else:
-                print(f"ls: entry is neither a file or a directory: {item_uuid}")
-
         for t in sorted(collections, key=lambda x: x[0].lower()):
             name, entry_size = t
             padding_col: str = ' '*(LS_COLUMN_WIDTH - len(entry_size))

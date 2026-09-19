@@ -1,3 +1,8 @@
+"""
+Repository layer to handle read/write operations for reMarkable data and
+in-memory data.
+"""
+
 from typing import Dict, List, Optional
 
 from src.constant import (
@@ -8,14 +13,17 @@ from src.data.metadata_source_v2 import MetadataSourceV2
 from src.exception import (
     RemarkableWriteError,
     NotFoundError,
-    NoSuchDirectoryError,
-    InvalidMetadataError)
+    NoSuchDirectoryError)
 
 from src.dto.entry import Entry
 from src.dto.metadata import Metadata
 from src.dto.content import Content
 
 class RemarkableDataRepository:
+    """
+    Repository layer to handle read/write operations for reMarkable data and
+    in-memory data.
+    """
 
     _in_memory_data: Dict[str, Entry]
 
@@ -104,7 +112,8 @@ class RemarkableDataRepository:
         """
         is_root = collection == ''
         is_valid_collection = (self._in_memory_data.get(collection)
-                               and self._in_memory_data[collection].metadata.type == 'CollectionType')
+                               and self._in_memory_data[collection]
+                               .metadata.type == 'CollectionType')
         if not (is_root or is_valid_collection):
             raise NotFoundError(COLLECTION_NOT_FOUND)
         self._current_collection = collection
@@ -211,7 +220,6 @@ class RemarkableDataRepository:
         """
         self._in_memory_data = self._source.load()
 
-        
     def write_metadata(self, entry_uuid: str, metadata: Metadata) -> None:
         """
         Attempts to write new metadata for an entry with the provided
@@ -228,7 +236,7 @@ class RemarkableDataRepository:
         """
 
         if entry_uuid not in self._in_memory_data:
-            raise NotFoundError("No entry found for uuid %s", entry_uuid)
+            raise NotFoundError(f"No entry found for uuid: {entry_uuid}")
 
         self._source.write_metadata(entry_uuid, metadata)
         self._in_memory_data[entry_uuid].metadata = metadata
@@ -242,10 +250,12 @@ class RemarkableDataRepository:
             NotFoundError if no entry is found
 
         :param entry_uuid: identification for the entry
+
+        :return: metadata for the given UUID
         """
 
         if entry_uuid not in self._in_memory_data:
-            raise NotFoundError("No entry found for uuid %s", entry_uuid)
+            raise NotFoundError(f"No entry found for uuid {entry_uuid}")
 
         return self._in_memory_data[entry_uuid].metadata
 
@@ -261,7 +271,7 @@ class RemarkableDataRepository:
         :param entry_uuid: entry to remove
         """
         if entry_uuid not in self._in_memory_data:
-            raise NotFoundError("No entry found for uuid %s", entry_uuid)
+            raise NotFoundError(f"No entry found for uuid {entry_uuid}")
 
         self._in_memory_data.pop(entry_uuid)
 
@@ -309,5 +319,3 @@ class RemarkableDataRepository:
             self._source.remove(entity_uuids)
         except RemarkableWriteError as e:
             print(f"ERROR: {e}")
-
-

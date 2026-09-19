@@ -26,6 +26,7 @@ UUID_B0 = "52da29a9-96fd-47fc-bd7d-7eb825be10a3"
 UUID_A_UNDER_B = "b21ca949-1d94-4b61-afd8-59bcf7330721"
 UUID_A0_UNDER_B = "40b7fe05-1c55-4944-b434-74e3f1c48bff"
 UUID_D_1 = "0cee4351-e773-4f83-858d-0e4f52c82627"
+UUID_C = "61ab31db-3870-4bb9-8893-2ad0dfe6a5a4"
 
 METADATA_A = {
     "type": "CollectionType",
@@ -148,6 +149,17 @@ METADATA_D_1 = {
     "source": ""
 }
 
+METADATA_FILE_C = {
+    "type": "DocumentType",
+    "parent": "",
+    "visibleName": "C",
+    "createdTime" :1,
+    "lastModified": 0,
+    "new": False,
+    "pinned": False,
+    "source": ""
+}
+
 
 TEST_DATA: Dict[str, Entry] = {
     UUID_A: Entry(
@@ -202,6 +214,11 @@ TEST_DATA: Dict[str, Entry] = {
     UUID_D_1: Entry(
         Metadata.from_dict(METADATA_D_1),
         size=4,
+        content=None
+    ),
+    UUID_C: Entry(
+        Metadata.from_dict(METADATA_FILE_C),
+        size=1024,
         content=None
     )
 }
