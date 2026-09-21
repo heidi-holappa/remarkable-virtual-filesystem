@@ -1005,3 +1005,6 @@ class RemarkableWorkspaceV2:
         metadata: Metadata = self._repository.get_metadata_for_uuid(entity_uuid)
 
         return metadata.type == EntityType.COLLECTION_TYPE
+
+    def restart_xochitl(self) -> None:
+        self._repository.restart_xochitl()

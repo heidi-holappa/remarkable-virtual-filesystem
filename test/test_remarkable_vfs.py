@@ -4,6 +4,9 @@ from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
 from remarkable_vfs import main_loop, init_logging, main, execute_command
+from test.stub_remarkable_metadata_source_v2 import StubRemarkableMetadataSourceV2
+from src.workspace.workspace_manager import WorkspaceManager
+
 
 class TestMainLoop(unittest.TestCase):
 
@@ -41,13 +44,15 @@ class TestMainLoop(unittest.TestCase):
 
     @patch("remarkable_vfs.cd")
     @patch("builtins.input")
-    @patch("remarkable_vfs.workspace_manager")
+    @patch("remarkable_vfs.get_workspace_manager")
     def test_cd_command(
             self,
             mock_workspace_manager: MagicMock,
             mock_input: MagicMock,
             mock_cd: MagicMock,
     ) -> None:
+        stubbed_workspace_manager = WorkspaceManager(StubRemarkableMetadataSourceV2())
+        mock_workspace_manager.return_value = stubbed_workspace_manager
         mock_ws = MagicMock()
         mock_ws.get_current_path.return_value = "/home/test"
         mock_workspace_manager.get.return_value = mock_ws
@@ -63,22 +68,24 @@ class TestMainLoop(unittest.TestCase):
 
         mock_cd.assert_called_once_with(
             ["foo"],
-            mock_workspace_manager,
+            stubbed_workspace_manager,
         )
 
         mock_exit.assert_called_once_with(
-            mock_workspace_manager,
+            stubbed_workspace_manager,
         )
 
     @patch("remarkable_vfs.ls")
     @patch("builtins.input")
-    @patch("remarkable_vfs.workspace_manager")
+    @patch("remarkable_vfs.get_workspace_manager")
     def test_ls_command(
             self,
             mock_workspace_manager: MagicMock,
             mock_input: MagicMock,
             mock_ls: MagicMock,
     ) -> None:
+        stubbed_workspace_manager = WorkspaceManager(StubRemarkableMetadataSourceV2())
+        mock_workspace_manager.return_value = stubbed_workspace_manager
         mock_ws = MagicMock()
         mock_ws.get_current_path.return_value = "/home/test"
         mock_workspace_manager.get.return_value = mock_ws
@@ -97,16 +104,16 @@ class TestMainLoop(unittest.TestCase):
 
         mock_ls.assert_called_once_with(
             ["-la"],
-            mock_workspace_manager,
+            stubbed_workspace_manager,
         )
 
         mock_exit.assert_called_once_with(
-            mock_workspace_manager,
+            stubbed_workspace_manager,
         )
 
     @patch("remarkable_vfs.clear")
     @patch("builtins.input")
-    @patch("remarkable_vfs.workspace_manager")
+    @patch("remarkable_vfs.get_workspace_manager")
     def test_clear_command(
             self,
             mock_workspace_manager: MagicMock,
@@ -123,67 +130,96 @@ class TestMainLoop(unittest.TestCase):
 
     @patch("remarkable_vfs.rm")
     @patch("builtins.input")
-    @patch("remarkable_vfs.workspace_manager")
+    @patch("remarkable_vfs.get_workspace_manager")
     def test_rm_command(
             self,
             mock_workspace_manager: MagicMock,
             mock_input: MagicMock,
             mock_rm: MagicMock,
     ) -> None:
-        self.run_command(
-            "rm file.txt",
-            mock_input,
-            mock_workspace_manager,
-        )
+        stubbed_workspace_manager = WorkspaceManager(StubRemarkableMetadataSourceV2())
+        mock_workspace_manager.return_value = stubbed_workspace_manager
+        mock_ws = MagicMock()
+        mock_ws.get_current_path.return_value = "/home/test"
+        mock_workspace_manager.get.return_value = mock_ws
+
+        mock_input.side_effect = ["rm file.txt", "exit"]
+
+        with patch(
+                "remarkable_vfs.handle_exit",
+                side_effect=SystemExit,
+        ) as mock_exit:
+            with self.assertRaises(SystemExit):
+                main_loop()
 
         mock_rm.assert_called_once_with(
             ["file.txt"],
-            mock_workspace_manager,
+            stubbed_workspace_manager,
         )
 
     @patch("remarkable_vfs.mv")
     @patch("builtins.input")
-    @patch("remarkable_vfs.workspace_manager")
+    @patch("remarkable_vfs.get_workspace_manager")
     def test_mv_command(
             self,
             mock_workspace_manager: MagicMock,
             mock_input: MagicMock,
             mock_mv: MagicMock,
     ) -> None:
-        self.run_command(
-            "mv old.txt new.txt",
-            mock_input,
-            mock_workspace_manager,
-        )
+        stubbed_workspace_manager = WorkspaceManager(StubRemarkableMetadataSourceV2())
+        mock_workspace_manager.return_value = stubbed_workspace_manager
+        mock_ws = MagicMock()
+        mock_ws.get_current_path.return_value = "/home/test"
+        mock_workspace_manager.get.return_value = mock_ws
+
+        mock_input.side_effect = ["mv old.txt new.txt", "exit"]
+
+        with patch(
+                "remarkable_vfs.handle_exit",
+                side_effect=SystemExit,
+        ) as mock_exit:
+            with self.assertRaises(SystemExit):
+                main_loop()
+
 
         mock_mv.assert_called_once_with(
             ["old.txt", "new.txt"],
-            mock_workspace_manager,
+            stubbed_workspace_manager,
         )
 
     @patch("remarkable_vfs.rcp")
     @patch("builtins.input")
-    @patch("remarkable_vfs.workspace_manager")
+    @patch("remarkable_vfs.get_workspace_manager")
     def test_rcp_command(
             self,
             mock_workspace_manager: MagicMock,
             mock_input: MagicMock,
             mock_rcp: MagicMock,
     ) -> None:
-        self.run_command(
-            "rcp source.txt destination.txt",
-            mock_input,
-            mock_workspace_manager,
-        )
+
+        stubbed_workspace_manager = WorkspaceManager(StubRemarkableMetadataSourceV2())
+        mock_workspace_manager.return_value = stubbed_workspace_manager
+        mock_ws = MagicMock()
+        mock_ws.get_current_path.return_value = "/home/test"
+        mock_workspace_manager.get.return_value = mock_ws
+
+        mock_input.side_effect = ["rcp source.txt destination.txt", "exit"]
+
+        with patch(
+                "remarkable_vfs.handle_exit",
+                side_effect=SystemExit,
+        ) as mock_exit:
+            with self.assertRaises(SystemExit):
+                main_loop()
 
         mock_rcp.assert_called_once_with(
             ["source.txt", "destination.txt"],
-            mock_workspace_manager,
+            stubbed_workspace_manager,
         )
 
     @patch("remarkable_vfs.help_instruction")
     @patch("builtins.input")
-    @patch("remarkable_vfs.workspace_manager")
+    @patch("remarkable_vfs.get_workspace_manager")
     def test_help_command(
             self,
             mock_workspace_manager: MagicMock,
@@ -200,72 +236,101 @@ class TestMainLoop(unittest.TestCase):
 
     @patch("remarkable_vfs.refresh")
     @patch("builtins.input")
-    @patch("remarkable_vfs.workspace_manager")
+    @patch("remarkable_vfs.get_workspace_manager")
     def test_refresh_command(
             self,
             mock_workspace_manager: MagicMock,
             mock_input: MagicMock,
             mock_refresh: MagicMock,
     ) -> None:
-        self.run_command(
-            "refresh",
-            mock_input,
-            mock_workspace_manager,
-        )
+        stubbed_workspace_manager = WorkspaceManager(StubRemarkableMetadataSourceV2())
+        mock_workspace_manager.return_value = stubbed_workspace_manager
+        mock_ws = MagicMock()
+        mock_ws.get_current_path.return_value = "/home/test"
+        mock_workspace_manager.get.return_value = mock_ws
+
+        mock_input.side_effect = ["refresh", "exit"]
+
+        with patch(
+                "remarkable_vfs.handle_exit",
+                side_effect=SystemExit,
+        ) as mock_exit:
+            with self.assertRaises(SystemExit):
+                main_loop()
 
         mock_refresh.assert_called_once_with(
-            mock_workspace_manager,
+            stubbed_workspace_manager,
         )
 
     @patch("remarkable_vfs.mkdir")
     @patch("builtins.input")
-    @patch("remarkable_vfs.workspace_manager")
+    @patch("remarkable_vfs.get_workspace_manager")
     def test_mkdir_command(
             self,
-            mock_workspace_manager: MagicMock,
+            mock_workspace_manager_getter: MagicMock,
             mock_input: MagicMock,
             mock_mkdir: MagicMock,
     ) -> None:
-        self.run_command(
-            "mkdir test_dir",
-            mock_input,
-            mock_workspace_manager,
-        )
+        stubbed_workspace_manager = WorkspaceManager(StubRemarkableMetadataSourceV2())
+        mock_workspace_manager_getter.return_value = stubbed_workspace_manager
+        mock_ws = MagicMock()
+        mock_ws.get_current_path.return_value = "/home/test"
+        mock_workspace_manager_getter.get.return_value = mock_ws
+
+        mock_input.side_effect = ["mkdir test_dir", "exit"]
+
+        with patch(
+                "remarkable_vfs.handle_exit",
+                side_effect=SystemExit,
+        ) as mock_exit:
+            with self.assertRaises(SystemExit):
+                main_loop()
 
         mock_mkdir.assert_called_once_with(
             ["test_dir"],
-            mock_workspace_manager,
+            stubbed_workspace_manager,
         )
 
     @patch("remarkable_vfs.rename")
     @patch("builtins.input")
-    @patch("remarkable_vfs.workspace_manager")
+    @patch("remarkable_vfs.get_workspace_manager")
     def test_rename_command(
             self,
             mock_workspace_manager: MagicMock,
             mock_input: MagicMock,
             mock_rename: MagicMock,
     ) -> None:
-        self.run_command(
-            "rename old new",
-            mock_input,
-            mock_workspace_manager,
-        )
+        stubbed_workspace_manager = WorkspaceManager(StubRemarkableMetadataSourceV2())
+        mock_workspace_manager.return_value = stubbed_workspace_manager
+        mock_ws = MagicMock()
+        mock_ws.get_current_path.return_value = "/home/test"
+        mock_workspace_manager.get.return_value = mock_ws
+
+        mock_input.side_effect = ["rename old new", "exit"]
+
+        with patch(
+                "remarkable_vfs.handle_exit",
+                side_effect=SystemExit,
+        ) as mock_exit:
+            with self.assertRaises(SystemExit):
+                main_loop()
 
         mock_rename.assert_called_once_with(
             ["old", "new"],
-            mock_workspace_manager,
+            stubbed_workspace_manager,
         )
 
     @patch("remarkable_vfs.execute_command")
     @patch("builtins.input")
-    @patch("remarkable_vfs.workspace_manager")
+    @patch("remarkable_vfs.get_workspace_manager")
     def test_exit_command(
             self,
             mock_workspace_manager: MagicMock,
             mock_input: MagicMock,
             mock_execute_command: MagicMock,
     ) -> None:
+        stubbed_workspace_manager = WorkspaceManager(StubRemarkableMetadataSourceV2())
+        mock_workspace_manager.return_value = stubbed_workspace_manager
         mock_ws = MagicMock()
         mock_ws.get_current_path.return_value = "/home/test"
         mock_workspace_manager.get.return_value = mock_ws
@@ -278,26 +343,30 @@ class TestMainLoop(unittest.TestCase):
         mock_execute_command.assert_called_once_with(
             "exit",
             [],
+            stubbed_workspace_manager
         )
 
     @patch("remarkable_vfs.handle_exit")
     def test_x_command_returns_false(self,
                                      mock_handle_exit: MagicMock) -> None:
 
-        result = execute_command("x", [])
+        workspace_manager = WorkspaceManager(StubRemarkableMetadataSourceV2())
+        result = execute_command("x", [], workspace_manager)
 
         mock_handle_exit.assert_called_once()
         self.assertFalse(result)
 
     @patch("remarkable_vfs.cd")
     @patch("builtins.input")
-    @patch("remarkable_vfs.workspace_manager")
+    @patch("remarkable_vfs.get_workspace_manager")
     def test_empty_command_is_ignored(
             self,
             mock_workspace_manager: MagicMock,
             mock_input: MagicMock,
             mock_cd: MagicMock,
     ) -> None:
+        stubbed_workspace_manager = WorkspaceManager(StubRemarkableMetadataSourceV2())
+        mock_workspace_manager.return_value = stubbed_workspace_manager
         mock_ws = MagicMock()
         mock_ws.get_current_path.return_value = "/home/test"
         mock_workspace_manager.get.return_value = mock_ws
@@ -317,11 +386,11 @@ class TestMainLoop(unittest.TestCase):
 
         mock_cd.assert_called_once_with(
             ["foo"],
-            mock_workspace_manager,
+            stubbed_workspace_manager,
         )
 
     @patch("builtins.input")
-    @patch("remarkable_vfs.workspace_manager")
+    @patch("remarkable_vfs.get_workspace_manager")
     @patch("builtins.print")
     def test_unknown_command(
             self,
@@ -329,6 +398,8 @@ class TestMainLoop(unittest.TestCase):
             mock_workspace_manager: MagicMock,
             mock_input: MagicMock,
     ) -> None:
+        stubbed_workspace_manager = WorkspaceManager(StubRemarkableMetadataSourceV2())
+        mock_workspace_manager.return_value = stubbed_workspace_manager
         mock_ws = MagicMock()
         mock_ws.get_current_path.return_value = "/home/test"
         mock_workspace_manager.get.return_value = mock_ws

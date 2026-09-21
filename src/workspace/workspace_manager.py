@@ -4,9 +4,10 @@
 
 from typing import Optional
 
-from src.data.metadata_source import MetadataSource
-from src.data.remarkable_ssh_metadata_source import RemarkableSSHMetadataSource
-from src.workspace.remarkable_workspace import RemarkableWorkspace
+from src.data.metadata_source_v2 import MetadataSourceV2
+from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
+from src.repository.remarkable_data_repository import RemarkableDataRepository
+from src.workspace.remarkable_workspace_v2 import RemarkableWorkspaceV2
 
 class WorkspaceManager:
     """
@@ -16,11 +17,11 @@ class WorkspaceManager:
         If the workspace is to be refreshed, a new workspace is created.
     """
 
-    def __init__(self, source: MetadataSource):
-        self._source = source
-        self._workspace: Optional[RemarkableWorkspace] = None
+    def __init__(self, source: MetadataSourceV2):
+        self._repository = RemarkableDataRepository(source)
+        self._workspace: RemarkableWorkspaceV2 = RemarkableWorkspaceV2(self._repository)
 
-    def get(self) -> RemarkableWorkspace:
+    def get(self) -> RemarkableWorkspaceV2:
         """
         Either created a new workspace or returns an existing
         instance of the workspace
@@ -28,18 +29,16 @@ class WorkspaceManager:
         :return: an instance of the reMarkable workspace
         """
         if self._workspace is None:
-            self._workspace = RemarkableWorkspace(self._source)
+            self._workspace = RemarkableWorkspaceV2(self._repository)
         return self._workspace
 
-    def refresh(self) -> RemarkableWorkspace:
+    def refresh(self) -> RemarkableWorkspaceV2:
         """
         Creates a new instance of the reMarkable workspace replacing
         the previous instance, if one exists.
 
         :return: an instance of reMarkable workspace
         """
-        self._workspace = RemarkableWorkspace(self._source)
+        self._workspace = RemarkableWorkspaceV2(self._repository)
         return self._workspace
 
-
-default_workspace_manager = WorkspaceManager(RemarkableSSHMetadataSource())
