@@ -402,6 +402,9 @@ class RemarkableWorkspaceV2:
 
         # Generate a random UUID for the new entry
         path_uuid: str = str(uuid.uuid4())
+
+        self._repository.create_entry_if_absent(path_uuid, metadata)
+
         self._repository.write_metadata(path_uuid, metadata)
 
         return path_uuid
