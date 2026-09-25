@@ -28,8 +28,6 @@ class WorkspaceManager:
 
         :return: an instance of the reMarkable workspace
         """
-        if self._workspace is None:
-            self._workspace = RemarkableWorkspaceV2(self._repository)
         return self._workspace
 
     def refresh(self) -> RemarkableWorkspaceV2:
