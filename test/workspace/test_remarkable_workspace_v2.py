@@ -1026,3 +1026,14 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
             result = self.ws._traverse_path("foo")
 
         self.assertEqual(result, None)
+
+
+    # --------------------------
+    # refresh
+    # --------------------------
+
+    @patch.object(RemarkableDataRepository, "restart_xochitl")
+    def test_restart_xochitl_invokes_repository_layer(self, mock_restart) -> None:
+        self.ws.restart_xochitl()
+        mock_restart.assert_called_once()
+

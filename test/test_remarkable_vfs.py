@@ -3,9 +3,10 @@ import unittest
 from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
-from remarkable_vfs import main_loop, init_logging, main, execute_command
+from remarkable_vfs import main_loop, init_logging, main, execute_command, get_workspace_manager
 from test.stub_remarkable_metadata_source_v2 import StubRemarkableMetadataSourceV2
 from src.workspace.workspace_manager import WorkspaceManager
+from src.data.metadata_source_v2 import MetadataSourceV2
 
 
 class TestMainLoop(unittest.TestCase):
@@ -478,6 +479,14 @@ class TestLogging(unittest.TestCase):
 
         mock_basic_config.assert_not_called()
         mock_logger.info.assert_not_called()
+
+
+    def test_get_workspace_manager(self) -> None:
+        with patch("remarkable_vfs.WorkspaceManager") as mock_workspace_manager:
+            get_workspace_manager()
+        arg = mock_workspace_manager.call_args.args[0]
+        assert isinstance(arg, MetadataSourceV2)
+
 
 import unittest
 
