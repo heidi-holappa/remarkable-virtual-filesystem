@@ -33,7 +33,7 @@ import tarfile
 import time
 import unittest
 from io import BytesIO
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple
 from unittest.mock import patch, MagicMock
 
 from src.constant import SSH_CONNECT, REMOTE_PREFIX, SSH_REMOTE_HOST
@@ -50,7 +50,7 @@ from src.exception import (
 from test.test_data import UUID_FAIRYTALE, UUID_FAIRYTALE_2
 
 # System under test (SUT)
-SUT: str = "src.data.remarkable_ssh_metadata_source"
+SUT: str = "src.data.remarkable_ssh_metadata_source_v2"
 
 class TestRemarkableSSHMetadataSourceV2(unittest.TestCase):
 
@@ -275,10 +275,10 @@ class TestRemarkableSSHMetadataSourceV2(unittest.TestCase):
 
         with (
             patch(
-                "src.data.remarkable_ssh_metadata_source.subprocess.Popen"
+                "src.data.remarkable_ssh_metadata_source_v2.subprocess.Popen"
             ) as mock_popen,
             patch(
-                "src.data.remarkable_ssh_metadata_source.tarfile.open",
+                "src.data.remarkable_ssh_metadata_source_v2.tarfile.open",
                 return_value=mock_tarfile,
             ),
             patch.object(
@@ -587,7 +587,7 @@ class TestRemarkableSSHMetadataSourceV2(unittest.TestCase):
     # restart xochitl
     # --------------------------------------------------
 
-    @patch("src.data.remarkable_ssh_metadata_source.subprocess.run")
+    @patch("src.data.remarkable_ssh_metadata_source_v2.subprocess.run")
     def test_restart_xochitl_success(self, mock_run: MagicMock) -> None:
         # ---- Mock subprocess result ----
         mock_result = MagicMock()
@@ -621,7 +621,7 @@ class TestRemarkableSSHMetadataSourceV2(unittest.TestCase):
             stderr="some stderr",
         )
 
-        with patch("src.data.remarkable_ssh_metadata_source.subprocess.run", side_effect=error):
+        with patch("src.data.remarkable_ssh_metadata_source_v2.subprocess.run", side_effect=error):
             with self.assertRaises(RemarkableOperationError) as exc_info:
                 self.source.restart_xochitl()
 

@@ -8,7 +8,9 @@ from typing import List
 
 from src.com.common import clear, ls, mv, rm, cd, rcp, mkdir, rename, refresh, handle_exit
 from src.com.help import help_instruction
-from src.workspace.workspace_manager import default_workspace_manager as workspace_manager
+from src.workspace.workspace_manager import WorkspaceManager
+from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
+from src.workspace.remarkable_workspace_v2 import RemarkableWorkspaceV2
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +21,12 @@ def main_loop() -> None:
     Reads commands from standard input, parses them, and executes them
     until the user issues an exit command.
     """
-    ws = workspace_manager.get()
+    workspace_manager: WorkspaceManager = get_workspace_manager()
+
+    ws: RemarkableWorkspaceV2 = workspace_manager.get()
 
     while True:
-        path = ws.get_current_path()
+        path = ws._repository.get_current_path()
         line = input(f"remarkable~{path}$ ")
 
         parsed = parse_command(line)
@@ -32,8 +36,11 @@ def main_loop() -> None:
 
         command, arguments = parsed
 
-        if not execute_command(command, arguments):
+        if not execute_command(command, arguments, workspace_manager):
             return
+
+def get_workspace_manager() -> WorkspaceManager:
+    return WorkspaceManager(RemarkableSSHMetadataSourceV2())
 
 def parse_command(line: str) -> tuple[str, list[str]] | None:
     """
@@ -54,12 +61,14 @@ def parse_command(line: str) -> tuple[str, list[str]] | None:
 def execute_command(
     command: str,
     utility_arguments: List[str],
+    workspace_manager: WorkspaceManager
 ) -> bool:
     """
     Executes a command with the supplied arguments.
 
     :param command: Command name to execute.
     :param utility_arguments: Arguments passed to the command.
+    :param workspace_manager: Workspace Manager
     :return: True if the command loop should continue, False if it
         should terminate.
     """
