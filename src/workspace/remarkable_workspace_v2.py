@@ -402,6 +402,9 @@ class RemarkableWorkspaceV2:
 
         # Generate a random UUID for the new entry
         path_uuid: str = str(uuid.uuid4())
+
+        self._repository.create_entry_if_absent(path_uuid, metadata)
+
         self._repository.write_metadata(path_uuid, metadata)
 
         return path_uuid
@@ -1005,3 +1008,10 @@ class RemarkableWorkspaceV2:
         metadata: Metadata = self._repository.get_metadata_for_uuid(entity_uuid)
 
         return metadata.type == EntityType.COLLECTION_TYPE
+
+    def restart_xochitl(self) -> None:
+        """
+        Invokes repostiory to restart Xochitl device.  
+        """
+
+        self._repository.restart_xochitl()

@@ -209,6 +209,73 @@ class RemarkableWorkspaceTest(unittest.TestCase):
         self.assertIn("ERROR: write failed", output)
 
     # -------------------
+    # create_entry_if_absent
+    # -------------------
+
+    def test_create_entry_when_entry_is_absent(self) -> None:
+        metadata_dict = {
+            "type": "DocumentType",
+            "parent": "trash",
+            "visibleName": "some-document.pdf",
+            "createdTime": 0,
+            "lastModified": 123456789,
+            "new": False,
+            "pinned": False,
+            "source": ""
+        }
+
+        metadata = Metadata.from_dict(metadata_dict)
+
+        entry_uuid = "4eeab5d8-d7df-459a-a371-a8abdb3cfe17"
+
+        entry: Entry = self.repository.create_entry_if_absent(
+            entry_uuid,metadata)
+
+        self.assertTrue(entry, msg=f"Entry does not exist: {entry_uuid}")
+        if entry:
+            self.assertEqual(metadata, entry.metadata,
+                         msg=f"Metadata entries do not match. Expected: {metadata}, actual: {entry.metadata}")
+
+
+    def test_create_if_absent_return_existing_entry(self) -> None:
+        metadata_dict = {
+            "type": "DocumentType",
+            "parent": "trash",
+            "visibleName": "some-document.pdf",
+            "createdTime": 0,
+            "lastModified": 123456789,
+            "new": False,
+            "pinned": False,
+            "source": ""
+        }
+
+        metadata = Metadata.from_dict(metadata_dict)
+        entry_uuid = UUID_A
+
+        entry: Entry = self.repository.create_entry_if_absent(
+            entry_uuid, metadata)
+
+        self.assertTrue(entry, msg=f"Entry does not exist: {entry_uuid}")
+        if entry:
+            self.assertNotEqual(metadata, entry.metadata,
+                         msg=f"Metadata entries match. Expected: {metadata}, actual: {entry.metadata}")
+
+            entry_a = TEST_DATA.get(UUID_A)
+            if entry_a:
+                self.assertEqual(entry_a.metadata, entry.metadata,
+                             msg=f"Metadata entries do not match. Expected: {metadata}, actual: {entry.metadata}")
+
+
+
+
+
+
+
+
+
+
+
+    # -------------------
     # _remove_entry
     # -------------------
     def test_remove_raises_when_uuid_not_found(self) -> None:

@@ -14,7 +14,7 @@ from src.exception import (
     NoSuchFileOrDirectoryError,
     NoSuchDirectoryError
 )
-from src.workspace.remarkable_workspace import RemarkableWorkspace
+from src.workspace.remarkable_workspace_v2 import RemarkableWorkspaceV2
 from src.workspace.workspace_manager import WorkspaceManager
 
 def cd(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> None:
@@ -30,10 +30,10 @@ def cd(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> Non
     :param workspace_manager: manager for reMarkable workspace
     """
 
-    ws: RemarkableWorkspace = workspace_manager.get()
+    ws: RemarkableWorkspaceV2 = workspace_manager.get()
 
     if len(utility_arguments) == 0:
-        ws.set_current_collection(ROOT_COLLECTION)
+        ws._repository.set_current_collection(ROOT_COLLECTION)
     elif len(utility_arguments) > 1:
         print("Usage: cd OR cd <path>")
         return
@@ -58,7 +58,7 @@ def mv(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> Non
     """
 
     if len(utility_arguments) == 2:
-        ws: RemarkableWorkspace = workspace_manager.get()
+        ws: RemarkableWorkspaceV2 = workspace_manager.get()
         operand_source, operand_target = utility_arguments
         ws.process_move_command(
             operand_source=operand_source, operand_target=operand_target)
@@ -80,7 +80,7 @@ def rm(utility_arguments: List[str], workspace_manager: WorkspaceManager) -> Non
     """
 
     if len(utility_arguments) == 1:
-        ws: RemarkableWorkspace = workspace_manager.get()
+        ws: RemarkableWorkspaceV2 = workspace_manager.get()
         operand = utility_arguments[0]
         ws.process_remove_command(target_pattern=operand)
     else:
@@ -108,7 +108,7 @@ def rcp(cmd_line: List[str], workspace_manager: WorkspaceManager) -> None:
     :param workspace_manager: manager for reMarkable workspace
     """
 
-    ws: RemarkableWorkspace = workspace_manager.get()
+    ws: RemarkableWorkspaceV2 = workspace_manager.get()
 
     if len(cmd_line) == 2:
         operand_source, operand_target = cmd_line

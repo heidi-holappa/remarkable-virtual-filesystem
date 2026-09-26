@@ -220,6 +220,35 @@ class RemarkableDataRepository:
         """
         self._in_memory_data = self._source.load()
 
+
+    def create_entry_if_absent(self, entry_uuid: str, metadata: Metadata) -> Entry:
+        """
+        Creates an Entry for given UUID and Metadata, if the uuid is not
+        yet in the persistent data. If entry exists, it is returned instead
+        and entry is NOT updated with the provided metadata.
+
+        :param entry_uuid: UUID of the entry
+        :param metadata: Metadata instance for the entry
+
+        :return: created or entry or existing entry
+        """
+
+        entry: Entry | None = self.get_data().get(entry_uuid)
+
+        if entry:
+            return entry
+
+        new_entry = Entry(
+            metadata=metadata,
+            size=0,
+            content=None
+        )
+
+        self.get_data()[entry_uuid] = new_entry
+
+        return new_entry
+
+
     def write_metadata(self, entry_uuid: str, metadata: Metadata) -> None:
         """
         Attempts to write new metadata for an entry with the provided
