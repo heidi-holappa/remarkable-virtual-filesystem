@@ -2,10 +2,7 @@
     Module for the workspace manager
 """
 
-from typing import Optional
-
 from src.data.metadata_source_v2 import MetadataSourceV2
-from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 from src.workspace.remarkable_workspace_v2 import RemarkableWorkspaceV2
 
@@ -39,4 +36,3 @@ class WorkspaceManager:
         """
         self._workspace = RemarkableWorkspaceV2(self._repository)
         return self._workspace
-

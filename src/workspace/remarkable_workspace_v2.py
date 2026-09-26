@@ -1010,4 +1010,8 @@ class RemarkableWorkspaceV2:
         return metadata.type == EntityType.COLLECTION_TYPE
 
     def restart_xochitl(self) -> None:
+        """
+        Invokes repostiory to restart Xochitl device.  
+        """
+
         self._repository.restart_xochitl()

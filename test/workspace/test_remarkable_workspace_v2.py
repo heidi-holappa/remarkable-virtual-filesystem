@@ -531,7 +531,7 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
     # Process remote copy command
     # -------------------------------------
 
-    @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
+    @patch("src.data.remarkable_ssh_metadata_source_v2.os.path.exists")
     @patch.object(RemarkableSSHMetadataSourceV2, "load")
     @patch.object(RemarkableSSHMetadataSourceV2, "remote_copy")
     def test_process_rcp_success_without_options(
@@ -577,8 +577,8 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
         # Verify content
         self.assertEqual(content.file_type, "pdf")
 
-    @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
-    @patch("src.data.remarkable_ssh_metadata_source.os.walk")
+    @patch("src.data.remarkable_ssh_metadata_source_v2.os.path.exists")
+    @patch("src.data.remarkable_ssh_metadata_source_v2.os.walk")
     @patch.object(RemarkableSSHMetadataSourceV2, "load")
     @patch.object(RemarkableSSHMetadataSourceV2, "remote_copy")
     def test_process_rcp_success_with_valid_option_all(
@@ -633,8 +633,8 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
             content = kwargs["content"]
             self.assertEqual(content.file_type, ext)
 
-    @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
-    @patch("src.data.remarkable_ssh_metadata_source.os.walk")
+    @patch("src.data.remarkable_ssh_metadata_source_v2.os.path.exists")
+    @patch("src.data.remarkable_ssh_metadata_source_v2.os.walk")
     @patch.object(RemarkableDataRepository, "refresh_data")
     @patch.object(RemarkableDataRepository, "invoke_remote_copy")
     @patch.object(RemarkableDataRepository, "write_metadata")
@@ -694,8 +694,8 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
             content = kwargs["content"]
             self.assertEqual(content.file_type, ext)
 
-    @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
-    @patch("src.data.remarkable_ssh_metadata_source.os.walk")
+    @patch("src.data.remarkable_ssh_metadata_source_v2.os.path.exists")
+    @patch("src.data.remarkable_ssh_metadata_source_v2.os.walk")
     @patch.object(RemarkableSSHMetadataSourceV2, "load")
     @patch.object(RemarkableSSHMetadataSourceV2, "write_metadata")
     def test_rcp_recursive_but_no_matches(
@@ -726,7 +726,7 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
 
 
     @patch("builtins.print")
-    @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
+    @patch("src.data.remarkable_ssh_metadata_source_v2.os.path.exists")
     @patch.object(RemarkableSSHMetadataSourceV2, "load")
     @patch.object(RemarkableSSHMetadataSourceV2, "restart_xochitl")
     @patch.object(RemarkableSSHMetadataSourceV2, "remote_copy")
@@ -758,7 +758,7 @@ class RemarkableWorkspaceV2Test(unittest.TestCase):
         mock_print.assert_called_once()
 
     @patch("builtins.print")
-    @patch("src.data.remarkable_ssh_metadata_source.os.path.exists")
+    @patch("src.data.remarkable_ssh_metadata_source_v2.os.path.exists")
     @patch.object(RemarkableSSHMetadataSourceV2, "load")
     @patch.object(RemarkableSSHMetadataSourceV2, "restart_xochitl")
     @patch.object(RemarkableSSHMetadataSourceV2, "remote_copy")

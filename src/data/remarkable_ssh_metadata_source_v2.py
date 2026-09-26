@@ -1,5 +1,5 @@
 """
-    Module providing an implementation of MetadataSource
+    Module providing an implementation of MetadataSourceV2
     responsible for interacting with the reMarkable device
     via SSH connection
 """
@@ -30,7 +30,7 @@ from src.dto.entry import Entry
 
 class RemarkableSSHMetadataSourceV2(MetadataSourceV2):
     """
-        An implementation of MetadataSource responsible for
+        An implementation of MetadataSourceV2 responsible for
         interacting with the reMarkable device via SSH connection
     """
 
