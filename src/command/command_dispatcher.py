@@ -1,6 +1,7 @@
 from collections.abc import Callable
+from functools import partial
 
-from commands import (
+from src.command.commands import (
     BaseCommand,
     RemoveCommand,
     RefreshCommand,
@@ -13,6 +14,7 @@ from commands import (
     ChangeDirectoryCommand,
     ExitCommand
 )
+from src.repository.remarkable_data_repository import RemarkableDataRepository
 
 from src.exception import (
     InvalidArgumentError
@@ -26,27 +28,27 @@ class CommandDispatcher:
     Command instances are initialized lazily and cached per dispatcher.
     """
 
-    _factories: dict[str, Callable[[], BaseCommand]] = {
-        "rm": RemoveCommand,
-        "refresh": RefreshCommand,
-        "rcp": RemoteCopyCommand,
-        "mv": MoveCommand,
-        "mkdir": MakeDirectoryCommand,
-        "ls": ListCommand,
-        "help": HelpCommand,
-        "clear": ClearCommand,
-        "cd": ChangeDirectoryCommand,
-        "exit": ExitCommand
-    }
 
-    _aliases: dict[str, tuple[str, list[str]]] = {
-        "x": ("exit", [])
-    }
-
-
-    def __init__(self) -> None:
+    def __init__(self, repository: RemarkableDataRepository) -> None:
         self._instances: dict[str, BaseCommand] = {}
+        self._repository = repository
 
+        _factories: dict[str, Callable[[], BaseCommand]] = { # type: ignore
+            "rm": RemoveCommand,
+            "refresh": RefreshCommand,
+            "rcp": RemoteCopyCommand,
+            "mv": MoveCommand,
+            "mkdir": MakeDirectoryCommand,
+            "ls": ListCommand,
+            "help": HelpCommand,
+            "clear": ClearCommand,
+            "cd": ChangeDirectoryCommand,
+            "exit": ExitCommand
+        }
+
+        _aliases: dict[str, tuple[str, list[str]]] = {
+            "x": ("exit", [])
+        }
 
 
     def dispatch(self, command: str, args: list[str]) -> None:
@@ -74,7 +76,7 @@ class CommandDispatcher:
         instance = self._instances.get(command)
 
         if instance is None:
-            instance = factory()
+            instance = factory(self._repository)
             self._instances[command] = instance
 
         instance.handle(args)

@@ -1,5 +1,5 @@
-from typing import List
-from .base_command import BaseCommand
+import subprocess
+from src.command.commands.base_command import BaseCommand
 
 
 class ClearCommand(BaseCommand):
@@ -7,7 +7,10 @@ class ClearCommand(BaseCommand):
     TODO
     """
 
-    def handle(self, args: List[str]) -> None:
+    def handle(self, args: list[str]) -> None:
         """
-        TODO
+        Clears bash terminal
+
+        Usage: clear
         """
+        subprocess.run("clear", check=False)

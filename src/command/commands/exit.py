@@ -1,13 +1,26 @@
-from typing import List
-from .base_command import BaseCommand
+import sys
+from src.command.commands.base_command import BaseCommand
+from src.exception import RemarkableOperationError, InvalidArgumentError
 
 class ExitCommand(BaseCommand):
     """
-    TODO
+    Exits the application
     """
 
 
-    def handle(self, args: List[str]) -> None:
+    def handle(self, args: list[str]) -> None:
         """
-        TODO
+        Exits the application.
+
+        :param args: an empty list
         """
+
+        try:
+            if args:
+                raise InvalidArgumentError("exit: command does not support args")
+
+            self._repository.restart_xochitl()
+            sys.exit(0)
+        except RemarkableOperationError as e:
+            print(e)
+            sys.exit(1)
