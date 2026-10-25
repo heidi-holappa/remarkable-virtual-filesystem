@@ -18,6 +18,7 @@ from src.exception import NotFoundError, InvalidPathError
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 
 
+# pylint: disable=too-few-public-methods
 class BaseCommand(ABC):
     """
     Abstract base class for commands. Each command

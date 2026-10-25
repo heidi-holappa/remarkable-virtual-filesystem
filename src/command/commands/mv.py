@@ -14,6 +14,7 @@ from src.exception import (
 from src.constant import  NO_SUCH_FILE_OR_DIRECTORY
 from .base_command import BaseCommand
 
+# pylint: disable=too-few-public-methods
 class MoveCommand(BaseCommand):
     """
     Implementation of move command
@@ -31,12 +32,12 @@ class MoveCommand(BaseCommand):
         """
         if len(args) == 2:
             operand_source, operand_target = args
-            self.process_move_command(
+            self._process_move_command(
                 operand_source=operand_source, operand_target=operand_target)
         else:
             print("Usage (mvp): mv <filename without path> <path>")
 
-    def process_move_command(self, operand_source: str, operand_target: str) -> None:
+    def _process_move_command(self, operand_source: str, operand_target: str) -> None:
         """
         A single move instruction moves one or several entities
         with a common parent to the provided target path. This

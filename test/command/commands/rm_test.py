@@ -49,7 +49,7 @@ class RemoveCommandTest(unittest.TestCase):
             output: str = mock_out.getvalue()
             self.assertTrue("Usage: rm <file or path>" in output, msg=f"Output was: {output}")
 
-    @patch.object(RemoveCommand, "process_remove_command")
+    @patch.object(RemoveCommand, "_process_remove_command")
     def test_rm_positive_case(self, mock_remove: MagicMock) -> None:
         file_to_remove = "file.txt"
         self.rm.handle([file_to_remove])
@@ -68,7 +68,7 @@ class RemoveCommandTest(unittest.TestCase):
         mock_remove.return_value = None
         self.rm._repository.set_current_collection(UUID_A)
         self.assertIn(UUID_FAIRYTALE, self.rm._repository.get_data())
-        self.rm.process_remove_command(target_pattern="Fairytale.pdf")
+        self.rm._process_remove_command(target_pattern="Fairytale.pdf")
         self.assertEqual(mock_remove.call_count, 1)
         self.assertIsNone(self.rm._repository.get_data().get(UUID_FAIRYTALE))
 
@@ -84,7 +84,7 @@ class RemoveCommandTest(unittest.TestCase):
         self.rm._repository.set_current_collection(UUID_A)
         self.assertIn(UUID_FAIRYTALE, self.rm._repository.get_data())
         self.assertIn(UUID_FAIRYTALE_2, self.rm._repository.get_data())
-        self.rm.process_remove_command(target_pattern="Fairytale*.pdf")
+        self.rm._process_remove_command(target_pattern="Fairytale*.pdf")
         self.assertEqual(mock_remove.call_count, 1)
         self.assertIsNone(self.rm._repository.get_data().get(UUID_FAIRYTALE))
         self.assertIsNone(self.rm._repository.get_data().get(UUID_FAIRYTALE_2))
@@ -107,7 +107,7 @@ class RemoveCommandTest(unittest.TestCase):
         }
         self.assertTrue(expected_removals.issubset(self.rm._repository.get_data()))
 
-        self.rm.process_remove_command(target_pattern="A")
+        self.rm._process_remove_command(target_pattern="A")
         self.assertEqual(mock_remove.call_count, 1)
 
         args, kwargs = mock_remove.call_args
@@ -122,7 +122,7 @@ class RemoveCommandTest(unittest.TestCase):
         self.rm._repository.set_current_collection(UUID_A)
 
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.rm.process_remove_command(target_pattern="no-such-target.pdf")
+            self.rm._process_remove_command(target_pattern="no-such-target.pdf")
             output: str = mock_out.getvalue()
             self.assertTrue(
                 "ERROR: cannot access /A/no-such-target.pdf" in output,

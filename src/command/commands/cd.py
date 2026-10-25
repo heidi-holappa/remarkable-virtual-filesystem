@@ -13,6 +13,7 @@ from src.exception import (
 )
 from .base_command import BaseCommand
 
+# pylint: disable=too-few-public-methods
 class ChangeDirectoryCommand(BaseCommand):
     """
     Implementation of the change directory command
@@ -39,13 +40,13 @@ class ChangeDirectoryCommand(BaseCommand):
         else:
             try:
                 operand: str = args[0]
-                self.change_collection(operand)
+                self._change_collection(operand)
             except (NoSuchFileOrDirectoryError,
                     NoSuchDirectoryError) as e:
                 print(f"cd: {str(e)}")
 
 
-    def change_collection(self, operand_path: str) -> None:
+    def _change_collection(self, operand_path: str) -> None:
         """
         Attempts to change current collection to the provided
         collection. If traversal of given path fails to locate

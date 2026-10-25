@@ -57,7 +57,7 @@ class RemoteCopyCommandTest(unittest.TestCase):
             output: str = mock_out.getvalue()
             self.assertTrue("rcp: invalid options: -x" in output, msg=f"Output was: {output}")
 
-    @patch.object(RemoteCopyCommand, "process_rcp_command_without_options")
+    @patch.object(RemoteCopyCommand, "_process_rcp_command_without_options")
     def test_rcp_without_options_positive_case(self, mock_rcp: MagicMock) -> None:
         source = "path/to/file.txt"
         target = "./foo"
@@ -69,7 +69,7 @@ class RemoteCopyCommandTest(unittest.TestCase):
         self.assertEqual(kwargs['source_file'], source)
         self.assertEqual(kwargs['target_collection'], target)
 
-    @patch.object(RemoteCopyCommand, "process_rcp_with_options")
+    @patch.object(RemoteCopyCommand, "_process_rcp_with_options")
     def test_rcp_with_options_positive_case(self, mock_rcp: MagicMock) -> None:
         source = "path/to/"
         target = "./foo"
@@ -108,7 +108,7 @@ class RemoteCopyCommandTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.rcp.process_rcp_command_without_options(source_file, target_path)
+        self.rcp._process_rcp_command_without_options(source_file, target_path)
 
         # ---- Assertions ----
 
@@ -157,7 +157,7 @@ class RemoteCopyCommandTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.rcp.process_rcp_with_options(["-a", source_path, target_path])
+        self.rcp._process_rcp_with_options(["-a", source_path, target_path])
 
         # ---- Assertions ----
 
@@ -216,7 +216,7 @@ class RemoteCopyCommandTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.rcp.process_rcp_with_options(["-r", source_path, target_path])
+        self.rcp._process_rcp_with_options(["-r", source_path, target_path])
 
         # ---- Assertions ----
 
@@ -276,7 +276,7 @@ class RemoteCopyCommandTest(unittest.TestCase):
 
         with patch('sys.stdout', new=StringIO()) as mock_out:
             # ---- Execute ----
-            self.rcp.process_rcp_with_options(["-r", source_path, target_path])
+            self.rcp._process_rcp_with_options(["-r", source_path, target_path])
             output: str = mock_out.getvalue()
             self.assertTrue(
                 "rcp: no pdf or epub files found in directory" in output,
@@ -303,7 +303,7 @@ class RemoteCopyCommandTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.rcp.process_rcp_command_without_options(source_file, target_path)
+        self.rcp._process_rcp_command_without_options(source_file, target_path)
 
         # ---- Assertions ----
 
@@ -335,7 +335,7 @@ class RemoteCopyCommandTest(unittest.TestCase):
         target_path = "/"
 
         # ---- Execute ----
-        self.rcp.process_rcp_with_options(["-a", source_file, target_path])
+        self.rcp._process_rcp_with_options(["-a", source_file, target_path])
 
         # ---- Assertions ----
 
@@ -350,7 +350,7 @@ class RemoteCopyCommandTest(unittest.TestCase):
 
     def test_process_rcp_with_invalid_args(self) -> None:
         with patch("sys.stdout", new=StringIO()) as mock_out:
-            self.rcp.process_rcp_with_options(["-q", "/some/path/to/file.pdf", "/"])
+            self.rcp._process_rcp_with_options(["-q", "/some/path/to/file.pdf", "/"])
             output: str = mock_out.getvalue()
             self.assertTrue("rcp: invalid options: -q" in output, msg=output)
 

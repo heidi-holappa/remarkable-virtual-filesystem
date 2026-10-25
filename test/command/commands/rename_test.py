@@ -77,7 +77,7 @@ class RenameCommandTest(unittest.TestCase):
         target = "Fairytale.pdf"
         new_visible_name = ""
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.rename.process_rename(target, new_visible_name)
+            self.rename._process_rename(target, new_visible_name)
             self.assertEqual(0, mock_write.call_count)
             output: str = mock_out.getvalue()
             self.assertTrue(f"rename: {target} {new_visible_name}: visible name cannot be an empty string" in output,
@@ -91,7 +91,7 @@ class RenameCommandTest(unittest.TestCase):
         target = "Fairytale.pdf"
         new_visible_name = "Fairytale-2.pdf"
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.rename.process_rename(target, new_visible_name)
+            self.rename._process_rename(target, new_visible_name)
             self.assertEqual(0, mock_write.call_count)
             output: str = mock_out.getvalue()
             self.assertTrue(f"rename: {target} {new_visible_name}: parent has a child with the same name" in output,
@@ -104,7 +104,7 @@ class RenameCommandTest(unittest.TestCase):
         target = "A_0"
         new_visible_name = "A_00/"
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.rename.process_rename(target, new_visible_name)
+            self.rename._process_rename(target, new_visible_name)
             self.assertEqual(0, mock_write.call_count)
             output: str = mock_out.getvalue()
             self.assertTrue(f"rename: {target} {new_visible_name}: visible name contains invalid characters" in output,
@@ -117,7 +117,7 @@ class RenameCommandTest(unittest.TestCase):
         target = "Fairytale-not-found.pdf"
         new_visible_name = "renamed-fairytale.pdf"
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.rename.process_rename(target, new_visible_name)
+            self.rename._process_rename(target, new_visible_name)
             self.assertEqual(0, mock_write.call_count)
             output: str = mock_out.getvalue()
             self.assertTrue(f"rename: {target} {new_visible_name}:" in output,

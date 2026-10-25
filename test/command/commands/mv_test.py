@@ -53,7 +53,7 @@ class MoveCommandTest(unittest.TestCase):
             output: str = mock_out.getvalue()
             self.assertTrue("Usage (mvp):" in output, msg=f"Output was: {output}")
 
-    @patch.object(MoveCommand, "process_move_command")
+    @patch.object(MoveCommand, "_process_move_command")
     def test_mv_positive_case(self, mock_move: MagicMock) -> None:
         source = "file.txt"
         target = "./foo"
@@ -73,21 +73,21 @@ class MoveCommandTest(unittest.TestCase):
     def test_after_successful_move_without_path_in_filename_parent_is_updated(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_A)
-        self.mv.process_move_command("Fairytale-2.pdf", "/B")
+        self.mv._process_move_command("Fairytale-2.pdf", "/B")
         self.assertEqual(UUID_B, self.mv._repository.get_data()[UUID_FAIRYTALE_2].metadata.parent)
 
     @patch.object(RemarkableSSHMetadataSourceV2, "write_metadata")
     def test_after_successful_move_with_absolute_path_in_filename_parent_is_updated(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_A)
-        self.mv.process_move_command("/A/Fairytale-2.pdf", "/B")
+        self.mv._process_move_command("/A/Fairytale-2.pdf", "/B")
         self.assertEqual(UUID_B, self.mv._repository.get_data()[UUID_FAIRYTALE_2].metadata.parent)
 
     @patch.object(RemarkableSSHMetadataSourceV2, "write_metadata")
     def test_after_successful_move_with_relative_path_in_filename_parent_is_updated(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_A0)
-        self.mv.process_move_command("../Fairytale-2.pdf", "/B")
+        self.mv._process_move_command("../Fairytale-2.pdf", "/B")
         self.assertEqual(UUID_B, self.mv._repository.get_data()[UUID_FAIRYTALE_2].metadata.parent)
 
     # Constraint: Source must be a valid file or collection (case: moving DocumentType)
@@ -97,7 +97,7 @@ class MoveCommandTest(unittest.TestCase):
         self.mv._repository.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
             source = "/E/non-existing-file.pdf"
-            self.mv.process_move_command(source, "/B")
+            self.mv._process_move_command(source, "/B")
             output: str = mock_out.getvalue()
             self.assertTrue(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}" in output,
                             msg=f"Output was: {output}")
@@ -109,7 +109,7 @@ class MoveCommandTest(unittest.TestCase):
         self.mv._repository.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
             source = "/A/no-such-prefix*"
-            self.mv.process_move_command(source, "/B")
+            self.mv._process_move_command(source, "/B")
             output: str = mock_out.getvalue()
             self.assertTrue(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}" in output,
                             msg=f"Output was: {output}")
@@ -120,7 +120,7 @@ class MoveCommandTest(unittest.TestCase):
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.mv.process_move_command("/E", "/B")
+            self.mv._process_move_command("/E", "/B")
             output: str = mock_out.getvalue()
             self.assertTrue(f"mv: cannot access /E: {NO_SUCH_FILE_OR_DIRECTORY} " in output, msg=f"Output was: {output}")
 
@@ -131,7 +131,7 @@ class MoveCommandTest(unittest.TestCase):
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.mv.process_move_command("/A/Fairytale.pdf", "/E")
+            self.mv._process_move_command("/A/Fairytale.pdf", "/E")
             output: str = mock_out.getvalue()
             self.assertTrue(f"mv: /E: {NO_SUCH_FILE_OR_DIRECTORY}" in output, msg=f"Output was: {output}")
 
@@ -140,7 +140,7 @@ class MoveCommandTest(unittest.TestCase):
     def test_collection_type_cannot_be_moved_to_its_descendant_with_relative_target_path(self) -> None:
         self.mv._repository.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.mv.process_move_command("/A", "A_0")
+            self.mv._process_move_command("/A", "A_0")
             output: str = mock_out.getvalue()
             self.assertTrue("collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
 
@@ -148,7 +148,7 @@ class MoveCommandTest(unittest.TestCase):
     def test_collection_type_cannot_be_moved_to_its_descendant_with_absolute_target_path(self) -> None:
         self.mv._repository.set_current_collection(UUID_ROOT)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.mv.process_move_command("/A", "/A/A_0")
+            self.mv._process_move_command("/A", "/A/A_0")
             output: str = mock_out.getvalue()
             self.assertTrue("collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
 
@@ -156,7 +156,7 @@ class MoveCommandTest(unittest.TestCase):
     def test_collection_cannot_be_moved_into_itself(self) -> None:
         self.mv._repository.set_current_collection(UUID_ROOT)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.mv.process_move_command("/A", "/A")
+            self.mv._process_move_command("/A", "/A")
             output: str = mock_out.getvalue()
             self.assertTrue("collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
 
@@ -164,7 +164,7 @@ class MoveCommandTest(unittest.TestCase):
     def test_root_collection_cannot_be_moved(self) -> None:
         self.mv._repository.set_current_collection(UUID_ROOT)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.mv.process_move_command("", "")
+            self.mv._process_move_command("", "")
             output: str = mock_out.getvalue()
             self.assertTrue("mv: root path cannot be moved" in output, msg=f"Output was: {output}")
 
@@ -172,7 +172,7 @@ class MoveCommandTest(unittest.TestCase):
     def test_destination_cannot_contain_child_with_the_same_visible_name(self) -> None:
         self.mv._repository.set_current_collection(UUID_ROOT)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.mv.process_move_command("/A", "/B")
+            self.mv._process_move_command("/A", "/B")
             output: str = mock_out.getvalue()
             self.assertTrue("destination must not contain a child with the same name" in output, msg=f"Output was: {output}")
 
@@ -181,7 +181,7 @@ class MoveCommandTest(unittest.TestCase):
     def test_moving_to_the_same_parent_should_result_in_no_op(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_A)
-        self.mv.process_move_command("Fairytale.pdf", "/A")
+        self.mv._process_move_command("Fairytale.pdf", "/A")
         mock_write.assert_not_called()
         self.assertEqual(mock_write.call_count, 0)
 
@@ -189,7 +189,7 @@ class MoveCommandTest(unittest.TestCase):
     def test_move_with_wild_card_single_document(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_A)
-        self.mv.process_move_command("*le.pdf", "/B/B_0")
+        self.mv._process_move_command("*le.pdf", "/B/B_0")
         self.assertEqual(mock_write.call_count, 1)
         self.assertEqual(UUID_B0, self.mv._repository.get_data()[UUID_FAIRYTALE].metadata.parent)
 
@@ -197,7 +197,7 @@ class MoveCommandTest(unittest.TestCase):
     def test_move_with_wild_card_single_document_absolute_path(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_ROOT)
-        self.mv.process_move_command("/A/*le.pdf", "/B/B_0")
+        self.mv._process_move_command("/A/*le.pdf", "/B/B_0")
         self.assertEqual(mock_write.call_count, 1)
         self.assertEqual(UUID_B0, self.mv._repository.get_data()[UUID_FAIRYTALE].metadata.parent)
 
@@ -205,7 +205,7 @@ class MoveCommandTest(unittest.TestCase):
     def test_move_with_wild_card_single_document_relative_path(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_B)
-        self.mv.process_move_command("../A/*le.pdf", "/B/B_0")
+        self.mv._process_move_command("../A/*le.pdf", "/B/B_0")
         self.assertEqual(mock_write.call_count, 1)
         self.assertEqual(UUID_B0, self.mv._repository.get_data()[UUID_FAIRYTALE].metadata.parent)
 
@@ -213,7 +213,7 @@ class MoveCommandTest(unittest.TestCase):
     def test_move_with_wild_card_single_collection_absolute_path(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_ROOT)
-        self.mv.process_move_command("/A/A_1", "/B")
+        self.mv._process_move_command("/A/A_1", "/B")
         self.assertEqual(mock_write.call_count, 1)
         self.assertEqual(UUID_B, self.mv._repository.get_data()[UUID_A1].metadata.parent)
 
@@ -221,7 +221,7 @@ class MoveCommandTest(unittest.TestCase):
     def test_move_with_wild_card_single_collection_relative_path(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_B)
-        self.mv.process_move_command("../A/A_1", "/B")
+        self.mv._process_move_command("../A/A_1", "/B")
         self.assertEqual(mock_write.call_count, 1)
         self.assertEqual(UUID_B, self.mv._repository.get_data()[UUID_A1].metadata.parent)
 
@@ -229,7 +229,7 @@ class MoveCommandTest(unittest.TestCase):
     def test_move_with_wild_card_multiple_valid_documents(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_A)
-        self.mv.process_move_command("Fairytale*.pdf", "/B/B_0")
+        self.mv._process_move_command("Fairytale*.pdf", "/B/B_0")
         self.assertEqual(mock_write.call_count, 2)
         self.assertEqual(UUID_B0, self.mv._repository.get_data()[UUID_FAIRYTALE].metadata.parent)
         self.assertEqual(UUID_B0, self.mv._repository.get_data()[UUID_FAIRYTALE_2].metadata.parent)
@@ -239,7 +239,7 @@ class MoveCommandTest(unittest.TestCase):
         mock_write.return_value = None
         with patch('sys.stdout', new=StringIO()) as mock_out:
             self.mv._repository.set_current_collection(UUID_B)
-            self.mv.process_move_command("A*", "/A")
+            self.mv._process_move_command("A*", "/A")
             self.assertEqual(mock_write.call_count, 1)
             self.assertEqual(UUID_A, self.mv._repository.get_data()[UUID_A_UNDER_B].metadata.parent)
             output: str = mock_out.getvalue()
@@ -250,7 +250,7 @@ class MoveCommandTest(unittest.TestCase):
         mock_write.return_value = None
         with patch('sys.stdout', new=StringIO()) as mock_out:
             self.mv._repository.set_current_collection(UUID_A)
-            self.mv.process_move_command("*.pdf", "/B/B_0")
+            self.mv._process_move_command("*.pdf", "/B/B_0")
             self.assertEqual(mock_write.call_count, 2)
 
     @patch.object(RemarkableDataRepository, "write_metadata")
@@ -258,7 +258,7 @@ class MoveCommandTest(unittest.TestCase):
         mock_write.return_value = None
         with patch('sys.stdout', new=StringIO()) as mock_out:
             self.mv._repository.set_current_collection(UUID_A)
-            self.mv.process_move_command("*", "/B")
+            self.mv._process_move_command("*", "/B")
             self.assertEqual(2, mock_write.call_count)
 
     @patch.object(RemarkableDataRepository, "write_metadata")
@@ -266,7 +266,7 @@ class MoveCommandTest(unittest.TestCase):
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_B)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.mv.process_move_command("*", "/A")
+            self.mv._process_move_command("*", "/A")
             self.assertEqual(2, mock_write.call_count)
 
 

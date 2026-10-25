@@ -4,6 +4,7 @@ Implementation of the remove command
 from src.exception import NotFoundError
 from .base_command import BaseCommand
 
+# pylint: disable=too-few-public-methods
 class RemoveCommand(BaseCommand):
     """
     Implementation of the remove command
@@ -23,13 +24,13 @@ class RemoveCommand(BaseCommand):
 
         if len(args) == 1:
             operand = args[0]
-            self.process_remove_command(target_pattern=operand)
+            self._process_remove_command(target_pattern=operand)
         else:
             print("Usage: rm <file or path>")
 
 
 
-    def process_remove_command(self, target_pattern: str) -> None:
+    def _process_remove_command(self, target_pattern: str) -> None:
         """
         A remove command removes one or several entities
         (documents and/or collections) matching the provided

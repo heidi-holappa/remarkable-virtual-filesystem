@@ -8,6 +8,7 @@ from src.constant import (
     VALID_VISIBLE_NAME_REGEX)
 from .base_command import BaseCommand
 
+# pylint: disable=too-few-public-methods
 class MakeDirectoryCommand(BaseCommand):
     """
     Implementation of make directory command
@@ -25,12 +26,12 @@ class MakeDirectoryCommand(BaseCommand):
 
 
         operand_path = args[0]
-        self.process_mkdir(operand_path)
+        self._process_mkdir(operand_path)
 
     # -------------------------
     # mkdir
     # -------------------------
-    def process_mkdir(self, operand_path: str, parent: str | None = None) -> None:
+    def _process_mkdir(self, operand_path: str, parent: str | None = None) -> None:
         """
         Tries to create a new subdirectory to the current
         parent.

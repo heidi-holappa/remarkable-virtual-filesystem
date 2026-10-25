@@ -25,7 +25,7 @@ from src.exception import (
     InvalidArgumentError
 )
 
-
+# pylint: disable=too-few-public-methods
 class CommandDispatcher:
     """
     Dispatches commands to their respective handlers.

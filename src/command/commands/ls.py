@@ -11,6 +11,7 @@ from src.dto.entry import Entry
 from src.dto.entry_type_enum import EntityType
 from .base_command import BaseCommand
 
+# pylint: disable=too-few-public-methods
 class ListCommand(BaseCommand):
     """
     Implementation of list command
@@ -32,11 +33,11 @@ class ListCommand(BaseCommand):
             return
 
         try:
-            self.process_ls(args)
+            self._process_ls(args)
         except NotFoundError as e:
             print(e)
 
-    def process_ls(self, args: list[str]) -> None:
+    def _process_ls(self, args: list[str]) -> None:
         """
         Processes ls command and lists files either in current
         collection or matching the provided argument. The argument

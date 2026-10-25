@@ -20,6 +20,7 @@ from src.exception import (
 
 from .base_command import BaseCommand
 
+# pylint: disable=too-few-public-methods
 class RemoteCopyCommand(BaseCommand):
     """
     Implementation of remote copy command used to
@@ -51,18 +52,18 @@ class RemoteCopyCommand(BaseCommand):
 
         if len(args) == 2:
             operand_source, operand_target = args
-            self.process_rcp_command_without_options(
+            self._process_rcp_command_without_options(
                 source_file=operand_source,
                 target_collection=operand_target)
         elif len(args) > 2:
-            self.process_rcp_with_options(args)
+            self._process_rcp_with_options(args)
         else:
             print("rcp: usage: rcp <source file> <target collection>")
 
     # -------------------------
     # rcp
     # -------------------------
-    def process_rcp_with_options(self, utility_args: list[str]) -> None:
+    def _process_rcp_with_options(self, utility_args: list[str]) -> None:
         """
         Handles rcp command with options. Flags are meant for
         copying multiple files with one command. This method
@@ -114,7 +115,7 @@ class RemoteCopyCommand(BaseCommand):
         except (InvalidArgumentError, NotFoundError) as e:
             print(f"rcp: {e}")
 
-    def process_rcp_command_without_options(self, source_file: str, target_collection: str) -> None:
+    def _process_rcp_command_without_options(self, source_file: str, target_collection: str) -> None:
         """
         Copies a single file defined by the user as the
         source file to the target collection in reMarkable

@@ -122,7 +122,7 @@ class ListCommandTest(unittest.TestCase):
     def test_ls_happy_path_returns_correct_listing(self) -> None:
         self.ls._repository.set_current_collection(UUID_A)
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ls.process_ls(args=[])
+            self.ls._process_ls(args=[])
             output: str = mock_out.getvalue()
 
             in_memory_data = self.ls._repository.get_data()
@@ -140,7 +140,7 @@ class ListCommandTest(unittest.TestCase):
 
     def test_ls_raises_when_collection_not_found(self) -> None:
         with self.assertRaises(NotFoundError) as ctx:
-            self.ls.process_ls(["/not-found/"])
+            self.ls._process_ls(["/not-found/"])
 
         self.assertTrue("ls: no such path" in str(ctx.exception))
 

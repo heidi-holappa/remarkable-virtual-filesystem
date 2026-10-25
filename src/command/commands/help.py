@@ -3,6 +3,7 @@ Implementation of the help command
 """
 from src.command.commands.base_command import BaseCommand
 
+# pylint: disable=too-few-public-methods
 class HelpCommand(BaseCommand):
     """
     Help command implementation

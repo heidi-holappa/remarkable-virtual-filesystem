@@ -5,11 +5,11 @@ import sys
 from src.command.commands.base_command import BaseCommand
 from src.exception import RemarkableOperationError, InvalidArgumentError
 
+# pylint: disable=too-few-public-methods
 class ExitCommand(BaseCommand):
     """
     Exits the application
     """
-
 
     def handle(self, args: list[str]) -> None:
         """

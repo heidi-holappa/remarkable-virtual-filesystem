@@ -58,7 +58,7 @@ class MakeDirectoryCommandTest(unittest.TestCase):
         self.mkdir._repository.set_current_collection(UUID_A)
         actual_path_to_make = "A_0"
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.mkdir.process_mkdir(actual_path_to_make)
+            self.mkdir._process_mkdir(actual_path_to_make)
             self.assertEqual(mock_write.call_count, 0)
             output: str = mock_out.getvalue()
             self.assertTrue("mkdir: A_0: path with same name already exists: hint: try help mkdir" in output,
@@ -70,7 +70,7 @@ class MakeDirectoryCommandTest(unittest.TestCase):
         self.mkdir._repository.set_current_collection(UUID_A)
         actual_path_to_make = "A#0"
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.mkdir.process_mkdir(actual_path_to_make)
+            self.mkdir._process_mkdir(actual_path_to_make)
             self.assertEqual(mock_write.call_count, 0)
             output: str = mock_out.getvalue()
             self.assertTrue("mkdir: A#0: path contains invalid characters: hint: try help mkdir" in output,
@@ -82,7 +82,7 @@ class MakeDirectoryCommandTest(unittest.TestCase):
         self.mkdir._repository.set_current_collection(UUID_A)
         actual_path_to_make = "/A/A_0"
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.mkdir.process_mkdir(actual_path_to_make)
+            self.mkdir._process_mkdir(actual_path_to_make)
             self.assertEqual(0, mock_write.call_count)
             output: str = mock_out.getvalue()
             self.assertTrue("mkdir: /A/A_0: relative or absolute paths are not yet supported: hint: try help mkdir" in output,
@@ -94,7 +94,7 @@ class MakeDirectoryCommandTest(unittest.TestCase):
         self.mkdir._repository.set_current_collection(UUID_A)
         actual_path_to_make = ""
         with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.mkdir.process_mkdir(actual_path_to_make)
+            self.mkdir._process_mkdir(actual_path_to_make)
             self.assertEqual(0, mock_write.call_count)
             output: str = mock_out.getvalue()
             self.assertTrue(
@@ -108,7 +108,7 @@ class MakeDirectoryCommandTest(unittest.TestCase):
         actual_path_to_make = "foo"
 
         with patch("sys.stdout", new=StringIO()) as mock_out:
-            self.mkdir.process_mkdir(actual_path_to_make)
+            self.mkdir._process_mkdir(actual_path_to_make)
 
             self.assertEqual(mock_write.call_count, 1)
             output: str = mock_out.getvalue()

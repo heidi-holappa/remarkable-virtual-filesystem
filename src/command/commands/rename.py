@@ -1,8 +1,6 @@
 """
 Implementation of the rename command
 """
-
-
 import copy
 
 from src.dto.metadata import Metadata
@@ -15,6 +13,7 @@ from src.exception import (
 
 from .base_command import BaseCommand
 
+# pylint: disable=too-few-public-methods
 class RenameCommand(BaseCommand):
     """
     TODO
@@ -31,9 +30,9 @@ class RenameCommand(BaseCommand):
             return
         operand_target, new_visible_name = args
 
-        self.process_rename(operand_target, new_visible_name)
+        self._process_rename(operand_target, new_visible_name)
 
-    def process_rename(self, target: str, new_visible_name: str) -> None:
+    def _process_rename(self, target: str, new_visible_name: str) -> None:
         """
         Tries to rename a document or a collection with
         the provided new_visible_name. User is informed,

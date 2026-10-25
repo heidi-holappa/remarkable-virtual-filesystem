@@ -85,36 +85,36 @@ class ChangeDirectoryCommandTest(unittest.TestCase):
     # -----------------------
 
     def test_change_collection_from_root_to_direct_subpath(self) -> None:
-        self.cd.change_collection("/A")
+        self.cd._change_collection("/A")
         assert self.cd._repository.get_current_collection() == UUID_A
 
     def test_change_collection_from_root_to_direct_subpath_with_additional_slashes(self) -> None:
-        self.cd.change_collection("//////////A")
+        self.cd._change_collection("//////////A")
         assert self.cd._repository.get_current_collection() == UUID_A
 
     def test_change_collection_from_root_to_direct_subpath_with_relative_directories(self) -> None:
-        self.cd.change_collection("/././../A/..////A")
+        self.cd._change_collection("/././../A/..////A")
         assert self.cd._repository.get_current_collection() == UUID_A
 
     def test_change_collection_to_nested_subpath_with_absolute_path(self) -> None:
-        self.cd.change_collection("/A/A_0")
+        self.cd._change_collection("/A/A_0")
         assert self.cd._repository.get_current_collection() == UUID_A0
 
     def test_change_collection_to_nested_subpath_with_relative_path(self) -> None:
         # assumming the collection is A before the path change
-        self.cd.change_collection("/A")
-        self.cd.change_collection("../B/B_0")
+        self.cd._change_collection("/A")
+        self.cd._change_collection("../B/B_0")
         # then the new path should be /B/B_0
         assert self.cd._repository.get_current_collection() == UUID_B0
 
     def test_change_collection_with_document_visible_name_raises_error(self) -> None:
         with self.assertRaises(NoSuchDirectoryError) as context:
-            self.cd.change_collection("C")
+            self.cd._change_collection("C")
 
         self.assertTrue("C: Not a directory" in str(context.exception))
 
     def test_change_collection_with_non_existing_path_raises_error(self) -> None:
         with self.assertRaises(NoSuchFileOrDirectoryError) as context:
-            self.cd.change_collection("D")
+            self.cd._change_collection("D")
 
         self.assertTrue(NO_SUCH_FILE_OR_DIRECTORY in str(context.exception))
