@@ -1,7 +1,11 @@
+"""
+Implementation of remote copy command used to
+copy files from host machine to reMarkable
+e-reader
+"""
+
 import os
 import time
-
-from .base_command import BaseCommand
 
 from src.dto.metadata import Metadata
 from src.dto.content import Content
@@ -14,10 +18,13 @@ from src.exception import (
     InvalidContentError
 )
 
+from .base_command import BaseCommand
 
 class RemoteCopyCommand(BaseCommand):
     """
-    TODO
+    Implementation of remote copy command used to
+    copy files from host machine to reMarkable
+    e-reader
     """
 
     def handle(self, args: list[str]) -> None:

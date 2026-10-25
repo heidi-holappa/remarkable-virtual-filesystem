@@ -1,3 +1,6 @@
+"""
+Implementation of the help command
+"""
 from src.command.commands.base_command import BaseCommand
 
 class HelpCommand(BaseCommand):

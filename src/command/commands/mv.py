@@ -1,23 +1,22 @@
+"""
+Implementation of move command
+"""
+
 import copy
 
-from .base_command import BaseCommand
 from src.dto.metadata import Metadata
-
 from src.exception import (
     ConstraintViolationError,
     NotFoundError,
     InvalidPathError,
     InvalidMetadataError,
-    RemarkableWriteError
-)
-
-from src.constant import  (
-    NO_SUCH_FILE_OR_DIRECTORY
-)
+    RemarkableWriteError)
+from src.constant import  NO_SUCH_FILE_OR_DIRECTORY
+from .base_command import BaseCommand
 
 class MoveCommand(BaseCommand):
     """
-    TODO
+    Implementation of move command
     """
 
     def handle(self, args: list[str]) -> None:

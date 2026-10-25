@@ -1,3 +1,6 @@
+"""
+Abstract base class for commands.
+"""
 from abc import ABC, abstractmethod
 from fnmatch import fnmatchcase
 import time
@@ -30,6 +33,8 @@ class BaseCommand(ABC):
         """
         each command class specializes on handling
         a specific command.
+
+        :param args: a list of arguments for the command
         """
 
     # --------------------------

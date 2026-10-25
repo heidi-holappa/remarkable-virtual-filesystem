@@ -1,4 +1,7 @@
-from .base_command import BaseCommand
+"""
+Implementation of the change directory command
+"""
+
 from src.constant import (
     ROOT_COLLECTION,
     NOT_A_DIRECTORY,
@@ -8,25 +11,25 @@ from src.exception import (
     NoSuchFileOrDirectoryError,
     NoSuchDirectoryError
 )
+from .base_command import BaseCommand
 
 class ChangeDirectoryCommand(BaseCommand):
     """
-    TODO
+    Implementation of the change directory command
     """
 
 
     def handle(self, args: list[str]) -> None:
         """
-            Handles command to change directory
+        Handles command to change directory
 
-            Usage examples:
-              - cd foo
-              - cd ../foo
-              - cd /foo/bar
+        Usage examples:
+          - cd foo
+          - cd ../foo
+          - cd /foo/bar
 
-            :param utility_arguments: the path to which directory should be changed to
-            :param workspace_manager: manager for reMarkable workspace
-            """
+        :param args: the path to which directory should be changed to
+        """
 
         if len(args) == 0:
             self._repository.set_current_collection(ROOT_COLLECTION)

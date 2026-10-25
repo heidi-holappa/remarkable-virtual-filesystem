@@ -1,6 +1,9 @@
-import copy
+"""
+Implementation of the rename command
+"""
 
-from .base_command import BaseCommand
+
+import copy
 
 from src.dto.metadata import Metadata
 from src.constant import VALID_VISIBLE_NAME_REGEX
@@ -9,6 +12,8 @@ from src.exception import (
     InvalidArgumentError,
     NotFoundError
 )
+
+from .base_command import BaseCommand
 
 class RenameCommand(BaseCommand):
     """

@@ -1,3 +1,8 @@
+"""
+CommandDispatcher handles incoming commands and calls the
+handler method for resolved command.
+"""
+
 from collections.abc import Callable
 
 from src.command.commands import (

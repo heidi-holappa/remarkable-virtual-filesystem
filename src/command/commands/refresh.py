@@ -1,11 +1,12 @@
-from .base_command import BaseCommand
-
+"""
+Implementation of refresh command
+"""
 from src.exception import RemarkableOperationError
-
+from .base_command import BaseCommand
 
 class RefreshCommand(BaseCommand):
     """
-    TODO
+    Implementation of refresh command
     """
 
     def handle(self, args: list[str]) -> None:
@@ -13,7 +14,7 @@ class RefreshCommand(BaseCommand):
         Invokes repository to handle refresh of Xochitl
         service and in-memory data
 
-        :param workspace_manager: manager for reMarkable workspace
+        :param args: manager for reMarkable workspace
         """
         try:
             self._repository.restart_xochitl()

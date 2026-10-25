@@ -1,5 +1,6 @@
-from .base_command import BaseCommand
-
+"""
+Implementation of list command
+"""
 from src.constant import (
     ROOT_COLLECTION,
     LS_COLUMN_WIDTH)
@@ -8,23 +9,23 @@ from src.exception import NotFoundError
 
 from src.dto.entry import Entry
 from src.dto.entry_type_enum import EntityType
+from .base_command import BaseCommand
 
 class ListCommand(BaseCommand):
     """
-    TODO
+    Implementation of list command
     """
 
     def handle(self, args: list[str]) -> None:
         """
-            A light implementation of the list command.
+        A light implementation of the list command.
 
-            Usage examples:
-              - ls
-              - ls <path>
+        Usage examples:
+          - ls
+          - ls <path>
 
-            :param utility_arguments: arguments for the ls command
-            :param workspace_manager: manager for reMarkable workspace
-            """
+        :param args: arguments for the ls command
+        """
 
         if len(args) > 1:
             print("ls: usage: ls or ls <path or file>")
@@ -101,7 +102,3 @@ class ListCommand(BaseCommand):
         print(header)
         for entry in list_result:
             print(entry)
-
-
-
-

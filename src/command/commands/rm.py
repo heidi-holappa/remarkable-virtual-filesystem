@@ -1,11 +1,12 @@
-from .base_command import BaseCommand
-
+"""
+Implementation of the remove command
+"""
 from src.exception import NotFoundError
-
+from .base_command import BaseCommand
 
 class RemoveCommand(BaseCommand):
     """
-    TODO
+    Implementation of the remove command
     """
 
     def handle(self, args: list[str]) -> None:
@@ -17,8 +18,7 @@ class RemoveCommand(BaseCommand):
           - rm /foo/bar
           - rm *.pdf
 
-        :param utility_arguments: possible arguments
-        :param workspace_manager: manager for reMarkable workspace
+        :param args: possible arguments
         """
 
         if len(args) == 1:
@@ -56,4 +56,3 @@ class RemoveCommand(BaseCommand):
 
         except (NotFoundError, KeyError) as e:
             print(f"ERROR: {e}")
-

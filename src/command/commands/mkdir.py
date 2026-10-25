@@ -1,13 +1,16 @@
-from .base_command import BaseCommand
+"""
+Implementation of make directory command
+"""
 
 from src.exception import (
     RemarkableWriteError, InvalidPathError)
 from src.constant import (
     VALID_VISIBLE_NAME_REGEX)
+from .base_command import BaseCommand
 
 class MakeDirectoryCommand(BaseCommand):
     """
-    TODO
+    Implementation of make directory command
     """
 
     def handle(self, args: list[str]) -> None:
@@ -85,4 +88,3 @@ class MakeDirectoryCommand(BaseCommand):
 
         if not bool(VALID_VISIBLE_NAME_REGEX.fullmatch(path)):
             raise InvalidPathError("path contains invalid characters")
-

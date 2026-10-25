@@ -1,3 +1,6 @@
+"""
+Implementation of exit command
+"""
 import sys
 from src.command.commands.base_command import BaseCommand
 from src.exception import RemarkableOperationError, InvalidArgumentError
