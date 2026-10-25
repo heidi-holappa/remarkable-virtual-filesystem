@@ -1,4 +1,3 @@
-from typing import List
 from .base_command import BaseCommand
 from src.constant import (
     ROOT_COLLECTION,
@@ -16,7 +15,7 @@ class ChangeDirectoryCommand(BaseCommand):
     """
 
 
-    def handle(self, args: List[str]) -> None:
+    def handle(self, args: list[str]) -> None:
         """
             Handles command to change directory
 

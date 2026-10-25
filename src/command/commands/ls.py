@@ -16,6 +16,27 @@ class ListCommand(BaseCommand):
 
     def handle(self, args: list[str]) -> None:
         """
+            A light implementation of the list command.
+
+            Usage examples:
+              - ls
+              - ls <path>
+
+            :param utility_arguments: arguments for the ls command
+            :param workspace_manager: manager for reMarkable workspace
+            """
+
+        if len(args) > 1:
+            print("ls: usage: ls or ls <path or file>")
+            return
+
+        try:
+            self.process_ls(args)
+        except NotFoundError as e:
+            print(e)
+
+    def process_ls(self, args: list[str]) -> None:
+        """
         Processes ls command and lists files either in current
         collection or matching the provided argument. The argument
         is expected to be a path (collection). If argument is provided,

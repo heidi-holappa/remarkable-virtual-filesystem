@@ -5,7 +5,8 @@ from unittest.mock import patch, MagicMock
 
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
 from src.exception import (
-    RemarkableOperationError
+    RemarkableOperationError,
+    InvalidArgumentError
 )
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 from src.command.commands.exit import ExitCommand
@@ -50,3 +51,9 @@ class ExitCommandTest(unittest.TestCase):
             self.assertIn("failure", output)
 
         mock_restart_xochitl.assert_called_once()
+
+    def test_handle_exit_invalid_argument(self) -> None:
+        with self.assertRaises(InvalidArgumentError) as ctx:
+            self.exit.handle(["unsupported_arg"])
+
+        self.assertTrue("exit: command does not support args" in str(ctx.exception))

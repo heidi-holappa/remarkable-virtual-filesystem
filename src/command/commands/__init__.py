@@ -16,3 +16,4 @@ from .rcp import RemoteCopyCommand
 from .refresh import RefreshCommand
 from .rm import RemoveCommand
 from .exit import ExitCommand
+from .rename import RenameCommand

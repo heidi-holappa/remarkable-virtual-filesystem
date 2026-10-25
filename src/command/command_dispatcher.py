@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from functools import partial
 
 from src.command.commands import (
     BaseCommand,
@@ -12,7 +11,8 @@ from src.command.commands import (
     HelpCommand,
     ClearCommand,
     ChangeDirectoryCommand,
-    ExitCommand
+    ExitCommand,
+    RenameCommand
 )
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 
@@ -33,7 +33,7 @@ class CommandDispatcher:
         self._instances: dict[str, BaseCommand] = {}
         self._repository = repository
 
-        _factories: dict[str, Callable[[], BaseCommand]] = { # type: ignore
+        self._factories: dict[str, Callable[[], BaseCommand]] = { # type: ignore
             "rm": RemoveCommand,
             "refresh": RefreshCommand,
             "rcp": RemoteCopyCommand,
@@ -43,10 +43,11 @@ class CommandDispatcher:
             "help": HelpCommand,
             "clear": ClearCommand,
             "cd": ChangeDirectoryCommand,
-            "exit": ExitCommand
+            "exit": ExitCommand,
+            "rename": RenameCommand
         }
 
-        _aliases: dict[str, tuple[str, list[str]]] = {
+        self._aliases: dict[str, tuple[str, list[str]]] = {
             "x": ("exit", [])
         }
 
