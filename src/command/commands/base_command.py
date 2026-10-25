@@ -346,7 +346,7 @@ class BaseCommand(ABC):
 
 
     def _collect_uuids_matching_name_or_pattern_and_all_descendants_of_matches(
-            self, visible_name: str, parent_uuid: str) -> List[str]:
+            self, visible_name: str, parent_uuid: str) -> list[str]:
         """
         Collects the UUIDs of all children with the provided
         parent collection matching a visible name or a pattern.

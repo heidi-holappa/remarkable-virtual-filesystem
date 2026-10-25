@@ -34,7 +34,6 @@ class CommandDispatcherTest(unittest.TestCase):
         mock_exit.assert_called_once_with(0)
 
 
-
     def test_command_not_found(self) -> None:
         with self.assertRaisesRegex(
             InvalidArgumentError,

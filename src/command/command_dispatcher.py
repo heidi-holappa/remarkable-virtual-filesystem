@@ -33,7 +33,7 @@ class CommandDispatcher:
         self._instances: dict[str, BaseCommand] = {}
         self._repository = repository
 
-        self._factories: dict[str, Callable[[], BaseCommand]] = { # type: ignore
+        self._factories: dict[str, Callable[[RemarkableDataRepository], BaseCommand]] = {
             "rm": RemoveCommand,
             "refresh": RefreshCommand,
             "rcp": RemoteCopyCommand,

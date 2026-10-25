@@ -157,18 +157,3 @@ class ListCommandTest(unittest.TestCase):
             result = self.ls._traverse_path("foo")
 
         self.assertEqual(result, None)
-
-
-    # -------------------
-    # _traverse_path
-    # -------------------
-    def test_traverse_path_breaks_when_collection_pointer_is_not_string(self) -> None:
-        # This should not happen, but we confirm this defensive check works
-        with patch.object(
-                self.ls._repository,
-                "_current_collection",
-                None,
-        ):
-            result = self.ls._traverse_path("foo")
-
-        self.assertEqual(result, None)
