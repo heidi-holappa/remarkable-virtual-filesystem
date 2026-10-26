@@ -3,6 +3,7 @@ import unittest
 from io import StringIO
 from unittest.mock import patch, MagicMock
 
+from src.event.event_bus import EventBus
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
 
 from src.exception import NotFoundError, InvalidPathError
@@ -24,7 +25,8 @@ class MoveCommandTest(unittest.TestCase):
     def setUp(self, mock_load: MagicMock) -> None:
         mock_load.return_value = copy.deepcopy(TEST_DATA)
         self.mv = MoveCommand(
-            RemarkableDataRepository(RemarkableSSHMetadataSourceV2()))
+            RemarkableDataRepository(RemarkableSSHMetadataSourceV2()),
+            EventBus())
 
     # -------------------------------
     # handle method

@@ -4,6 +4,7 @@ from io import StringIO
 from unittest.mock import patch, MagicMock
 import unittest
 
+from src.event.event_bus import EventBus
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 
@@ -22,7 +23,8 @@ class RenameCommandTest(unittest.TestCase):
     def setUp(self, mock_load: MagicMock) -> None:
         mock_load.return_value = copy.deepcopy(TEST_DATA)
         self.rename = RenameCommand(
-            RemarkableDataRepository(RemarkableSSHMetadataSourceV2()))
+            RemarkableDataRepository(RemarkableSSHMetadataSourceV2()),
+            EventBus())
 
 
     # -------------------------------
