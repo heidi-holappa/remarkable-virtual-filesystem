@@ -3,6 +3,7 @@ import unittest
 
 from unittest.mock import patch, MagicMock
 
+from src.event.event_bus import EventBus
 from src.command.command_dispatcher import CommandDispatcher
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
@@ -18,7 +19,8 @@ class CommandDispatcherTest(unittest.TestCase):
     def setUp(self, mock_load: MagicMock) -> None:
         mock_load.return_value = copy.deepcopy(TEST_DATA)
         self.dispatcher = CommandDispatcher(
-            RemarkableDataRepository(RemarkableSSHMetadataSourceV2())
+            RemarkableDataRepository(RemarkableSSHMetadataSourceV2()),
+            EventBus()
         )
 
     @patch("src.command.commands.exit.sys.exit")

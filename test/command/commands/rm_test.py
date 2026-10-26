@@ -5,6 +5,7 @@ from unittest.mock import patch, MagicMock
 
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
 
+from src.event.event_bus import EventBus
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 from src.command.commands import RemoveCommand 
 from test.test_data_v2 import (
@@ -19,7 +20,8 @@ class RemoveCommandTest(unittest.TestCase):
     def setUp(self, mock_load: MagicMock) -> None:
         mock_load.return_value = copy.deepcopy(TEST_DATA)
         self.rm = RemoveCommand(
-            RemarkableDataRepository(RemarkableSSHMetadataSourceV2()))
+            RemarkableDataRepository(RemarkableSSHMetadataSourceV2()),
+            EventBus())
         
         
     # -------------------------------

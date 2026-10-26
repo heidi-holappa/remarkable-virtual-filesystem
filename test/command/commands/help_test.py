@@ -2,6 +2,7 @@ import copy
 import unittest
 from io import StringIO
 from unittest.mock import patch, MagicMock
+from src.event.event_bus import EventBus
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
 from src.command.commands.help import HelpCommand
@@ -16,7 +17,8 @@ class TestHelpInstruction(unittest.TestCase):
     def setUp(self, mock_load: MagicMock) -> None:
         mock_load.return_value = copy.deepcopy(TEST_DATA)
         self._help = HelpCommand(
-            RemarkableDataRepository(RemarkableSSHMetadataSourceV2()))
+            RemarkableDataRepository(RemarkableSSHMetadataSourceV2()),
+            EventBus())
 
     def test_help_method_prints_to_console(self) -> None:
         with patch('sys.stdout', new=StringIO()) as mock_out:

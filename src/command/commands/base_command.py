@@ -9,6 +9,7 @@ import uuid
 from src.dto.metadata import Metadata
 from src.dto.entry import Entry
 from src.dto.entry_type_enum import EntityType
+from src.event.event_bus import EventBus
 
 from src.constant import (
     ROOT_COLLECTION,
@@ -26,8 +27,9 @@ class BaseCommand(ABC):
     method.
     """
 
-    def __init__(self, repository: RemarkableDataRepository) -> None:
+    def __init__(self, repository: RemarkableDataRepository, event_bus: EventBus) -> None:
         self._repository = repository
+        self._event_bus = event_bus
 
     @abstractmethod
     def handle(self, args: list[str]) -> None:
