@@ -19,6 +19,7 @@ from src.command.commands import (
     ExitCommand,
     RenameCommand
 )
+from src.event.event_bus import EventBus
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 
 from src.exception import (
@@ -34,11 +35,12 @@ class CommandDispatcher:
     """
 
 
-    def __init__(self, repository: RemarkableDataRepository) -> None:
+    def __init__(self, repository: RemarkableDataRepository, event_bus: EventBus) -> None:
         self._instances: dict[str, BaseCommand] = {}
         self._repository = repository
+        self._event_bus = event_bus
 
-        self._factories: dict[str, Callable[[RemarkableDataRepository], BaseCommand]] = {
+        self._factories: dict[str, Callable[[RemarkableDataRepository, EventBus], BaseCommand]] = {
             "rm": RemoveCommand,
             "refresh": RefreshCommand,
             "rcp": RemoteCopyCommand,
@@ -82,7 +84,7 @@ class CommandDispatcher:
         instance = self._instances.get(command)
 
         if instance is None:
-            instance = factory(self._repository)
+            instance = factory(self._repository, self._event_bus)
             self._instances[command] = instance
 
         instance.handle(args)
