@@ -1,16 +1,16 @@
 """Entry point and command loop for the Remarkable Virtual File System."""
 
-import shlex
 import argparse
 import logging
 from argparse import ArgumentParser, Namespace
-from typing import List
 
-from src.com.common import clear, ls, mv, rm, cd, rcp, mkdir, rename, refresh, handle_exit
-from src.com.help import help_instruction
-from src.workspace.workspace_manager import WorkspaceManager
+from src.command.command_dispatcher import CommandDispatcher
+from src.ui.ui_cli import CliUi
+from src.repository.remarkable_data_repository import RemarkableDataRepository
+from src.event.event_bus import EventBus
+
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
-from src.workspace.remarkable_workspace_v2 import RemarkableWorkspaceV2
+
 
 logger = logging.getLogger(__name__)
 
@@ -21,85 +21,15 @@ def main_loop() -> None:
     Reads commands from standard input, parses them, and executes them
     until the user issues an exit command.
     """
-    workspace_manager: WorkspaceManager = get_workspace_manager()
 
-    ws: RemarkableWorkspaceV2 = workspace_manager.get()
+    repository = RemarkableDataRepository(RemarkableSSHMetadataSourceV2())
+    event_bus = EventBus()
+    dispatcher = CommandDispatcher(repository, event_bus)
+    ui = CliUi(repository, event_bus, dispatcher)
 
-    while True:
-        path = ws._repository.get_current_path()
-        line = input(f"remarkable~{path}$ ")
+    logger.info("Starting UI")
+    ui.loop()
 
-        parsed = parse_command(line)
-
-        if parsed is None:
-            continue
-
-        command, arguments = parsed
-
-        if not execute_command(command, arguments, workspace_manager):
-            return
-
-def get_workspace_manager() -> WorkspaceManager:
-    return WorkspaceManager(RemarkableSSHMetadataSourceV2())
-
-def parse_command(line: str) -> tuple[str, list[str]] | None:
-    """
-    Parses a command line into a command and its arguments.
-
-    :param line: Raw command line entered by the user.
-    :return: A tuple containing the command and its arguments, or None
-        if the input is empty.
-    """
-    cmd_line = shlex.split(line)
-
-    if not cmd_line:
-        return None
-
-    command, *arguments = cmd_line
-    return command, arguments
-
-def execute_command(
-    command: str,
-    utility_arguments: List[str],
-    workspace_manager: WorkspaceManager
-) -> bool:
-    """
-    Executes a command with the supplied arguments.
-
-    :param command: Command name to execute.
-    :param utility_arguments: Arguments passed to the command.
-    :param workspace_manager: Workspace Manager
-    :return: True if the command loop should continue, False if it
-        should terminate.
-    """
-    match command:
-        case "cd":
-            cd(utility_arguments, workspace_manager)
-        case "clear":
-            clear()
-        case "rm":
-            rm(utility_arguments, workspace_manager)
-        case "ls":
-            ls(utility_arguments, workspace_manager)
-        case "mv":
-            mv(utility_arguments, workspace_manager)
-        case "rcp":
-            rcp(utility_arguments, workspace_manager)
-        case "help":
-            help_instruction(utility_arguments)
-        case "refresh":
-            refresh(workspace_manager)
-        case "mkdir":
-            mkdir(utility_arguments, workspace_manager)
-        case "rename":
-            rename(utility_arguments, workspace_manager)
-        case "exit" | "x":
-            handle_exit(workspace_manager)
-            return False
-        case _:
-            print(f"Command '{command}' not found.\nTry: help")
-
-    return True
 
 def init_argparse() -> ArgumentParser:
     """
