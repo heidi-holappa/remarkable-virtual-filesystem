@@ -115,7 +115,8 @@ class RemoteCopyCommand(BaseCommand):
         except (InvalidArgumentError, NotFoundError) as e:
             print(f"rcp: {e}")
 
-    def _process_rcp_command_without_options(self, source_file: str, target_collection: str) -> None:
+    def _process_rcp_command_without_options(
+            self, source_file: str, target_collection: str) -> None:
         """
         Copies a single file defined by the user as the
         source file to the target collection in reMarkable

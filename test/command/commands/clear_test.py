@@ -22,7 +22,7 @@ class ClearCommandTest(unittest.TestCase):
     # -------------------------------
     # clear instruction
     # -------------------------------
-    @patch("src.com.common.subprocess.run")
+    @patch("src.command.commands.clear.subprocess.run")
     def test_clear(self, mock_run: MagicMock) -> None:
         """
         Verifies that clear() invokes subprocess.run with "clear".

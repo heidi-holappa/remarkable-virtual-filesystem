@@ -48,6 +48,8 @@ class CliUi(Ui):
         Listens to events published by other application
         layers by subscribing to the event bus. Renders these
         messages to the terminal.
+
+        :param event: event to render
         """
 
         if isinstance(event, OutputMessage):

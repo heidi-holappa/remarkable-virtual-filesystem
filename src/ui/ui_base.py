@@ -1,9 +1,15 @@
+"""
+Base class for UI implementations
+"""
 from abc import ABC, abstractmethod
 from src.event.event import Event
 
 
 class Ui(ABC):
-    pass
+    """
+    A base class for UI implementations
+    """
+
     @abstractmethod
     def loop(self) -> None:
         """
@@ -17,4 +23,6 @@ class Ui(ABC):
         An event listen subscribes to event bus
         and handles events published from other
         application layers.
+
+        :param event: event to output
         """
