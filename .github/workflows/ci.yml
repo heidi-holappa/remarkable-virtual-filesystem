@@ -36,6 +36,16 @@ jobs:
           source venv/bin/activate
           mypy .
 
+      - name: Debug Python environment
+        run: |
+          pwd
+          python --version
+          python -m pip --version
+          python -m pytest --version
+          python -c "import sys; print('\n'.join(sys.path))"
+          python -c "import os; print(os.listdir('.'))"
+          python -c "import src; print(src.__file__)"
+          
       - name: Run tests with coverage
         run: |
           source venv/bin/activate
