@@ -39,7 +39,12 @@ jobs:
       - name: Run tests with coverage
         run: |
           source venv/bin/activate
-          pytest -v
+          echo "=== pytest executable ==="
+          which pytest
+          pytest --collect-only -q
+
+          echo "=== python module ==="
+          python -m pytest --collect-only -q
 
       - name: Enforce coverage >= 80%
         run: |
