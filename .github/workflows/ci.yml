@@ -35,33 +35,11 @@ jobs:
         run: |
           source venv/bin/activate
           mypy .
-
-      - name: Debug Python environment
-        run: |
-          source venv/bin/activate
-
-          pwd
-          which python
-          python --version
-          python -m pip --version
-          python -m pytest --version
-
-          python -c "import sys; print('\n'.join(sys.path))"
-          python -c "import os; print(os.listdir('.'))"
-          python -c "import src; print(src.__file__)"
-
-      - name: Debug pytest imports
-        run: |
-          source venv/bin/activate
-
-          python -c "import pytest; print(pytest.__file__)"
-
-          python -m pytest --trace-config --collect-only -q
           
       - name: Run tests with coverage
         run: |
           source venv/bin/activate
-          pytest --cov=src --cov-report=term --cov-report=xml
+          pytest -v
 
       - name: Enforce coverage >= 80%
         run: |
