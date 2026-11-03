@@ -1,6 +1,5 @@
 import copy
 import unittest
-from io import StringIO
 from unittest.mock import patch, MagicMock
 
 from src.event.event_bus import EventBus
@@ -9,6 +8,7 @@ from src.exception import (
     RemarkableOperationError,
     InvalidArgumentError
 )
+from src.event.event import OutputCommandMessage
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 from src.command.commands.exit import ExitCommand
 from test.test_data_v2 import (
@@ -43,14 +43,19 @@ class ExitCommandTest(unittest.TestCase):
         # Arrange
         mock_restart_xochitl.side_effect = RemarkableOperationError("failure")
 
-        with patch("sys.stdout", new=StringIO()) as fake_out:
+        with patch.object(self.exit._event_bus, "publish") as mock_publish:
             with self.assertRaises(SystemExit) as context:
                 self.exit.handle([])
 
             self.assertEqual(context.exception.code, 1)
 
-            output = fake_out.getvalue()
-            self.assertIn("failure", output)
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "exit",
+                    "failure"
+                )
+
+            )
 
         mock_restart_xochitl.assert_called_once()
 

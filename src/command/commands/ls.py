@@ -9,6 +9,7 @@ from src.exception import NotFoundError
 
 from src.dto.entry import Entry
 from src.dto.entry_type_enum import EntityType
+from src.event.event import OutputCommandMessage, OutputMessage
 from .base_command import BaseCommand
 
 # pylint: disable=too-few-public-methods
@@ -29,13 +30,23 @@ class ListCommand(BaseCommand):
         """
 
         if len(args) > 1:
-            print("ls: usage: ls or ls <path or file>")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "ls",
+                    "usage: ls or ls <path or file>"
+                )
+            )
             return
 
         try:
             self._process_ls(args)
         except NotFoundError as e:
-            print(e)
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "ls",
+                    f"{e}"
+                )
+            )
 
     def _process_ls(self, args: list[str]) -> None:
         """
@@ -52,7 +63,7 @@ class ListCommand(BaseCommand):
             collection_to_list_uuid: str | None = (
                 self._traverse_path(operand_path))
             if collection_to_list_uuid is None:
-                raise NotFoundError("ls: no such path")
+                raise NotFoundError("no such path")
         else:
             collection_to_list_uuid = self._repository.get_current_collection()
 
@@ -94,12 +105,12 @@ class ListCommand(BaseCommand):
 
         self._output_ls_result(list_result)
 
-    @staticmethod
-    def _output_ls_result(list_result: list[str]) -> None:
+
+    def _output_ls_result(self, list_result: list[str]) -> None:
         size_header = "size (kB)"
         header_padding = " " * (LS_COLUMN_WIDTH - len(size_header))
         name_header = "name"
         header = f"{size_header}{header_padding}{name_header}"
-        print(header)
+        self._event_bus.publish(OutputMessage(f"{header}"))
         for entry in list_result:
-            print(entry)
+            self._event_bus.publish(OutputMessage(f"{entry}"))

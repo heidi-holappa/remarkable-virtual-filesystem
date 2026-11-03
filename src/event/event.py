@@ -10,10 +10,19 @@ from dataclasses import dataclass
 class Event:
     """Base class for application events."""
 
+
 @dataclass(frozen=True)
 class OutputMessage(Event):
     """
-    Outputs a message to the UI for the user
+    Outputs a message with command name to the UI for the user
+    """
+    message: str
+
+
+@dataclass(frozen=True)
+class OutputCommandMessage(Event):
+    """
+    Outputs a message with command name to the UI for the user
     """
     command: str
     message: str

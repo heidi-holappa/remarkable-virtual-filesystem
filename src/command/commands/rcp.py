@@ -10,6 +10,7 @@ import time
 from src.dto.metadata import Metadata
 from src.dto.content import Content
 from src.dto.entry_type_enum import EntityType
+from src.event.event import OutputCommandMessage, ProgressUpdate
 
 from src.exception import (
     InvalidArgumentError,
@@ -58,7 +59,13 @@ class RemoteCopyCommand(BaseCommand):
         elif len(args) > 2:
             self._process_rcp_with_options(args)
         else:
-            print("rcp: usage: rcp <source file> <target collection>")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "rcp",
+                    "usage: rcp <source file> <target collection>"
+
+                )
+            )
 
     # -------------------------
     # rcp
@@ -95,25 +102,47 @@ class RemoteCopyCommand(BaseCommand):
                 source_path, recurse)
 
             if not files_to_copy:
-                print(f"rcp: no pdf or epub files found in directory: {source_path}")
+                self._event_bus.publish(
+                    OutputCommandMessage(
+                        "rcp",
+                        f"no pdf or epub files found in directory: {source_path}"
+                    )
+                )
                 return
 
             files_and_parents: list[tuple[str, str]] = (
                 self._generate_target_path_uuid_and_source_file_pairs(
                     source_path, files_to_copy, validated_target_uuid))
 
-            print(f"found {len(files_to_copy)} files to copy. copying files one-by-one."
-                  f"\nDO NOT disconnect reMarkable while operation is ongoing.")
+
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "rcp",
+                    f"found {len(files_to_copy)} files to copy. copying files one-by-one."
+                    f"\nDO NOT disconnect reMarkable while operation is ongoing."
+                )
+            )
             for idx, file_parent_pair in enumerate(files_and_parents):
                 source_file, parent_uuid = file_parent_pair
                 self._copy_file_from_host_to_target(source_file, parent_uuid)
-                print(f"{idx + 1}/{len(files_to_copy)}: "
-                      f"{source_file} copied to {target_collection}")
+                self._event_bus.publish(
+                    ProgressUpdate(
+                        "rcp",
+                        f"{source_file} copied to {target_collection}",
+                        idx + 1,
+                        len(files_to_copy)
+                    )
+                )
 
             self._repository.refresh_data()
 
         except (InvalidArgumentError, NotFoundError) as e:
-            print(f"rcp: {e}")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "rcp",
+                    f"{e}"
+                )
+            )
 
     def _process_rcp_command_without_options(
             self, source_file: str, target_collection: str) -> None:
@@ -137,8 +166,12 @@ class RemoteCopyCommand(BaseCommand):
             self._repository.refresh_data()
 
         except NotFoundError as e:
-            print(f"rcp: {e}")
-
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "rcp",
+                    f"{e}"
+                )
+            )
 
 
     @staticmethod
@@ -280,7 +313,12 @@ class RemoteCopyCommand(BaseCommand):
                 visible_name=filename
             )
 
-            print(f"SOURCE_FILE: {source_file}")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "rcp",
+                    f"SOURCE_FILE: {source_file}"
+                )
+            )
 
             self._repository.invoke_remote_copy(source_file=source_file,
                                      metadata=metadata, content=content)
@@ -288,4 +326,9 @@ class RemoteCopyCommand(BaseCommand):
 
         except (NotFoundError, InvalidMetadataError,
                 InvalidContentError) as e:
-            print(e)
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "rcp",
+                    f"{e}"
+                )
+            )

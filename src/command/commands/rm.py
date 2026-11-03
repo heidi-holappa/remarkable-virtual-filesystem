@@ -1,8 +1,9 @@
 """
 Implementation of the remove command
 """
-from src.exception import NotFoundError
+from src.exception import NotFoundError, RemarkableWriteError
 from .base_command import BaseCommand
+from src.event.event import OutputCommandMessage
 
 # pylint: disable=too-few-public-methods
 class RemoveCommand(BaseCommand):
@@ -26,7 +27,12 @@ class RemoveCommand(BaseCommand):
             operand = args[0]
             self._process_remove_command(target_pattern=operand)
         else:
-            print("Usage: rm <file or path>")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "rm",
+                    "usage: rm <file or path>"
+            ))
+
 
 
 
@@ -55,5 +61,11 @@ class RemoveCommand(BaseCommand):
             for item_uuid in entities_to_remove:
                 self._repository.remove_entry(item_uuid)
 
-        except (NotFoundError, KeyError) as e:
-            print(f"ERROR: {e}")
+        except (NotFoundError, KeyError, RemarkableWriteError) as e:
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "rm",
+                    f"error: {e}"
+                )
+            )
+

@@ -1,20 +1,19 @@
 import copy
 import unittest
-from io import StringIO
 from unittest.mock import patch, MagicMock
 
 from src.event.event_bus import EventBus
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
 from src.exception import (NotFoundError)
+from src.event.event import OutputMessage, OutputCommandMessage
 
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 from src.command.commands.ls import ListCommand
 from test.test_data_v2 import (
     TEST_DATA,
     UUID_ROOT,
-    UUID_A, UUID_A0, UUID_A1,
-    UUID_B,
-    UUID_FAIRYTALE, UUID_FAIRYTALE_2)
+    UUID_A, UUID_A0,
+    UUID_B)
 
 
 class ListCommandTest(unittest.TestCase):
@@ -31,120 +30,100 @@ class ListCommandTest(unittest.TestCase):
     # -------------------------------
     def test_ls_root(self) -> None:
         self.ls._repository.set_current_collection("")
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.ls._event_bus, "publish") as mock_publish:
             self.ls.handle([])
-            output: str = mock_out.getvalue()
-            self.assertTrue("A/" in output, msg=f"Output was: {output}")
-            self.assertTrue("B/" in output, msg=f"Output was: {output}")
+            mock_publish.assert_any_call(OutputMessage("4               A/"))
+            mock_publish.assert_any_call(OutputMessage("4               B/"))
 
     def test_ls_sub_path(self) -> None:
         self.ls._repository.set_current_collection(UUID_A)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.ls._event_bus, "publish") as mock_publish:
             self.ls.handle([])
-            output: str = mock_out.getvalue()
-            self.assertTrue("A_0/" in output, msg=f"Output was: {output}")
+            mock_publish.assert_any_call(OutputMessage("4               A_0/"))
 
     def test_ls_file_with_size(self) -> None:
         self.ls._repository.set_current_collection(UUID_A)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.ls._event_bus, "publish") as mock_publish:
             self.ls.handle([])
-            output: str = mock_out.getvalue()
-            self.assertTrue("1024" in output, msg=f"Output was: {output}")
-            self.assertTrue("Fairytale.pdf" in output, msg=f"Output was: {output}")
+            mock_publish.assert_any_call(OutputMessage("1024            Fairytale.pdf"))
+
 
     def test_ls_with_too_many_args_informs_of_usage(self) -> None:
         self.ls._repository.set_current_collection(UUID_A)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.ls._event_bus, "publish") as mock_publish:
             self.ls.handle(["a", "b"])
-            output: str = mock_out.getvalue()
-            self.assertTrue("ls: usage: ls" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "ls",
+                    "usage: ls or ls <path or file>"
+                )
+            )
 
     def test_ls_with_valid_absolute_path_as_arg_lists_files_in_path(self) -> None:
         self.ls._repository.set_current_collection(UUID_ROOT)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.ls._event_bus, "publish") as mock_publish:
             self.ls.handle(["A"])
-            output: str = mock_out.getvalue()
-            self.assertTrue("1024" in output, msg=f"Output was: {output}")
-            self.assertTrue("Fairytale.pdf" in output, msg=f"Output was: {output}")
+            mock_publish.assert_any_call(OutputMessage("1024            Fairytale.pdf"))
 
     def test_ls_with_valid_relative_path_as_arg_lists_files_in_path(self) -> None:
         self.ls._repository.set_current_collection(UUID_B)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.ls._event_bus, "publish") as mock_publish:
             self.ls.handle(["../A"])
-            output: str = mock_out.getvalue()
-            self.assertTrue("1024" in output, msg=f"Output was: {output}")
-            self.assertTrue("Fairytale.pdf" in output, msg=f"Output was: {output}")
+            mock_publish.assert_any_call(OutputMessage("1024            Fairytale.pdf"))
 
     def test_ls_with_invalid_path_informs_user_path_not_found(self) -> None:
         self.ls._repository.set_current_collection(UUID_ROOT)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.ls._event_bus, "publish") as mock_publish:
             self.ls.handle(["path-does-not-exist"])
-            output: str = mock_out.getvalue()
-            self.assertTrue("ls: no such path" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "ls",
+                    "no such path"
+                )
+            )
 
     def test_ls_full_output_for_root(self) -> None:
         self.ls._repository.set_current_collection(UUID_ROOT)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.ls._event_bus, "publish") as mock_publish:
             self.ls.handle([])
-            output: str = mock_out.getvalue()
-            self.assertTrue("size (kB)       name" in output, msg=f"Output was: {output}")
-            self.assertTrue("                ./" in output, msg=f"Output was: {output}")
-            self.assertTrue("4               A/" in output, msg=f"Output was: {output}")
-            self.assertTrue("4               B/" in output, msg=f"Output was: {output}")
-            self.assertTrue("4               D 1/" in output, msg=f"Output was: {output}")
+            mock_publish.assert_any_call(OutputMessage("size (kB)       name"))
+            mock_publish.assert_any_call(OutputMessage("                ./"))
+            mock_publish.assert_any_call(OutputMessage("4               A/"))
+            mock_publish.assert_any_call(OutputMessage("4               B/"))
+            mock_publish.assert_any_call(OutputMessage("4               D 1/"))
 
     def test_ls_full_output_for_dir_with_files(self) -> None:
         self.ls._repository.set_current_collection(UUID_A)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.ls._event_bus, "publish") as mock_publish:
             self.ls.handle([])
-            output: str = mock_out.getvalue()
-            self.assertTrue("size (kB)       name" in output, msg=f"Output was: {output}")
-            self.assertTrue("                ../" in output, msg=f"Output was: {output}")
-            self.assertTrue("                ./" in output, msg=f"Output was: {output}")
-            self.assertTrue("4               A_0/" in output, msg=f"Output was: {output}")
-            self.assertTrue("4               A_1/" in output, msg=f"Output was: {output}")
-            self.assertTrue("4096            Fairytale-2.pdf" in output, msg=f"Output was: {output}")
-            self.assertTrue("1024            Fairytale.pdf" in output, msg=f"Output was: {output}")
+
+
+            mock_publish.assert_any_call(OutputMessage("size (kB)       name"))
+            mock_publish.assert_any_call(OutputMessage("                ../"))
+            mock_publish.assert_any_call(OutputMessage("                ./"))
+            mock_publish.assert_any_call(OutputMessage("4               A_0/"))
+            mock_publish.assert_any_call(OutputMessage("4               A_1/"))
+            mock_publish.assert_any_call(OutputMessage("4096            Fairytale-2.pdf"))
+            mock_publish.assert_any_call(OutputMessage("1024            Fairytale.pdf"))
 
     def test_ls_full_output_for_dir_without_files_or_subdirectories(self) -> None:
         self.ls._repository.set_current_collection(UUID_A0)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.ls._event_bus, "publish") as mock_publish:
             self.ls.handle([])
-            output: str = mock_out.getvalue()
-            expected_output = """size (kB)       name
-                ../
-                ./
-"""
-            self.assertEqual(expected_output, output, msg=f"Output was: {output}")
+            mock_publish.assert_any_call(OutputMessage("size (kB)       name"))
+            mock_publish.assert_any_call(OutputMessage("                ../"))
+            mock_publish.assert_any_call(OutputMessage("                ./"))
 
     # -----------------------
     # process ls command method call
     # -----------------------
 
-    def test_ls_happy_path_returns_correct_listing(self) -> None:
-        self.ls._repository.set_current_collection(UUID_A)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
-            self.ls._process_ls(args=[])
-            output: str = mock_out.getvalue()
-
-            in_memory_data = self.ls._repository.get_data()
-
-            self.assertTrue('..' in output,
-                            msg=f"Output was: {output}")
-            self.assertTrue(in_memory_data[UUID_FAIRYTALE].metadata.visible_name in output,
-                            msg=f"Output was: {output}")
-            self.assertTrue(in_memory_data[UUID_FAIRYTALE_2].metadata.visible_name in output,
-                            msg=f"Output was: {output}")
-            self.assertTrue(in_memory_data[UUID_A0].metadata.visible_name in output,
-                            msg=f"Output was: {output}")
-            self.assertTrue(in_memory_data[UUID_A1].metadata.visible_name in output,
-                            msg=f"Output was: {output}")
-
     def test_ls_raises_when_collection_not_found(self) -> None:
-        with self.assertRaises(NotFoundError) as ctx:
-            self.ls._process_ls(["/not-found/"])
+        with patch.object(self.ls._event_bus, "publish") as mock_publish:
+            with self.assertRaises(NotFoundError) as ctx:
+                self.ls._process_ls(["/not-found/"])
 
-        self.assertTrue("ls: no such path" in str(ctx.exception))
+            self.assertTrue("no such path" in str(ctx.exception))
 
     # -------------------
     # _traverse_path

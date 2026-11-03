@@ -6,7 +6,8 @@ from unittest.mock import patch, MagicMock
 from src.event.event_bus import EventBus
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
 
-from src.exception import NotFoundError, InvalidPathError
+from src.exception import NotFoundError
+from src.event.event import OutputCommandMessage
 
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 from src.command.commands.mv import MoveCommand
@@ -38,10 +39,14 @@ class MoveCommandTest(unittest.TestCase):
         the command
         """
         self.mv._repository.set_current_collection("")
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             self.mv.handle([])
-            output: str = mock_out.getvalue()
-            self.assertTrue("Usage (mvp):" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "mv",
+                    "usage: mv <filename without path> <path>"
+                )
+            )
 
     def test_mv_with_too_many_args(self) -> None:
         """
@@ -50,10 +55,14 @@ class MoveCommandTest(unittest.TestCase):
         the command
         """
         self.mv._repository.set_current_collection("")
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             self.mv.handle(["-r", "foo.pdf", "bar/"])
-            output: str = mock_out.getvalue()
-            self.assertTrue("Usage (mvp):" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "mv",
+                    "usage: mv <filename without path> <path>"
+                )
+            )
 
     @patch.object(MoveCommand, "_process_move_command")
     def test_mv_positive_case(self, mock_move: MagicMock) -> None:
@@ -97,34 +106,43 @@ class MoveCommandTest(unittest.TestCase):
     def test_invalid_source_filename_results_in_error_shown_to_user(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_A)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             source = "/E/non-existing-file.pdf"
             self.mv._process_move_command(source, "/B")
-            output: str = mock_out.getvalue()
-            self.assertTrue(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}" in output,
-                            msg=f"Output was: {output}")
-
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "mv",
+                    f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}"
+                )
+            )
 
     @patch.object(RemarkableSSHMetadataSourceV2, "write_metadata")
     def test_valid_wildcard_but_no_matches(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_A)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             source = "/A/no-such-prefix*"
             self.mv._process_move_command(source, "/B")
-            output: str = mock_out.getvalue()
-            self.assertTrue(f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}" in output,
-                            msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "mv",
+                    f"cannot move {source}: {NO_SUCH_FILE_OR_DIRECTORY}"
+                )
+            )
 
     # Constraint: Source must be a valid file or collection (case: moving CollectionType)
     @patch.object(RemarkableSSHMetadataSourceV2, "write_metadata")
     def test_invalid_source_path_results_in_error_shown_to_user(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_A)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             self.mv._process_move_command("/E", "/B")
-            output: str = mock_out.getvalue()
-            self.assertTrue(f"mv: cannot access /E: {NO_SUCH_FILE_OR_DIRECTORY} " in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "mv",
+                    f"cannot access /E: {NO_SUCH_FILE_OR_DIRECTORY}"
+                )
+            )
 
 
     # Constraint: destination must resolve to valid collection
@@ -132,51 +150,75 @@ class MoveCommandTest(unittest.TestCase):
     def test_with_invalid_target_path_error_is_shown_to_user(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_A)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             self.mv._process_move_command("/A/Fairytale.pdf", "/E")
-            output: str = mock_out.getvalue()
-            self.assertTrue(f"mv: /E: {NO_SUCH_FILE_OR_DIRECTORY}" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "mv",
+                    f"/E: {NO_SUCH_FILE_OR_DIRECTORY}"
+                )
+            )
 
 
     # Constraint: A collection can not be moved into itself or its descendant
     def test_collection_type_cannot_be_moved_to_its_descendant_with_relative_target_path(self) -> None:
         self.mv._repository.set_current_collection(UUID_A)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             self.mv._process_move_command("/A", "A_0")
-            output: str = mock_out.getvalue()
-            self.assertTrue("collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "mv",
+                    "collection can not be moved into itself or its descendant"
+                )
+            )
 
     # Constraint: A collection can not be moved into itself or its descendant
     def test_collection_type_cannot_be_moved_to_its_descendant_with_absolute_target_path(self) -> None:
         self.mv._repository.set_current_collection(UUID_ROOT)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             self.mv._process_move_command("/A", "/A/A_0")
-            output: str = mock_out.getvalue()
-            self.assertTrue("collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "mv",
+                    "collection can not be moved into itself or its descendant"
+                )
+            )
 
     # Constraint: A collection can not be moved into itself or its descendant
     def test_collection_cannot_be_moved_into_itself(self) -> None:
         self.mv._repository.set_current_collection(UUID_ROOT)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             self.mv._process_move_command("/A", "/A")
-            output: str = mock_out.getvalue()
-            self.assertTrue("collection can not be moved into itself or its descendant" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "mv",
+                    "collection can not be moved into itself or its descendant"
+                )
+            )
 
     # Constraint: Root collection can not be moved
     def test_root_collection_cannot_be_moved(self) -> None:
         self.mv._repository.set_current_collection(UUID_ROOT)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             self.mv._process_move_command("", "")
-            output: str = mock_out.getvalue()
-            self.assertTrue("mv: root path cannot be moved" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "mv",
+                    "root path cannot be moved"
+                )
+            )
 
     # Constraint: destination must not contain a child with the same name
     def test_destination_cannot_contain_child_with_the_same_visible_name(self) -> None:
         self.mv._repository.set_current_collection(UUID_ROOT)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             self.mv._process_move_command("/A", "/B")
-            output: str = mock_out.getvalue()
-            self.assertTrue("destination must not contain a child with the same name" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "mv",
+                    "destination must not contain a child with the same name: A"
+                )
+            )
 
     # Constraint: moving to the same parent should result in a no-op
     @patch.object(RemarkableSSHMetadataSourceV2, "write_metadata")
@@ -239,18 +281,22 @@ class MoveCommandTest(unittest.TestCase):
     @patch.object(RemarkableSSHMetadataSourceV2, "write_metadata")
     def test_move_with_wild_card_one_collection_exists_in_destination_one_collection_moved(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             self.mv._repository.set_current_collection(UUID_B)
             self.mv._process_move_command("A*", "/A")
             self.assertEqual(mock_write.call_count, 1)
             self.assertEqual(UUID_A, self.mv._repository.get_data()[UUID_A_UNDER_B].metadata.parent)
-            output: str = mock_out.getvalue()
-            self.assertTrue("destination must not contain a child with the same name: A_0" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "mv",
+                    "destination must not contain a child with the same name: A_0"
+                )
+            )
 
     @patch.object(RemarkableSSHMetadataSourceV2, "write_metadata")
     def test_move_with_wild_card_one_document_has_invalid_metadata(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             self.mv._repository.set_current_collection(UUID_A)
             self.mv._process_move_command("*.pdf", "/B/B_0")
             self.assertEqual(mock_write.call_count, 2)
@@ -258,7 +304,7 @@ class MoveCommandTest(unittest.TestCase):
     @patch.object(RemarkableDataRepository, "write_metadata")
     def test_move_with_wild_card_both_collections_and_documents_one_document_has_invalid_metadata_and_collection_with_same_name_exists_in_destination(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             self.mv._repository.set_current_collection(UUID_A)
             self.mv._process_move_command("*", "/B")
             self.assertEqual(2, mock_write.call_count)
@@ -267,7 +313,7 @@ class MoveCommandTest(unittest.TestCase):
     def test_move_with_wild_card_three_matching_collections_but_one_has_filename_already_present_in_destination(self, mock_write: MagicMock) -> None:
         mock_write.return_value = None
         self.mv._repository.set_current_collection(UUID_B)
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.mv._event_bus, "publish") as mock_publish:
             self.mv._process_move_command("*", "/A")
             self.assertEqual(2, mock_write.call_count)
 
