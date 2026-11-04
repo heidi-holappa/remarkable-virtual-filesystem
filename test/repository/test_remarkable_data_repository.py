@@ -200,13 +200,13 @@ class RemarkableWorkspaceTest(unittest.TestCase):
 
         entity_uuids = [str(UUID_A)]
 
-        with patch("sys.stdout", new=StringIO()) as mock_out:
+        with self.assertRaises(RemarkableWriteError) as ctx:
             self.repository.remove_entities(entity_uuids)
 
-        mock_remove.assert_called_once_with(entity_uuids)
+        self.assertTrue("write failed" in str(ctx.exception),
+                        msg="expected error message to contain string 'write failed'")
 
-        output: str = mock_out.getvalue()
-        self.assertIn("ERROR: write failed", output)
+
 
     # -------------------
     # create_entry_if_absent
