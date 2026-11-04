@@ -57,15 +57,38 @@ class ListCommand(BaseCommand):
 
         :param args: optional utility arguments for ls
         """
+        collection_to_list_uuid = self._get_collection_to_list_uuid(args)
+        list_result = self._generate_list_output(collection_to_list_uuid)
+        self._output_ls_result(list_result)
 
+    def _get_collection_to_list_uuid(self, args: list[str]) -> str:
+        """
+        Resolves the UUID for the collection whose
+        content is to be listed.
+
+        Raises:
+            NotFoundError if collection is not found
+
+        :param args: possible path as an argument
+        """
         if args:
             operand_path: str = args[0]
             collection_to_list_uuid: str | None = (
                 self._traverse_path(operand_path))
             if collection_to_list_uuid is None:
                 raise NotFoundError("no such path")
-        else:
-            collection_to_list_uuid = self._repository.get_current_collection()
+            return collection_to_list_uuid
+
+        return self._repository.get_current_collection()
+
+
+    def _generate_list_output(self, collection_to_list_uuid: str) -> list[str]:
+        """
+        Collects the items in the provided collection
+        and generates the list command output
+
+        :param collection_to_list_uuid: uuid of the collection
+        """
 
         remarkable_metadata: dict[str, Entry] = self._repository.get_data()
 
@@ -73,29 +96,25 @@ class ListCommand(BaseCommand):
         collections: list[tuple[str, str]] = []
         documents: list[tuple[str, str]] = []
 
-
         if collection_to_list_uuid != ROOT_COLLECTION:
-            list_result.append(f"{' '*LS_COLUMN_WIDTH}../")
-        list_result.append(f"{' '*LS_COLUMN_WIDTH}./")
+            list_result.append(f"{' ' * LS_COLUMN_WIDTH}../")
+        list_result.append(f"{' ' * LS_COLUMN_WIDTH}./")
 
         for entry in remarkable_metadata.values():
             if entry.metadata.parent != collection_to_list_uuid:
                 continue
+            size: int = 0
+            if entry.size:
+                size = entry.size
             if entry.metadata.type == EntityType.COLLECTION_TYPE:
                 collection_visible_name: str = entry.metadata.visible_name
-                collection_size: int = 0
-                if entry.size:
-                    collection_size = entry.size
-                collections.append((f"{collection_visible_name}/", f"{collection_size}"))
+                collections.append((f"{collection_visible_name}/", f"{size}"))
             elif entry.metadata.type == EntityType.DOCUMENT_TYPE:
                 document_visible_name: str = entry.metadata.visible_name
-                document_size: int = 0
-                if entry.size:
-                    document_size = entry.size
-                documents.append((f"{document_visible_name}", f"{document_size}"))
+                documents.append((f"{document_visible_name}", f"{size}"))
         for t in sorted(collections, key=lambda x: x[0].lower()):
             name, entry_size = t
-            padding_col: str = ' '*(LS_COLUMN_WIDTH - len(entry_size))
+            padding_col: str = ' ' * (LS_COLUMN_WIDTH - len(entry_size))
             list_result.append(f"{entry_size}{padding_col}{name}")
 
         for t in sorted(documents, key=lambda x: x[0].lower()):
@@ -103,7 +122,7 @@ class ListCommand(BaseCommand):
             padding_doc: str = ' ' * (LS_COLUMN_WIDTH - len(entry_size))
             list_result.append(f"{entry_size}{padding_doc}{name}")
 
-        self._output_ls_result(list_result)
+        return list_result
 
 
     def _output_ls_result(self, list_result: list[str]) -> None:

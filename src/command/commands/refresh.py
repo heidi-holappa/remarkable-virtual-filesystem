@@ -2,8 +2,8 @@
 Implementation of refresh command
 """
 from src.exception import RemarkableOperationError
-from .base_command import BaseCommand
 from src.event.event import OutputCommandMessage
+from .base_command import BaseCommand
 
 # pylint: disable=too-few-public-methods
 class RefreshCommand(BaseCommand):

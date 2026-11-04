@@ -2,8 +2,8 @@
 Implementation of the remove command
 """
 from src.exception import NotFoundError, RemarkableWriteError
-from .base_command import BaseCommand
 from src.event.event import OutputCommandMessage
+from .base_command import BaseCommand
 
 # pylint: disable=too-few-public-methods
 class RemoveCommand(BaseCommand):
@@ -68,4 +68,3 @@ class RemoveCommand(BaseCommand):
                     f"error: {e}"
                 )
             )
-

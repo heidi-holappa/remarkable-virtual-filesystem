@@ -347,4 +347,3 @@ class RemarkableDataRepository:
         """
 
         self._source.remove(entity_uuids)
-

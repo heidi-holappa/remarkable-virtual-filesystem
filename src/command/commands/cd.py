@@ -11,8 +11,8 @@ from src.exception import (
     NoSuchFileOrDirectoryError,
     NoSuchDirectoryError
 )
-from .base_command import BaseCommand
 from src.event.event import OutputCommandMessage
+from .base_command import BaseCommand
 
 # pylint: disable=too-few-public-methods
 class ChangeDirectoryCommand(BaseCommand):
