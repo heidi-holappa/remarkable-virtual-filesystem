@@ -12,7 +12,10 @@ from src.exception import InvalidMetadataError
 
 
 @dataclass(slots=True)
-class Metadata:
+class Metadata: # pylint: disable=too-many-instance-attributes
+    """
+    A metadata model used by remarkable for user files
+    """
     created_time: int
     last_modified: int
     new: bool
@@ -65,7 +68,11 @@ class Metadata:
     # -------------------------------
 
     def to_dict(self) -> Dict[str, Any]:
-        """Return reMarkable-compatible JSON structure."""
+        """
+        Return reMarkable-compatible JSON structure.
+
+        :return: a dictionary of metadata
+        """
         return {
             "createdTime": self.created_time,
             "lastModified": self.last_modified,
@@ -158,5 +165,3 @@ class Metadata:
             "trash" # trash path
         }
         return uuid_field in accepted_non_uuid_values or bool(UUID_REGEX.match(uuid_field))
-
-

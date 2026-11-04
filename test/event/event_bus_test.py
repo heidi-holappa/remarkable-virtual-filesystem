@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import Mock, call
 
-from src.event.event import Event, OutputMessage
+from src.event.event import Event, OutputCommandMessage
 from src.event.event_bus import EventBus
 
 
@@ -17,7 +17,7 @@ class TestEventBus(unittest.TestCase):
 
         self.event_bus.subscribe(handler)
 
-        event = OutputMessage(
+        event = OutputCommandMessage(
             command="test",
             message="Hello",
         )
@@ -28,7 +28,7 @@ class TestEventBus(unittest.TestCase):
     def test_publish_to_multiple_subscribers(self) -> None:
         first_handler = Mock()
         second_handler = Mock()
-        event = OutputMessage(
+        event = OutputCommandMessage(
             command="test",
             message="Hello",
         )
@@ -43,7 +43,7 @@ class TestEventBus(unittest.TestCase):
 
     def test_unsubscribe_handler(self) -> None:
         handler = Mock()
-        event = OutputMessage(
+        event = OutputCommandMessage(
             command="test",
             message="Hello",
         )
@@ -57,7 +57,7 @@ class TestEventBus(unittest.TestCase):
     def test_unsubscribe_one_handler_preserves_others(self) -> None:
         first_handler = Mock()
         second_handler = Mock()
-        event = OutputMessage(
+        event = OutputCommandMessage(
             command="test",
             message="Hello",
         )
@@ -72,7 +72,7 @@ class TestEventBus(unittest.TestCase):
         second_handler.assert_called_once_with(event)
 
     def test_publish_without_subscribers(self) -> None:
-        event = OutputMessage(
+        event = OutputCommandMessage(
             command="test",
             message="Hello",
         )
@@ -83,7 +83,7 @@ class TestEventBus(unittest.TestCase):
     def test_publish_passes_same_event_to_all_handlers(self) -> None:
         first_handler = Mock()
         second_handler = Mock()
-        event = OutputMessage(
+        event = OutputCommandMessage(
             command="test",
             message="Hello",
         )
@@ -101,7 +101,7 @@ class TestEventBus(unittest.TestCase):
 
     def test_subscribing_same_handler_twice_calls_it_twice(self) -> None:
         handler = Mock()
-        event = OutputMessage(
+        event = OutputCommandMessage(
             command="test",
             message="Hello",
         )
@@ -119,7 +119,7 @@ class TestEventBus(unittest.TestCase):
 
     def test_publish_uses_snapshot_of_handlers(self) -> None:
         second_handler = Mock()
-        event = OutputMessage(
+        event = OutputCommandMessage(
             command="test",
             message="Hello",
         )

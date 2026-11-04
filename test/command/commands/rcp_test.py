@@ -1,10 +1,10 @@
 import os
 import copy
 import unittest
-from io import StringIO
 from unittest.mock import patch, MagicMock
 
 from src.event.event_bus import EventBus
+from src.event.event import OutputCommandMessage
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
 
 from src.exception import NotFoundError, InvalidPathError
@@ -42,10 +42,14 @@ class RemoteCopyCommandTest(unittest.TestCase):
         the command
         """
         self.rcp._repository.set_current_collection("")
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.rcp._event_bus, "publish") as mock_publish:
             self.rcp.handle([])
-            output: str = mock_out.getvalue()
-            self.assertTrue("rcp: usage:" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "rcp",
+                    "usage: rcp <source file> <target collection>"
+                )
+            )
 
     def test_rcp_with_invalid_argument(self) -> None:
         """
@@ -54,10 +58,14 @@ class RemoteCopyCommandTest(unittest.TestCase):
         usage of the command
         """
         self.rcp._repository.set_current_collection("")
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.rcp._event_bus, "publish") as mock_publish:
             self.rcp.handle(["-x", "/path/to/foo.pdf", "bar/"])
-            output: str = mock_out.getvalue()
-            self.assertTrue("rcp: invalid options: -x" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "rcp",
+                    "invalid options: -x: hint: help rcp"
+                )
+            )
 
     @patch.object(RemoteCopyCommand, "_process_rcp_command_without_options")
     def test_rcp_without_options_positive_case(self, mock_rcp: MagicMock) -> None:
@@ -276,16 +284,16 @@ class RemoteCopyCommandTest(unittest.TestCase):
 
         target_path = "/"
 
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.rcp._event_bus, "publish") as mock_publish:
             # ---- Execute ----
             self.rcp._process_rcp_with_options(["-r", source_path, target_path])
-            output: str = mock_out.getvalue()
-            self.assertTrue(
-                "rcp: no pdf or epub files found in directory" in output,
-                msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "rcp",
+                    f"no pdf or epub files found in directory: {os.getcwd()}"
+                )
+            )
 
-
-    @patch("builtins.print")
     @patch("src.data.remarkable_ssh_metadata_source_v2.os.path.exists")
     @patch.object(RemarkableSSHMetadataSourceV2, "load")
     @patch.object(RemarkableSSHMetadataSourceV2, "restart_xochitl")
@@ -295,8 +303,7 @@ class RemoteCopyCommandTest(unittest.TestCase):
             mock_remote_copy: MagicMock,
             mock_restart: MagicMock,
             mock_load: MagicMock,
-            mock_exists: MagicMock,
-            mock_print: MagicMock
+            mock_exists: MagicMock
     ) -> None:
         # ---- Setup ----
         mock_exists.return_value = False  # <-- triggers first branch
@@ -304,20 +311,25 @@ class RemoteCopyCommandTest(unittest.TestCase):
         source_file = "/does/not/exist.pdf"
         target_path = "/"
 
-        # ---- Execute ----
-        self.rcp._process_rcp_command_without_options(source_file, target_path)
 
-        # ---- Assertions ----
+        with patch.object(self.rcp._event_bus, "publish") as mock_publish:
+            # ---- Execute ----
+            self.rcp._process_rcp_command_without_options(source_file, target_path)
 
-        # Nothing should be called
-        mock_remote_copy.assert_not_called()
-        mock_restart.assert_not_called()
-        mock_load.assert_not_called()
+            # ---- Assertions ----
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "rcp",
+                    "rcp: source file /does/not/exist.pdf not found"
+                )
+            )
 
-        # Error was printed
-        mock_print.assert_called_once()
+            # Nothing should be called
+            mock_remote_copy.assert_not_called()
+            mock_restart.assert_not_called()
+            mock_load.assert_not_called()
 
-    @patch("builtins.print")
+
     @patch("src.data.remarkable_ssh_metadata_source_v2.os.path.exists")
     @patch.object(RemarkableSSHMetadataSourceV2, "load")
     @patch.object(RemarkableSSHMetadataSourceV2, "restart_xochitl")
@@ -327,8 +339,7 @@ class RemoteCopyCommandTest(unittest.TestCase):
             mock_remote_copy: MagicMock,
             mock_restart: MagicMock,
             mock_load: MagicMock,
-            mock_exists: MagicMock,
-            mock_print: MagicMock
+            mock_exists: MagicMock
     ) -> None:
         # ---- Setup ----
         mock_exists.return_value = False  # <-- triggers first branch
@@ -336,25 +347,37 @@ class RemoteCopyCommandTest(unittest.TestCase):
         source_file = "/does/not/exist.pdf"
         target_path = "/"
 
+
         # ---- Execute ----
-        self.rcp._process_rcp_with_options(["-a", source_file, target_path])
+        with patch.object(self.rcp._event_bus, "publish") as mock_publish:
+            self.rcp._process_rcp_with_options(["-a", source_file, target_path])
 
-        # ---- Assertions ----
+            # ---- Assertions ----
 
-        # Nothing should be called
-        mock_remote_copy.assert_not_called()
-        mock_restart.assert_not_called()
-        mock_load.assert_not_called()
+            # Nothing should be called
+            mock_remote_copy.assert_not_called()
+            mock_restart.assert_not_called()
+            mock_load.assert_not_called()
 
-        # Error was printed
-        mock_print.assert_called_once()
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "rcp",
+                    f"rcp: source file /does/not/exist.pdf not found"
+                )
+            )
+
+
 
 
     def test_process_rcp_with_invalid_args(self) -> None:
-        with patch("sys.stdout", new=StringIO()) as mock_out:
+        with patch.object(self.rcp._event_bus, "publish") as mock_publish:
             self.rcp._process_rcp_with_options(["-q", "/some/path/to/file.pdf", "/"])
-            output: str = mock_out.getvalue()
-            self.assertTrue("rcp: invalid options: -q" in output, msg=output)
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "rcp",
+                    f"invalid options: -q: hint: help rcp"
+                )
+            )
 
 
     @patch.object(RemarkableSSHMetadataSourceV2, "remote_copy")
@@ -365,12 +388,16 @@ class RemoteCopyCommandTest(unittest.TestCase):
         source_file = "/tmp/foo.pdf"
         target_uuid = str(UUID_A)
 
-        with patch("sys.stdout", new=StringIO()) as mock_out:
+        with patch.object(self.rcp._event_bus, "publish") as mock_publish:
             self.rcp._copy_file_from_host_to_target(source_file, target_uuid)
 
             self.assertEqual(mock_remote_copy.call_count, 1)
-            output: str = mock_out.getvalue()
-            self.assertIn("file not found", output)
+            mock_publish.assert_any_call(
+                OutputCommandMessage(
+                    "rcp",
+                    f"file not found"
+                )
+            )
 
 
     # -------------------

@@ -11,7 +11,6 @@ from src.constant import (
     NOT_A_DIRECTORY)
 from src.data.metadata_source_v2 import MetadataSourceV2
 from src.exception import (
-    RemarkableWriteError,
     NotFoundError,
     NoSuchDirectoryError)
 
@@ -341,10 +340,10 @@ class RemarkableDataRepository:
         Attempts to remove the provided entity from the reMarkable
         tablet.
 
+        Raises:
+          RemarkableWriteError if remove op fails
+
         :param entity_uuids: UUID of the entity to remove
         """
 
-        try:
-            self._source.remove(entity_uuids)
-        except RemarkableWriteError as e:
-            print(f"ERROR: {e}")
+        self._source.remove(entity_uuids)

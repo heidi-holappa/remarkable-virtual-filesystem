@@ -11,6 +11,7 @@ from src.exception import (
     NoSuchFileOrDirectoryError,
     NoSuchDirectoryError
 )
+from src.event.event import OutputCommandMessage
 from .base_command import BaseCommand
 
 # pylint: disable=too-few-public-methods
@@ -35,7 +36,12 @@ class ChangeDirectoryCommand(BaseCommand):
         if len(args) == 0:
             self._repository.set_current_collection(ROOT_COLLECTION)
         elif len(args) > 1:
-            print("Usage: cd OR cd <path>")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "cd",
+                    "usage: cd OR cd <path>"
+                )
+            )
             return
         else:
             try:
@@ -43,7 +49,12 @@ class ChangeDirectoryCommand(BaseCommand):
                 self._change_collection(operand)
             except (NoSuchFileOrDirectoryError,
                     NoSuchDirectoryError) as e:
-                print(f"cd: {str(e)}")
+                self._event_bus.publish(
+                    OutputCommandMessage(
+                        "cd",
+                        f"{e}"
+                    )
+                )
 
 
     def _change_collection(self, operand_path: str) -> None:

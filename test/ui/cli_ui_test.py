@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, Mock, call, patch
 
 from src.command.command_dispatcher import CommandDispatcher
-from src.event.event import Event, OutputMessage, ProgressUpdate
+from src.event.event import Event, OutputCommandMessage, ProgressUpdate, OutputMessage
 from src.ui.ui_cli import CliUi
 
 from test.test_data_v2 import TEST_DATA
@@ -74,7 +74,7 @@ class TestCliUi(unittest.TestCase):
     # Event rendering
 
     def test_render_output_message(self) -> None:
-        event = OutputMessage(
+        event = OutputCommandMessage(
             command="list",
             message="Found 3 files",
         )
@@ -110,7 +110,7 @@ class TestCliUi(unittest.TestCase):
         mock_print.assert_not_called()
 
     def test_event_bus_delivers_output_message_to_ui(self) -> None:
-        event = OutputMessage(
+        event = OutputCommandMessage(
             command="test",
             message="Hello",
         )
@@ -181,13 +181,13 @@ class TestCliUi(unittest.TestCase):
             "builtins.input",
             side_effect=["help", KeyboardInterrupt],
         ):
-            with patch("builtins.print") as mock_print:
+            with patch.object(self.event_bus, "publish") as mock_publish:
                 with self.assertRaises(KeyboardInterrupt):
                     self.ui.loop()
 
         # The real dispatcher and event bus should produce terminal output
         # if the help command publishes an OutputMessage.
-        self.assertTrue(
-            mock_print.called,
-            "Expected the real command to produce terminal output.",
+        mock_publish.assert_any_call(
+            OutputMessage("help: show help texts")
         )
+

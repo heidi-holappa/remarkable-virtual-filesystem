@@ -4,6 +4,7 @@ Implementation of exit command
 import sys
 from src.command.commands.base_command import BaseCommand
 from src.exception import RemarkableOperationError, InvalidArgumentError
+from src.event.event import OutputCommandMessage
 
 # pylint: disable=too-few-public-methods
 class ExitCommand(BaseCommand):
@@ -25,5 +26,10 @@ class ExitCommand(BaseCommand):
             self._repository.restart_xochitl()
             sys.exit(0)
         except RemarkableOperationError as e:
-            print(e)
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "exit",
+                    f"{e}"
+                )
+            )
             sys.exit(1)

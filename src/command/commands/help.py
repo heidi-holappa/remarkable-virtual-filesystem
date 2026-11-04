@@ -2,6 +2,7 @@
 Implementation of the help command
 """
 from src.command.commands.base_command import BaseCommand
+from src.event.event import OutputMessage, OutputCommandMessage
 
 # pylint: disable=too-few-public-methods
 class HelpCommand(BaseCommand):
@@ -125,19 +126,30 @@ class HelpCommand(BaseCommand):
         """
 
         if len(args) > 1:
-            print("help: usage: help or help <command>")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "help",
+                    "usage: help or help <command>"
+                )
+            )
             return
 
         if args:
             command = args[0]
             if not self.SUPPORTED_INSTRUCTIONS.get(command):
-                print("help: command not found: supported commands:")
+                self._event_bus.publish(
+                    OutputCommandMessage(
+                        "help",
+                        "command not found: supported commands:"
+                    )
+                )
                 self.list_commands()
             else:
                 self.print_command_details(command)
         else:
             self.print_command_details("help")
-            print("")
+            self._event_bus.publish(OutputMessage(""))
+
             self.list_commands()
 
     def print_command_details(self, command: str) -> None:
@@ -147,30 +159,30 @@ class HelpCommand(BaseCommand):
         :param command: a command to print out
         """
 
-        print("")
+        self._event_bus.publish(OutputMessage(""))
         command_help = self.SUPPORTED_INSTRUCTIONS[command]
-        print(f"{command}: {command_help["description"]}")
+        self._event_bus.publish(OutputMessage(f"{command}: {command_help["description"]}"))
         if command_help.get("args"):
-            print("")
-            print("  args:")
+            self._event_bus.publish(OutputMessage(""))
+            self._event_bus.publish(OutputMessage("  args:"))
             for arg in command_help["args"]:
-                print(f"    {arg}")
+                self._event_bus.publish(OutputMessage(f"    {arg}"))
         if command_help.get("usage"):
-            print("")
-            print("  usage:")
+            self._event_bus.publish(OutputMessage(""))
+            self._event_bus.publish(OutputMessage("  usage:"))
             for usage in command_help["usage"]:
-                print(f"    {usage}")
+                self._event_bus.publish(OutputMessage(f"    {usage}"))
         if command_help.get("info"):
-            print("")
-            print("  additional information:")
+            self._event_bus.publish(OutputMessage(""))
+            self._event_bus.publish(OutputMessage("  additional information:"))
             for info in command_help["info"]:
-                print(f"    {info}")
-        print("")
+                self._event_bus.publish(OutputMessage(f"    {info}"))
+        self._event_bus.publish(OutputMessage(""))
 
     def list_commands(self) -> None:
         """
         Lists commands from dictionary
         """
-        print("supported commands:")
+        self._event_bus.publish(OutputMessage("supported commands:"))
         for com in self.SUPPORTED_INSTRUCTIONS:
-            print(f"  {com}")
+            self._event_bus.publish(OutputMessage(f"  {com}"))

@@ -4,6 +4,7 @@ from io import StringIO
 from unittest.mock import patch, MagicMock
 
 from src.event.event_bus import EventBus
+from src.event.event import OutputCommandMessage
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 
@@ -33,9 +34,13 @@ class RefreshCommandTest(unittest.TestCase):
     def test_refresh_logs_exception(self, mock_restart_xochitl: MagicMock) -> None:
         mock_restart_xochitl.side_effect = RemarkableOperationError("failure")
 
-        with patch("sys.stdout", new=StringIO()) as fake_out:
+        with patch.object(self.refresh._event_bus, "publish") as mock_publish:
             self.refresh.handle([])
-            output = fake_out.getvalue()
-            self.assertIn("refresh: unexpected error occurred", output)
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "refresh",
+                    "unexpected error occurred: failure"
+                )
+            )
 
         mock_restart_xochitl.assert_called_once()

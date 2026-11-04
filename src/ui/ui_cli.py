@@ -4,7 +4,7 @@ Implementation for the CLI UI
 import shlex
 import logging
 
-from src.event.event import Event, OutputMessage, ProgressUpdate
+from src.event.event import Event, OutputCommandMessage, ProgressUpdate
 from src.event.event_bus import EventBus
 from src.command.command_dispatcher import CommandDispatcher
 from src.repository.remarkable_data_repository import RemarkableDataRepository
@@ -48,9 +48,11 @@ class CliUi(Ui):
         Listens to events published by other application
         layers by subscribing to the event bus. Renders these
         messages to the terminal.
+
+        :param event: event to render
         """
 
-        if isinstance(event, OutputMessage):
+        if isinstance(event, OutputCommandMessage):
             print(
                 f"{event.command}: "
                 f"{event.message}")

@@ -1,11 +1,5 @@
 """
     Module for content entry
-
-    Note: the module structure was copied from metadata.py
-    For the 0.1 release, the structure is quite heavy for,
-    as .content -files only have one field. In the future,
-    they may support more fields and in that case this
-    structure provides a more mature foundation.
 """
 
 from dataclasses import dataclass
@@ -17,8 +11,10 @@ from src.exception import InvalidContentError
 
 @dataclass(slots=True)
 class Content:
+    """
+    Content model used by reMarkable
+    """
     file_type: FileType
-
 
     def __post_init__(self) -> None:
         """
@@ -32,7 +28,8 @@ class Content:
 
         if validation_errors:
             raise InvalidContentError(
-                f"one or more fields for .content file have invalid values: {','.join(validation_errors)}")
+                f"one or more fields for .content file have invalid values: "
+                f"{','.join(validation_errors)}")
 
 
     # -------------------------------
@@ -40,7 +37,11 @@ class Content:
     # -------------------------------
 
     def to_dict(self) -> Dict[str, Any]:
-        """Return reMarkable-compatible JSON structure."""
+        """
+        Return reMarkable-compatible JSON structure.
+
+        :return: dictionary of data
+        """
         return {
             "fileType": self.file_type.value,
         }
