@@ -12,6 +12,7 @@ from src.exception import (
 
 from src.constant import (
     NO_SUCH_FILE_OR_DIRECTORY)
+from src.event.event import OutputCommandMessage
 
 
 from src.repository.remarkable_data_repository import RemarkableDataRepository
@@ -52,29 +53,43 @@ class ChangeDirectoryCommandTest(unittest.TestCase):
         self.cd.handle(["A"])
         self.assertTrue(self.cd._repository.get_current_collection() == UUID_A)
 
-
     def test_cd_with_too_many_args(self) -> None:
         self.cd._repository.set_current_collection("")
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+
+        with patch.object(self.cd._event_bus, "publish") as mock_publish:
             self.cd.handle(["arg1", "arg2"])
-            output: str = mock_out.getvalue()
-            self.assertTrue("Usage: cd OR cd <path>" in output, msg=f"Output was: {output}")
+
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "cd",
+                    "usage: cd OR cd <path>"
+                )
+            )
 
     def test_cd_with_non_existing_path_informs_user_path_does_not_exist(self) -> None:
         self.cd._repository.set_current_collection("")
         path: str = "/path/does/not/exist"
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.cd._event_bus, "publish") as mock_publish:
             self.cd.handle([path])
-            output: str = mock_out.getvalue()
-            self.assertTrue(f"cd: {path}: No such file or directory" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "cd",
+                    f"{path}: No such file or directory"
+                )
+            )
+
 
     def test_cd_to_file_informs_user_the_targer_is_not_a_directory(self) -> None:
         self.cd._repository.set_current_collection("")
         path: str = "/A/Fairytale.pdf"
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.cd._event_bus, "publish") as mock_publish:
             self.cd.handle([path])
-            output: str = mock_out.getvalue()
-            self.assertTrue(f"cd: {path}: Not a directory" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "cd",
+                    f"{path}: Not a directory"
+                )
+            )
 
     def test_cd_to_collection_with_a_whitespace_in_its_visble_name(self) -> None:
         self.cd._repository.set_current_collection("")

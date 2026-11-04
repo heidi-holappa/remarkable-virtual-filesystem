@@ -12,6 +12,7 @@ from src.exception import (
     InvalidMetadataError,
     RemarkableWriteError)
 from src.constant import  NO_SUCH_FILE_OR_DIRECTORY
+from src.event.event import OutputCommandMessage
 from .base_command import BaseCommand
 
 # pylint: disable=too-few-public-methods
@@ -35,7 +36,12 @@ class MoveCommand(BaseCommand):
             self._process_move_command(
                 operand_source=operand_source, operand_target=operand_target)
         else:
-            print("Usage (mvp): mv <filename without path> <path>")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "mv",
+                   "usage: mv <filename without path> <path>"
+                )
+            )
 
     def _process_move_command(self, operand_source: str, operand_target: str) -> None:
         """
@@ -88,7 +94,13 @@ class MoveCommand(BaseCommand):
         except (ConstraintViolationError,
                 InvalidPathError,
                 NotFoundError) as e:
-            print(f"mv: {e} ")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "mv",
+                    f"{e}"
+                )
+            )
+
 
 
     def _collect_uuids_for_children_matching_name_or_pattern(
@@ -149,7 +161,12 @@ class MoveCommand(BaseCommand):
                 InvalidMetadataError,
                 ConstraintViolationError,
                 RemarkableWriteError) as e:
-            print(f"mv: {e} ")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "mv",
+                    f"{e}"
+                )
+            )
 
 
     def _is_target_path_descendant_of_source_path(

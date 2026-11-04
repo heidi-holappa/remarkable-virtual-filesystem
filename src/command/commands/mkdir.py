@@ -6,6 +6,7 @@ from src.exception import (
     RemarkableWriteError, InvalidPathError)
 from src.constant import (
     VALID_VISIBLE_NAME_REGEX)
+from src.event.event import OutputCommandMessage
 from .base_command import BaseCommand
 
 # pylint: disable=too-few-public-methods
@@ -21,7 +22,12 @@ class MakeDirectoryCommand(BaseCommand):
         :param args: arguments provided for the mkdir command
         """
         if len(args) != 1:
-            print("mkdir: usage: mkdir <path>")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "mkdir",
+                    "usage: mkdir <path>"
+                )
+            )
             return
 
 
@@ -56,9 +62,20 @@ class MakeDirectoryCommand(BaseCommand):
                 parent, operand_path)
 
         except InvalidPathError as e:
-            print(f"mkdir: {operand_path}: {e}: hint: try help mkdir")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "mkdir",
+                    f"{operand_path}: {e}: hint: try help mkdir"
+                )
+            )
+
         except RemarkableWriteError as e:
-            print(f"mkdir: {operand_path}: error writing to remarkable: {e}")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "mkdir",
+                    f"{operand_path}: error writing to remarkable: {e}"
+                )
+            )
 
 
     def _validate_path(self, path: str) -> None:

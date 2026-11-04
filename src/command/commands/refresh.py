@@ -2,6 +2,7 @@
 Implementation of refresh command
 """
 from src.exception import RemarkableOperationError
+from src.event.event import OutputCommandMessage
 from .base_command import BaseCommand
 
 # pylint: disable=too-few-public-methods
@@ -20,4 +21,7 @@ class RefreshCommand(BaseCommand):
         try:
             self._repository.restart_xochitl()
         except RemarkableOperationError as e:
-            print(f"refresh: unexpected error occurred: {e}")
+            self._event_bus.publish(OutputCommandMessage(
+                "refresh",
+                f"unexpected error occurred: {e}"
+            ))

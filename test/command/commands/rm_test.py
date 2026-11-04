@@ -1,11 +1,11 @@
 import copy
 import unittest
-from io import StringIO
 from unittest.mock import patch, MagicMock
 
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
 
 from src.event.event_bus import EventBus
+from src.event.event import OutputCommandMessage
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 from src.command.commands import RemoveCommand 
 from test.test_data_v2 import (
@@ -34,10 +34,14 @@ class RemoveCommandTest(unittest.TestCase):
         the command
         """
         self.rm._repository.set_current_collection("")
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.rm._event_bus, "publish") as mock_publish:
             self.rm.handle([])
-            output: str = mock_out.getvalue()
-            self.assertTrue("Usage: rm <file or path>" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "rm",
+                    f"usage: rm <file or path>"
+                )
+            )
 
     def test_rm_too_many_args(self) -> None:
         """
@@ -46,10 +50,14 @@ class RemoveCommandTest(unittest.TestCase):
         usage of the command
         """
         self.rm._repository.set_current_collection("")
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.rm._event_bus, "publish") as mock_publish:
             self.rm.handle(["-rf", "/foo"])
-            output: str = mock_out.getvalue()
-            self.assertTrue("Usage: rm <file or path>" in output, msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "rm",
+                    f"usage: rm <file or path>"
+                )
+            )
 
     @patch.object(RemoveCommand, "_process_remove_command")
     def test_rm_positive_case(self, mock_remove: MagicMock) -> None:
@@ -123,9 +131,11 @@ class RemoveCommandTest(unittest.TestCase):
         mock_remove.return_value = None
         self.rm._repository.set_current_collection(UUID_A)
 
-        with patch('sys.stdout', new=StringIO()) as mock_out:
+        with patch.object(self.rm._event_bus, "publish") as mock_publish:
             self.rm._process_remove_command(target_pattern="no-such-target.pdf")
-            output: str = mock_out.getvalue()
-            self.assertTrue(
-                "ERROR: cannot access /A/no-such-target.pdf" in output,
-                msg=f"Output was: {output}")
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "rm",
+                    f"error: cannot access /A/no-such-target.pdf: No such file or directory"
+                )
+            )

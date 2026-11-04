@@ -167,11 +167,8 @@ class BaseCommand(ABC):
         :return: the UUID of the entry
         """
 
-        # print(f"filename: {filename}, parent: {parent_uuid}")
 
         for entry_uuid, entry in self._repository.get_data().items():
-            # if v.get('parent') == parent_uuid:
-                # print(v.get('visibleName'))
             if (entry.metadata.parent == parent_uuid and
                     entry.metadata.visible_name == filename):
                 return entry_uuid

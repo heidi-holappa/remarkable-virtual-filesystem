@@ -5,6 +5,7 @@ import copy
 
 from src.dto.metadata import Metadata
 from src.constant import VALID_VISIBLE_NAME_REGEX
+from src.event.event import OutputCommandMessage
 
 from src.exception import (
     InvalidArgumentError,
@@ -26,7 +27,12 @@ class RenameCommand(BaseCommand):
         :param args: arguments provided for the rename command
         """
         if len(args) != 2:
-            print("rename: usage: rename <file or path> <new name>")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "rename",
+                    "usage: rename <file or path> <new name>"
+                )
+            )
             return
         operand_target, new_visible_name = args
 
@@ -59,9 +65,19 @@ class RenameCommand(BaseCommand):
             self._repository.write_metadata(entity_uuid, updated_metadata)
 
         except InvalidArgumentError as e:
-            print(f"rename: {target} {new_visible_name}: {e}: hint: help rename")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "rename",
+                    f"{target} {new_visible_name}: {e}: hint: help rename"
+                )
+            )
         except NotFoundError as e:
-            print(f"rename: {target} {new_visible_name}: {e}: hint: help rename")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    "rename",
+                    f"{target} {new_visible_name}: {e}: hint: help rename"
+                )
+            )
 
 
     def _validate_visible_name(self, parent_uuid: str,
