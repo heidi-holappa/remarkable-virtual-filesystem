@@ -22,7 +22,7 @@ The repository maintains the in-memory state and coordinates metadata operations
 
 This separation of responsibilities keeps command-specific functionality independent of the user interface, centralizes application state management, and isolates device persistence from the rest of the application.
 
-![architecture-diagram](./remarkable-vfs-architecture.drawio.svg)
+![architecture-diagram](./img/remarkable-vfs-architecture.drawio.svg)
 
 ## Case study - remove command
 
@@ -42,4 +42,4 @@ The operation therefore involves three distinct responsibilities: `RemoveCommand
 
 In this happy path, information flows from the UI towards the reMarkable device and through the corresponding components. The repository also updates its in-memory state following the device removal. No response needs to be propagated back through the invoking layers, as the command does not require further processing of the device response.
 
-![Remove command - happy path sequence diagram](./rm-sequence-diagram.drawio.svg)
+![Remove command - happy path sequence diagram](./img/rm-sequence-diagram.drawio.svg)
