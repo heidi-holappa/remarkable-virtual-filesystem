@@ -4,7 +4,11 @@ Implementation for the CLI UI
 import shlex
 import logging
 
-from src.event.event import Event, OutputCommandMessage, ProgressUpdate
+from src.event.event import (
+    Event,
+    OutputCommandMessage,
+    ProgressUpdate,
+    OutputMessage)
 from src.event.event_bus import EventBus
 from src.command.command_dispatcher import CommandDispatcher
 from src.repository.remarkable_data_repository import RemarkableDataRepository
@@ -52,7 +56,10 @@ class CliUi(Ui):
         :param event: event to render
         """
 
-        if isinstance(event, OutputCommandMessage):
+        if isinstance(event, OutputMessage):
+            print(f"{event.message}")
+
+        elif isinstance(event, OutputCommandMessage):
             print(
                 f"{event.command}: "
                 f"{event.message}")
