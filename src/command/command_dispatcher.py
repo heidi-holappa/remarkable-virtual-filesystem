@@ -20,11 +20,8 @@ from src.command.commands import (
     RenameCommand
 )
 from src.event.event_bus import EventBus
+from src.event.event import OutputCommandMessage
 from src.repository.remarkable_data_repository import RemarkableDataRepository
-
-from src.exception import (
-    InvalidArgumentError
-)
 
 # pylint: disable=too-few-public-methods
 class CommandDispatcher:
@@ -78,7 +75,13 @@ class CommandDispatcher:
         factory = self._factories.get(command)
 
         if factory is None:
-            raise InvalidArgumentError(f"{command}: command not found")
+            self._event_bus.publish(
+                OutputCommandMessage(
+                    command=command,
+                    message="command not found: hint: help"
+                )
+            )
+            return
 
 
         instance = self._instances.get(command)
