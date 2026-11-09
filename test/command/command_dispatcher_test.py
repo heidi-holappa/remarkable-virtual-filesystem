@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from src.event.event_bus import EventBus
+from src.event.event import OutputCommandMessage
 from src.command.command_dispatcher import CommandDispatcher
 from src.repository.remarkable_data_repository import RemarkableDataRepository
 from src.data.remarkable_ssh_metadata_source_v2 import RemarkableSSHMetadataSourceV2
@@ -37,8 +38,11 @@ class CommandDispatcherTest(unittest.TestCase):
 
 
     def test_command_not_found(self) -> None:
-        with self.assertRaisesRegex(
-            InvalidArgumentError,
-            "unknown: command not found"
-        ):
+        with patch.object(self.dispatcher._event_bus, "publish") as mock_publish:
             self.dispatcher.dispatch("unknown", [])
+            mock_publish.assert_called_once_with(
+                OutputCommandMessage(
+                    "unknown",
+                    f"command not found: hint: help"
+                )
+            )
